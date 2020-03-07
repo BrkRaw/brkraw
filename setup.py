@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-PyNIT (Python NeuroImaging Toolkit)
+Bruker PVdataset loader / converter
 """
 from distutils.core import setup
 from setuptools import find_packages
