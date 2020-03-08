@@ -1,5 +1,5 @@
 # Bruker PVdataset Loader and Converter
-## Version: 0.1.0
+## Version: 0.1.1
 
 The tools to convert Bruker raw to Nifti format.
 This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower version was not fully tested)
