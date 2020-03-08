@@ -25,7 +25,7 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 - BART integration (for ZTE image)           - when my time is available
 
 ### Requirements
-- Linux or Mac OSX
+- Linux, Mac OSX, Windows 10 with Anaconda python 3.7 (pip install only)
 - tested at Python 3.7.6 only, compatible issue with python 2.7 (due to the re module, no plan for backward compatibility)
 
 ### Installation
