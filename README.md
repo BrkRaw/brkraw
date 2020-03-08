@@ -13,7 +13,7 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 - Summary print out
 - Automatic BIDS structure conversion (pynipt project)
 
-### Future plan
+### Future plan
 - Position based orientation correction (Head_left, Head_right, Foot_....) - when my time is available
 - Meta data output (json for BIDS)           - soon
 - GUI reader (Thumbnail viewer)              - when my time is available
@@ -28,7 +28,7 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 pip install bruker
 ```
 
-### Contribution
+### Contribute
 - please contact me (shlee@unc.edu)
 
 ### Command line tool
