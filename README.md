@@ -52,7 +52,7 @@ brkraw tonii <session path>
 brkraw tonii <session path> -s <scan id> -r <reco id>
 ```
 
-- If <reco id> is not provided, then default is 1
+- If reco_id is not provided, then default is 1
 
 - To convert all raw data under the folder. This command will scan all folder under the parent folder and the derived file will be structured as BIDS
 ```angular2html
