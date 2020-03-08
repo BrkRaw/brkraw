@@ -11,9 +11,9 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 - For the position correction, currently only Head_Prone and Head_Supine are available.
 - Zip file conversion (including .PVdatasets from transferred or achieved from PV 6.0.1)
 - Summary print out
-- automatic BIDS structure conversion (pynipt project)
+- Automatic BIDS structure conversion (pynipt project)
 
-### Future plan
+### Future plan
 - Position based orientation correction (Head_left, Head_right, Foot_....) - when my time is available
 - Meta data output (json for BIDS)           - soon
 - GUI reader (Thumbnail viewer)              - when my time is available
@@ -29,7 +29,7 @@ pip install bruker
 ```
 
 ### Contribution
-- Feel free to contribute for this project, I'm animal researcher so do not have enough time for the coding.
+- please contact me (shlee@unc.edu)
 
 ### Command line tool
 - Help function
