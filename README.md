@@ -13,6 +13,7 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 - Zip file conversion (including .PVdatasets from transferred or achieved from PV 6.0.1)
 - Summary print out
 - Automatic BIDS structure conversion (pynipt project)
+- Working at Windows system (with anaconda 3.7 distribution)
 
 ### Future plan
 - Documentation
