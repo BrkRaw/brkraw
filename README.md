@@ -6,9 +6,10 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 
 ### Features
 - The object parting almost all parameter as python friendly datatype (which help to use it to apply custom reconstruction tool such as BART)
-- The orientation issues are corrected. This means the image in the same session will be aligned at the same space on scanner coordination system.
+- The orientation issues are corrected. This means the image in the same session will be aligned at the same space on scanner coordination system. (Please report and provide the dataset if you have any issue regarding the orientation.)
 - Orientation correction for species (R-L, A-P, I-S is labelled based on the species brain position and orientation).
 - For the position correction, currently only Head_Prone and Head_Supine are available.
+- Data slope and offset are applied on nifti header - dataobj will be 16bit integer for most case that help saving the storage
 - Zip file conversion (including .PVdatasets from transferred or achieved from PV 6.0.1)
 - Summary print out
 - Automatic BIDS structure conversion (pynipt project)
