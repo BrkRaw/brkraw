@@ -14,7 +14,8 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 - Automatic BIDS structure conversion (pynipt project)
 
 ### Future plan
-- Position based orientation correction (Head_left, Head_right, Foot_....) - when my time is available
+- Documentation
+- Complete the all case of position based orientation correction (Head_left, Head_right, Foot_....) - when my time is available
 - Meta data output (json for BIDS)           - soon
 - GUI reader (Thumbnail viewer)              - when my time is available
 - BART integration (for ZTE image)           - when my time is available
