@@ -558,7 +558,10 @@ class BrukerLoader():
                     lines.append(title)
                     lines.append('-' * len(title))
 
-                    datetime = self.get_scan_time()
+                    try:
+                        datetime = self.get_scan_time()
+                    except:
+                        print('Empty dataset...')
                     lines.append('UserAccount:\t{}'.format(user_account))
                     lines.append('Researcher:\t{}'.format(user_name))
                     lines.append('Date:\t\t{}'.format(datetime['date']))
