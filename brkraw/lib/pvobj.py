@@ -44,7 +44,18 @@ class PvDatasetBase():
             self.subj_weight    = get_value(subject, 'SUBJECT_weight')
             self.subj_dob       = get_value(subject, 'SUBJECT_dbirth')
             self.user_name      = get_value(subject, 'SUBJECT_name_string')
-
+        else:
+            self.user_account   = None
+            self.subj_id        = None
+            self.study_id       = None
+            self.session_id     = None
+            self.subj_entry     = None
+            self.subj_pose      = None
+            self.subj_sex       = None
+            self.subj_type      = None
+            self.subj_weight    = None
+            self.subj_dob       = None
+            self.user_name      = None
 
     def _parse_info(self):
         pass
