@@ -5,7 +5,7 @@ The tools to convert Bruker raw to Nifti format.
 This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower version was not fully tested)
 
 ### Features
-- The object parting almost all parameter as python friendly datatype (which help to use it to apply custom reconstruction tool such as BART)
+- The object will parse almost all parameters as python friendly datatype (developed lower level parser tool for JCAMP DX format, which help to use it to apply custom reconstruction tool such as BART)
 - The orientation issues are corrected. This means the image in the same session will be aligned at the same space on scanner coordination system. (Please report and provide the dataset if you have any issue regarding the orientation.)
 - Orientation correction for species (R-L, A-P, I-S is labelled based on the species brain position and orientation).
 - For the position correction, currently only Head_Prone and Head_Supine are available.
