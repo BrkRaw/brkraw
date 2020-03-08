@@ -106,73 +106,73 @@ dict(Recommended    = [# SCANNER_HARDWARE
 
 # Matadata Field Mapping for Bruker PvDataset
 METADATA_FILED_INFO = \
-    dict(Manufacturer = 'VisuManufacturer',
-         ManufacturersModelName = 'VisuStation',
-         DeviceSerialNumber = 'VisuSystemOrderNumber',
-         StationName = 'VisuStation',
-         SoftwareVersion = 'VisuAcqSoftwareVersion',
-         MagneticFieldStrength = ['VisuAcqImagingFrequency', 'divide', 42.576],
-         ReceiveCoilName = 'VisuCoilReceiveName',
-         ReceiveCoilActiveElements = 'VisuCoilReceiveType',
-         GradientSetType = 'ACQ_status',
-         MRTransmitCoilSequence = ['VisuCoilTransmitName',
-                                   'VisuCoilTransmitManufacturer',
-                                   'VisuCoilTransmitType'],
-         CoilConfigName = 'ACQ_coil_config_file', # if Transmit and Receive coil info in None
-         MatrixCoilMode = 'ACQ_experiment_mode',
-         CoilCombinationMethod = None,
+    dict(Manufacturer                   = 'VisuManufacturer',
+         ManufacturersModelName         = 'VisuStation',
+         DeviceSerialNumber             = 'VisuSystemOrderNumber',
+         StationName                    = 'VisuStation',
+         SoftwareVersion                = 'VisuAcqSoftwareVersion',
+         MagneticFieldStrength          = ['VisuAcqImagingFrequency', 'divide', 42.576],
+         ReceiveCoilName                = 'VisuCoilReceiveName',
+         ReceiveCoilActiveElements      = 'VisuCoilReceiveType',
+         GradientSetType                = 'ACQ_status',
+         MRTransmitCoilSequence         = ['VisuCoilTransmitName',
+                                           'VisuCoilTransmitManufacturer',
+                                           'VisuCoilTransmitType'],
+         CoilConfigName                 = 'ACQ_coil_config_file', # if Transmit and Receive coil info in None
+         MatrixCoilMode                 = 'ACQ_experiment_mode',
+         CoilCombinationMethod          = None,
 
          # SEQUENCE_SPECIFIC
-         PulseSequenceType = 'VisuAcqEchoSequenceType',
-         ScanningSequence = 'VisuAcqSequenceName',
-         SequenceVariant = 'VisuAcqEchoSequenceType',
-         ScanOptions = dict(RG = 'VisuRespSynchUsed',
-                            CG = 'VisuCardiacSynchUsed',
-                            PFF = ['VisuAcqPartialFourier', 0],
-                            PFP = ['VisuAcqPartialFourier', 1],
-                            FC = 'VisuAcqFlowCompensation',
-                            SP = 'PVM_FovSatOnOff',
-                            FP = 'VisuAcqSpectralSuppression'),
-         SequenceName = ['VisuAcquisitionProtocol',
-                         'ACQ_protocol_name'], # if first component are None
-         PulseSequenceDetails = 'ACQ_scan_name',
-         NonlinearGradientCorrection = 'VisuAcqKSpaceTraversal',
+         PulseSequenceType              = 'VisuAcqEchoSequenceType',
+         ScanningSequence               = 'VisuAcqSequenceName',
+         SequenceVariant                = 'VisuAcqEchoSequenceType',
+         ScanOptions                    = dict(RG = 'VisuRespSynchUsed',
+                                               CG = 'VisuCardiacSynchUsed',
+                                               PFF = ['VisuAcqPartialFourier', 0],
+                                               PFP = ['VisuAcqPartialFourier', 1],
+                                               FC = 'VisuAcqFlowCompensation',
+                                               SP = 'PVM_FovSatOnOff',
+                                               FP = 'VisuAcqSpectralSuppression'),
+         SequenceName                   = ['VisuAcquisitionProtocol',
+                                           'ACQ_protocol_name'], # if first component are None
+         PulseSequenceDetails           = 'ACQ_scan_name',
+         NonlinearGradientCorrection    = 'VisuAcqKSpaceTraversal',
 
          # IN_PLANE_SPATIAL_ENCODING
-         NumberShots = 'VisuAcqKSpaceTrajectoryCnt',
+         NumberShots                    = 'VisuAcqKSpaceTrajectoryCnt',
          ParallelReductionFactorInPlane = 'ACQ_phase_factor',
-         ParallelAcquisitionTechnique = None,
-         PartialFourier = 'VisuAcqPartialFourier',
-         PartialFourierDirection = None,
-         PhaseEncodingDirection = [['VisuAcqGradEncoding', 'phase_enc'],
-                                   'VisuAcqImagePhaseEncDir'], # Deprecated
-         EffectiveEchoSpacing = dict(ETL= 'VisuAcqEchoTrainLength',
-                                     BWhzPixel= 'VisuAcqPixelBandwidth',
-                                     ACCfactor= 'ACQ_phase_factor',
-                                     Equation= '(1000 * 1 / (ETL * BWhzPixel)) / ACCfactor'), # in millisecond
-         TotalReadoutTime = '',
+         ParallelAcquisitionTechnique   = None,
+         PartialFourier                 = 'VisuAcqPartialFourier',
+         PartialFourierDirection        = None,
+         PhaseEncodingDirection         = [['VisuAcqGradEncoding', 'phase_enc'],
+                                            'VisuAcqImagePhaseEncDir'], # Deprecated
+         EffectiveEchoSpacing           = dict(ETL= 'VisuAcqEchoTrainLength',
+                                               BWhzPixel= 'VisuAcqPixelBandwidth',
+                                               ACCfactor= 'ACQ_phase_factor',
+                                               Equation= '(1000 * 1 / (ETL * BWhzPixel)) / ACCfactor'), # in millisecond
+         TotalReadoutTime               = '',
 
          # TIMING_PARAMETERS
-         EchoTime = 'VisuAcqEchoTime',
-         InversionTime = 'VisuAcqInversionTime',
-         SliceTiming = dict(TR = 'VisuAcqRepetitionTime',
-                            Num_of_Slice='VisuCoreFrameCount',
-                            Order='ACQ_obj_order',
-                            Equation='np.linspace(0, TR, Num_of_Slice + 1)["ACQ_obj_order"]'),
-         SliceEncodingDirection = dict(_3D=['VisuAcqGradEncoding', 'slice_enc'],
-                                       _2D=['len(VisuAcqGradEncoding)']),
-         DwellTime = dict(BWhzPixel='VisuAcqPixelBandwidth',
-                          Equation='1/BWhzPixel'),
+         EchoTime                       = 'VisuAcqEchoTime',
+         InversionTime                  = 'VisuAcqInversionTime',
+         SliceTiming                    = dict(TR = 'VisuAcqRepetitionTime',
+                                               Num_of_Slice='VisuCoreFrameCount',
+                                               Order='ACQ_obj_order',
+                                               Equation='np.linspace(0, TR, Num_of_Slice + 1)["ACQ_obj_order"]'),
+         SliceEncodingDirection         = dict(_3D=['VisuAcqGradEncoding', 'slice_enc'],
+                                               _2D=['len(VisuAcqGradEncoding)']),
+         DwellTime                      = dict(BWhzPixel='VisuAcqPixelBandwidth',
+                                               Equation='1/BWhzPixel'),
 
          # RF_AND_CONTRAST, SLICE_ACCELERATION
-         FlipAngle = 'VisuAcqFlipAngle',
-         MultibandAccerlationFactor = None,
-         AnatomicalLandmarkCoordinates = None,
+         FlipAngle                      = 'VisuAcqFlipAngle',
+         MultibandAccerlationFactor     = None,
+         AnatomicalLandmarkCoordinates  = None,
 
          # INSTITUTION_INFORMATION
-         InstitutionName = 'VisuInstitution',
-         InstitutionAddress = None,
-         InstitutionalDepartmentName = None)
+         InstitutionName                = 'VisuInstitution',
+         InstitutionAddress             = None,
+         InstitutionalDepartmentName    = None)
 
 
 XYZT_UNITS = \
