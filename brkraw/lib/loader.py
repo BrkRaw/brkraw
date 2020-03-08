@@ -561,7 +561,7 @@ class BrukerLoader():
                     try:
                         datetime = self.get_scan_time()
                     except:
-                        print('Empty dataset...')
+                        raise Exception('Empty dataset...')
                     lines.append('UserAccount:\t{}'.format(user_account))
                     lines.append('Researcher:\t{}'.format(user_name))
                     lines.append('Date:\t\t{}'.format(datetime['date']))
@@ -584,7 +584,7 @@ class BrukerLoader():
                 flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
                 param_values = [tr, te, pixel_bw, flip_angle]
                 if j == 0:
-                    params = "[ TR: {0} ms, TE: {1} ms, pixelBW: {2:.2f} Hz, FlipAngle: {3} degree]".format(*param_values)
+                    params = "[ TR: {0} ms, TE: {1:.3f} ms, pixelBW: {2:.2f} Hz, FlipAngle: {3} degree]".format(*param_values)
                     protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
                     sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
                     lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
