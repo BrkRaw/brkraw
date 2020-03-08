@@ -14,6 +14,8 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 - Summary print out
 - Automatic BIDS structure conversion (pynipt project)
 - Working at Windows system (with anaconda 3.7 distribution)
+- Slice timing will be integrated for EPI image (for fMRI study)
+- bvec, bval, bmat generation for DTI image
 
 ### Future plan
 - Documentation
