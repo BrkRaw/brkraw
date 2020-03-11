@@ -1,5 +1,4 @@
 # REGEX patterns
-# ptrn_param         = r'^\#\#(?P<key>.*)\=(?P<value>.*){}$'.format(re.escape('\n'))
 ptrn_param          = r'^\#\#(?P<key>.*)\=(?P<value>.*)$'
 ptrn_key            = r'^\$(?P<key>.*)'
 ptrn_array          = r"\((?P<array>[^()]*)\)"
