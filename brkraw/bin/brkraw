@@ -22,6 +22,7 @@ def main():
 
     nii = subparsers.add_parser("tonii", help='Convert to NifTi format')
     nii.add_argument("path", help="Folder location for the Bruker raw data", type=str)
+    nii.add_argument("-b", "--bids", help="Create JSON file with BIDS standard MRI acqusition parameter.", action='store_true')
     nii.add_argument("-o", "--output", help="Filename w/o extension to export NifTi image", type=str, default=False)
     nii.add_argument("-r", "--recoid", help="RECO ID (if scan_id has multiple reconstruction data)", type=int, default=1)
     nii.add_argument("-s", "--scanid", help="Scan ID", type=str)
@@ -30,6 +31,8 @@ def main():
                                                      "Caution: Don't use this function on console computer!! "
                                                      "It will take forever!!")
     niiall.add_argument("path", help="Path of dataset root folder", type=str)
+    niiall.add_argument("-b", "--bids", help="Create JSON file with BIDS standard MRI acqusition parameter.",
+                        action='store_true')
 
     args = parser.parse_args()
 
@@ -59,6 +62,8 @@ def main():
             output_fname = '{}-{}-{}'.format(output, scan_id, reco_id)
             try:
                 study.save_as(scan_id, reco_id, output_fname)
+                if args.bids:
+                    study.save_json(scan_id, reco_id, output_fname)
                 print('NifTi file is genetared... [{}]'.format(output_fname))
             except Exception as e:
                 print('[Warning]::{}'.format(e))
@@ -68,6 +73,8 @@ def main():
                     output_fname = '{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id)
                     try:
                         study.save_as(scan_id, reco_id, output_fname)
+                        if args.bids:
+                            study.save_json(scan_id, reco_id, output_fname)
                         print('NifTi file is genetared... [{}]'.format(output_fname))
                     except Exception as e:
                         print('[Warning]::{}'.format(e))
@@ -117,6 +124,8 @@ def main():
                                                                                      str(reco_id).zfill(2)))
                         try:
                             study.save_as(scan_id, reco_id, output_fname)
+                            if args.bids:
+                                study.save_json(scan_id, reco_id, output_fname)
                             if re.search('dti', method, re.IGNORECASE):
                                 study.save_bdata(scan_id, reco_id, output_fname)
                         except Exception as e:

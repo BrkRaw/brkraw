@@ -16,11 +16,11 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 - Working at Windows system (with anaconda 3.7 distribution)
 - Slice timing will be integrated for EPI image (for fMRI study)
 - bvec, bval, bmat generation for DTI image
+- JSON file generation according to BIDS recommended MR parameters
 
 ### Future plan
 - Documentation
 - Complete the all case of position based orientation correction (Head_left, Head_right, Foot_....) - when my time is available
-- Meta data output (json for BIDS)           - soon
 - GUI reader (Thumbnail viewer)              - when my time is available
 - BART integration (for ZTE image)           - when my time is available
 

@@ -317,3 +317,104 @@ def reverse_swap(swap_code):
     for target, origin in enumerate(swap_code):
         reversed_code[origin] = target
     return reversed_code
+
+# META handler
+def meta_get_value(value, acqp, method, visu_pars):
+    if isinstance(value, str):
+        return meta_check_source(value, acqp, method, visu_pars)
+    elif isinstance(value, dict):
+        if is_keywhere(value):
+            return meta_check_where(value, acqp, method, visu_pars)
+        elif is_keyindex(value):
+            return meta_check_index(value, acqp, method, visu_pars)
+        elif is_express(value):
+            return meta_check_express(value, acqp, method, visu_pars)
+        else:
+            parser = dict()
+            for k, v in value.items():
+                parser[k] = meta_get_value(v, acqp, method, visu_pars)
+            return parser
+    elif isinstance(value, list):
+        parser = []
+        for vi in value:
+            val = meta_get_value(vi, acqp, method, visu_pars)
+            if val != None:
+                parser.append(val)
+        if len(parser) > 0:
+            return parser[0]
+        else:
+            return None
+    else:
+        return value
+
+
+def is_keywhere(value):
+    if all([k in value.keys() for k in ['key', 'where']]):
+        return True
+    else:
+        return False
+
+
+def is_keyindex(value):
+    if all([k in value.keys() for k in ['key', 'idx']]):
+        return True
+    else:
+        return False
+
+
+def is_express(value):
+    if any([k in value.keys() for k in ['Equation']]):
+        return True
+    else:
+        return False
+
+
+def meta_check_where(value, acqp, method, visu_pars):
+    val = get_value(visu_pars, value['key'])
+    if val != None:
+        if isinstance(value['where'], str):
+            if value['where'] not in val:
+                return None
+            else:
+                return val.index(value['where'])
+        else:
+            where = meta_get_value(value['where'], acqp, method, visu_pars)
+            return val.index(where)
+    else:
+        return None
+
+
+def meta_check_index(value, acqp, method, visu_pars):
+    val = get_value(visu_pars, value['key'])
+    if val != None:
+        if isinstance(value['idx'], int):
+            return val[value['idx']]
+        else:
+            idx = meta_get_value(value['idx'], acqp, method, visu_pars)
+        return val[idx]
+    else:
+        return None
+
+
+def meta_check_express(value, acqp, method, visu_pars):
+    lcm = locals()
+    for k, v in value.items():
+        if k != 'Equation':
+            exec('global {}'.format(k))
+            val = meta_get_value(v, acqp, method, visu_pars)
+            exec('{} = {}'.format(k, val))
+    exec("output = {}".format(value['Equation']), globals(), lcm)
+    return lcm['output']
+
+
+def meta_check_source(key_string, acqp, method, visu_pars):
+    if 'Visu' in key_string:
+        return get_value(visu_pars, key_string)
+    elif 'PVM' in key_string:
+        return get_value(method, key_string)
+    elif 'ACQ' in key_string:
+        return get_value(acqp, key_string)
+    elif key_string == 'PULPROG':
+        return get_value(acqp, key_string)
+    else:
+        raise Exception(key_string)

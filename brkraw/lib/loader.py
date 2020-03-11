@@ -429,6 +429,55 @@ class BrukerLoader():
                     bmat_fobj.write("%s " % item)
                 bmat_fobj.write("\n")
 
+    # BIDS JSON
+    def save_json(self, scan_id, reco_id, filename, dir='./'):
+
+        acqp        = self._acqp[scan_id]
+        method      = self._method[scan_id]
+        visu_pars   = self._get_visu_pars(scan_id, reco_id)
+
+        json_obj = dict()
+        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
+        for k, v in METADATA_FILED_INFO.items():
+            val = meta_get_value(v, acqp, method, visu_pars)
+            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+                val = encdir_dic[val]
+
+            if isinstance(val, np.ndarray):
+                val = val.tolist()
+            if isinstance(val, list):
+                val = ', '.join(map(str, val))
+            json_obj[k] = val
+
+        with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
+            import json
+            json.dump(json_obj, f)
+
+    def print_bids(self, scan_id, reco_id):
+
+        acqp = self._acqp[scan_id]
+        method = self._method[scan_id]
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
+
+        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
+        for k, v in METADATA_FILED_INFO.items():
+            n_tap = int(5 - int(len(k) / 8))
+            if len(k) % 8 >= 7:
+                n_tap -= 1
+
+            tap = ''.join(['\t'] * n_tap)
+            val = meta_get_value(v, acqp, method, visu_pars)
+            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+                val = encdir_dic[val]
+
+            if isinstance(val, np.ndarray):
+                val = val.tolist()
+            if isinstance(val, list):
+                val = ', '.join(map(str, val))
+
+            print('{}:{}{}'.format(k, tap, val))
+
+
     # method to parse information of each scan
     def _get_disk_slice_order(self, visu_pars):
         # check disk_slice_order # TODO: Exceptoin handling use reverence
