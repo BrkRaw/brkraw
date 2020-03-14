@@ -24,8 +24,8 @@ setup(name='bruker',
       license='GNLv3',
       packages=find_packages(),
       install_requires=['nibabel',
-                        'numpy'
-                         ],
+                        'numpy',
+                        'pillow'],
       scripts=['brkraw/bin/brkraw',
                'brkraw/bin/brkraw-win.bat'
                ],
