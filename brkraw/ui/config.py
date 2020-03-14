@@ -1,8 +1,10 @@
 import os
 if os.name == 'posix':
     font = 'arial 14'
+    button_size = 10
 else:
     font = 'arial 10'
+    button_size = 12
 win_pre_width = 250
 win_pst_width = 1050
 win_pre_height = 40

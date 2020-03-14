@@ -1,5 +1,5 @@
 import tkinter as tk
-from .config import font
+from .config import font, button_size
 
 class LabelItem(tk.Frame):
     def __init__(self, *args, **kwargs):
@@ -38,10 +38,11 @@ class SubjInfo(tk.Frame):
         self._init_upper_frame()
 
     def _extend_layout(self):
-        self._path_label = tk.Label(self._upper_frame, text='DataPath', width=10, font=font)
+        self._path_label = tk.Label(self._upper_frame, text='DataPath',
+                                    width=button_size, font=font)
         self._path_label.pack(side=tk.LEFT, anchor=tk.E)
         self._close = tk.Button(self._upper_frame, text='Close',
-                                font=font, width=10)
+                                font=font, width=button_size)
         self._close.pack(side=tk.RIGHT)
         self._path = tk.Text(self._upper_frame, height=1, font=font)
         self._path.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, anchor=tk.CENTER)
@@ -65,9 +66,9 @@ class SubjInfo(tk.Frame):
 
     def _init_upper_frame(self):
         self._loadfile = tk.Button(self._upper_frame, text='Open File',
-                                   font=font, width=10)
+                                   font=font, width=button_size)
         self._loaddir  = tk.Button(self._upper_frame, text='Open Directory',
-                                   font=font, width=10)
+                                   font=font, width=button_size)
         self._loadfile.pack(side=tk.LEFT)
         self._loaddir.pack(side=tk.LEFT)
 
