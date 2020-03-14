@@ -1,5 +1,8 @@
-# font = 'helvetica 12'
-font = 'arial 14'
+import os
+if os.name == 'posix':
+    font = 'arial 14'
+else:
+    font = 'arial 10'
 win_pre_width = 250
 win_pst_width = 1050
 win_pre_height = 40
