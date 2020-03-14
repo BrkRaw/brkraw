@@ -57,17 +57,17 @@ def build_affine_from_orient_info(resol, rmat, pose,
         pass
     # From here, not urgent, extra work to determine correction matrix needed.
     elif subj_pose == 'Head_Left':
-        raise Exception(ERROR_MESSAGES['NotIntegrated'])
+        affine = apply_rotate(affine, rad_z=np.pi/2)
     elif subj_pose == 'Head_Right':
-        raise Exception(ERROR_MESSAGES['NotIntegrated'])
+        affine = apply_rotate(affine, rad_z=-np.pi/2)
     elif subj_pose == 'Foot_Supine':
-        raise Exception(ERROR_MESSAGES['NotIntegrated'])
+        affine = apply_rotate(affine, rad_x=np.pi)
     elif subj_pose == 'Foot_Prone':
-        raise Exception(ERROR_MESSAGES['NotIntegrated'])
+        affine = apply_rotate(affine, rad_y=np.pi)
     elif subj_pose == 'Foot_Left':
-        raise Exception(ERROR_MESSAGES['NotIntegrated'])
+        affine = apply_rotate(affine, rad_y=np.pi, rad_z=np.pi/2)
     elif subj_pose == 'Foot_Right':
-        raise Exception(ERROR_MESSAGES['NotIntegrated'])
+        affine = apply_rotate(affine, rad_y=np.pi, rad_z=-np.pi/2)
     else:  # in case Bruker put additional value for this header
         raise Exception(ERROR_MESSAGES['NotIntegrated'])
 

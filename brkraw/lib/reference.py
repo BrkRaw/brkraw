@@ -43,6 +43,7 @@ ERROR_MESSAGES = {'ImportError'         : '[{}] is not recognized as ParavisionD
                   }
 
 # BIDS v1.2.2
+# Below is the list of METADATA keywords that BIDS recommended
 COMMON_METADATA_FIELD = \
 dict(Recommended    = [# SCANNER_HARDWARE
                        'Manufacturer',
@@ -104,13 +105,21 @@ dict(Recommended    = [# SCANNER_HARDWARE
                        'HardcopyDeviceSoftwareVersion'])
 
 # Matadata Field Mapping for Bruker PvDataset
+# BIDS Meta data will be automatically created according to below reference.
+# If list is entered as value, each parameter will be searched and the first value will be chosen
+# If dict is entered as value, below condition will be checked.
+#   If key - where pair:  parse value from given key and return index of 'where' from these values
+#   If key - idx pair:    parse value from given key and return value of given 'idx'
+#   If 'Equation' in key: each key assigned as local variable and test in Equation will be executed to return the value
+#   Else, new key - value dictionary will be return (for the cases with sub-keys)
+# If string is entered as value, The value of given parameter will be parsed from parameter files
 METADATA_FILED_INFO = \
     dict(Manufacturer                   = 'VisuManufacturer',
          ManufacturersModelName         = 'VisuStation',
          DeviceSerialNumber             = 'VisuSystemOrderNumber',
          StationName                    = 'VisuStation',
          SoftwareVersion                = 'VisuAcqSoftwareVersion',
-         MagneticFieldStrength          = dict(Freq = 'VisuAcqImagingFrequency',
+         MagneticFieldStrength          = dict(Freq     = 'VisuAcqImagingFrequency',
                                                Equation = 'Freq / 42.576'),
          ReceiveCoilName                = 'VisuCoilReceiveName',
          ReceiveCoilActiveElements      = 'VisuCoilReceiveType',
@@ -126,15 +135,15 @@ METADATA_FILED_INFO = \
          PulseSequenceType              = 'PULPROG', #'VisuAcqEchoSequenceType',
          ScanningSequence               = 'VisuAcqSequenceName',
          SequenceVariant                = 'VisuAcqEchoSequenceType',
-         ScanOptions                    = dict(RG = 'VisuRespSynchUsed',
-                                               CG = 'VisuCardiacSynchUsed',
-                                               PFF = dict(key = 'VisuAcqPartialFourier',
-                                                          idx = 0),
-                                               PFP = dict(key = 'VisuAcqPartialFourier',
-                                                          idx = 1),
-                                               FC = 'VisuAcqFlowCompensation',
-                                               SP = 'PVM_FovSatOnOff',
-                                               FP = 'VisuAcqSpectralSuppression'),
+         ScanOptions                    = dict(RG   = 'VisuRespSynchUsed',
+                                               CG   = 'VisuCardiacSynchUsed',
+                                               PFF  = dict(key = 'VisuAcqPartialFourier',
+                                                           idx = 0),
+                                               PFP  = dict(key = 'VisuAcqPartialFourier',
+                                                           idx = 1),
+                                               FC   = 'VisuAcqFlowCompensation',
+                                               SP   = 'PVM_FovSatOnOff',
+                                               FP   = 'VisuAcqSpectralSuppression'),
          SequenceName                   = ['VisuAcquisitionProtocol',
                                            'ACQ_protocol_name'], # if first component are None
          PulseSequenceDetails           = 'ACQ_scan_name',
@@ -146,22 +155,22 @@ METADATA_FILED_INFO = \
          ParallelAcquisitionTechnique   = None,
          PartialFourier                 = 'VisuAcqPartialFourier',
          PartialFourierDirection        = None,
-         PhaseEncodingDirection         = [dict(key = 'VisuAcqGradEncoding',
-                                                where = 'phase_enc'),
-                                           dict(key = 'VisuAcqImagePhaseEncDir',
-                                                where = 'col_dir')], # Deprecated
-         EffectiveEchoSpacing           = dict(BWhzPixel= 'VisuAcqPixelBandwidth',
-                                               MatSizePE=dict(key='VisuCoreSize',
-                                                              idx=[dict(key = 'VisuAcqGradEncoding',
-                                                                        where = 'phase_enc'),
-                                                                   dict(key = 'VisuAcqImagePhaseEncDir',
-                                                                        where = 'col_dir')]),
-                                               ACCfactor= 'ACQ_phase_factor',
-                                               Equation= '(1 / (MatSizePE * BWhzPixel)) / ACCfactor'), # in millisecond
-         TotalReadoutTime               = dict(ETL= 'VisuAcqEchoTrainLength',
-                                               BWhzPixel= 'VisuAcqPixelBandwidth',
-                                               ACCfactor= 'ACQ_phase_factor',
-                                               Equation = '(1 / BWhzPixel) / ACCfactor'),
+         PhaseEncodingDirection         = [dict(key         = 'VisuAcqGradEncoding',
+                                                where       = 'phase_enc'),
+                                           dict(key         = 'VisuAcqImagePhaseEncDir',
+                                                where       = 'col_dir')], # Deprecated
+         EffectiveEchoSpacing           = dict(BWhzPixel    = 'VisuAcqPixelBandwidth',
+                                               MatSizePE    = dict(key='VisuCoreSize',
+                                                                   idx=[dict(key    = 'VisuAcqGradEncoding',
+                                                                             where  = 'phase_enc'),
+                                                                        dict(key    = 'VisuAcqImagePhaseEncDir',
+                                                                             where  = 'col_dir')]),
+                                               ACCfactor    = 'ACQ_phase_factor',
+                                               Equation     = '(1 / (MatSizePE * BWhzPixel)) / ACCfactor'), # in second
+         TotalReadoutTime               = dict(ETL          = 'VisuAcqEchoTrainLength',
+                                               BWhzPixel    = 'VisuAcqPixelBandwidth',
+                                               ACCfactor    = 'ACQ_phase_factor',
+                                               Equation     = '(1 / BWhzPixel) / ACCfactor'),
 
          # TIMING_PARAMETERS
          EchoTime                       = 'VisuAcqEchoTime',
@@ -170,12 +179,12 @@ METADATA_FILED_INFO = \
                                                Num_of_Slice = 'VisuCoreFrameCount',
                                                Order        = 'ACQ_obj_order',
                                                Equation     = 'np.linspace(0, TR/1000, Num_of_Slice + 1)[Order]'),
-         SliceEncodingDirection         = [dict(key    = 'VisuAcqGradEncoding',
-                                                where  = 'slice_enc'),
-                                           dict(EncSeq = 'VisuAcqGradEncoding',
-                                                Equation = 'len(EncSeq)')],
-         DwellTime                      = dict(BWhzPixel='VisuAcqPixelBandwidth',
-                                               Equation='1/BWhzPixel'),
+         SliceEncodingDirection         = [dict(key         = 'VisuAcqGradEncoding',
+                                                where       = 'slice_enc'),
+                                           dict(EncSeq      = 'VisuAcqGradEncoding',
+                                                Equation    = 'len(EncSeq)')],
+         DwellTime                      = dict(BWhzPixel    ='VisuAcqPixelBandwidth',
+                                               Equation     ='1/BWhzPixel'),
 
          # RF_AND_CONTRAST, SLICE_ACCELERATION
          FlipAngle                      = 'VisuAcqFlipAngle',

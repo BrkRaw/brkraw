@@ -1,5 +1,5 @@
 # Bruker PVdataset Loader and Converter
-## Version: 0.1.1
+## Version: 0.2.0
 
 The tools to convert Bruker raw to Nifti format.
 This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower version was not fully tested)
@@ -17,12 +17,7 @@ This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower vers
 - Slice timing will be integrated for EPI image (for fMRI study)
 - bvec, bval, bmat generation for DTI image
 - JSON file generation according to BIDS recommended MR parameters
-
-### Future plan
-- Documentation
-- Complete the all case of position based orientation correction (Head_left, Head_right, Foot_....) - when my time is available
-- GUI reader (Thumbnail viewer)              - when my time is available
-- BART integration (for ZTE image)           - when my time is available
+- GUI support
 
 ### Requirements
 - Linux, Mac OSX, Windows 10 with Anaconda python 3.7 (pip install only)
@@ -62,4 +57,13 @@ brkraw tonii <session path> -s <scan id> -r <reco id>
 - To convert all raw data under the folder. This command will scan all folder under the parent folder and the derived file will be structured as BIDS
 ```angular2html
 brkraw tonii_all <parent folder>
+```
+
+- Run GUI
+```angular2html
+brkraw gui -i <session path> -o <output path>
+```
+or just simply
+```angular2html
+brkraw gui
 ```

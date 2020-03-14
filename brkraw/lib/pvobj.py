@@ -33,7 +33,7 @@ class PvDatasetBase():
     def _update_studyinfo(self):
         if self._subject is not None:
             subject = self._subject
-            self.user_account   = get_value(subject, 'OWNER')
+            self.user_account   = subject.headers['OWNER']
             self.subj_id        = get_value(subject, 'SUBJECT_id')
             self.study_id       = get_value(subject, 'SUBJECT_study_nr')
             self.session_id     = get_value(subject, 'SUBJECT_study_name')

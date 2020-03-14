@@ -26,77 +26,189 @@ class BrukerLoader():
     def __init__(self, path):
         self._pvobj = load(path)
 
-    def _get_dataobj(self, scan_id, reco_id):
+    def close(self):
+        self._pvobj.close()
+        self._pvobj = None
+
+    def get_dataobj(self, scan_id, reco_id):
         return self._pvobj.get_dataobj(scan_id, reco_id)
 
-    def _get_affine(self, visu_pars, method):
-        is_reversed = True if self._get_disk_slice_order(visu_pars) == 'reverse' else False
-        slice_info = self._get_slice_info(visu_pars)
-        spatial_info = self._get_spatial_info(visu_pars)
-        orient_info = self._get_orient_info(visu_pars, method)
-        slice_orient_map = {0: 'sagital', 1: 'coronal', 2: 'axial'}
+    def get_fid(self, scan_id):
+        return self._pvobj.get_fid(scan_id)
 
+    # methods to dump data into file object
+    ## - NifTi1
+    def get_niftiobj(self, scan_id, reco_id):
+        from nibabel import Nifti1Image
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
+        method = self._method[scan_id]
+        affine = self._get_affine(visu_pars, method)
+        dataobj = self.get_dataobj(scan_id, reco_id)
+        shape = self._get_matrix_size(visu_pars, dataobj)
+        imgobj = dataobj.reshape(shape[::-1]).T
 
-        num_slice_packs = slice_info['num_slice_packs']
+        if isinstance(affine, list):
+            parser = []
+            slice_info = self._get_slice_info(visu_pars)
+            num_slice_packs = slice_info['num_slice_packs']
+            for spack_idx in range(num_slice_packs):
+                slice_info = self._get_slice_info(visu_pars)
+                num_slices_each_pack = slice_info['num_slices_each_pack']
+                start = int(spack_idx * num_slices_each_pack[spack_idx])
+                end = start + num_slices_each_pack[spack_idx]
+                seg_imgobj = imgobj[..., start:end]
+                niiobj = Nifti1Image(seg_imgobj, affine[spack_idx])
+                niiobj = self._set_default_header(niiobj, visu_pars, method)
+                parser.append(niiobj)
+            return parser
 
-        subj_pose = orient_info['subject_position']
-        subj_type = orient_info['subject_type']
+        niiobj = Nifti1Image(imgobj, affine)
+        niiobj = self._set_default_header(niiobj, visu_pars, method)
+        return niiobj
 
-        if num_slice_packs > 1:
-            affine = []
-            for slice_idx in range(num_slice_packs):
-                sidx = orient_info['orient_order'][slice_idx].index(2)
-                slice_orient = slice_orient_map[sidx]
-                resol = spatial_info['spatial_resol'][slice_idx]
-                rmat = orient_info['orient_matrix'][slice_idx]
-                pose = orient_info['volume_position'][slice_idx]
-                # TODO: did not integrate revered disk for multiple slice pack
-                affine.append(build_affine_from_orient_info(resol, rmat, pose,
-                                                            subj_pose, subj_type,
-                                                            slice_orient))
+    def save_as(self, scan_id, reco_id, filename, dir='./', ext='nii.gz'):
+        niiobj = self.get_niftiobj(scan_id, reco_id)
+        if isinstance(niiobj, list):
+            for i, nii in enumerate(niiobj):
+                output_path = os.path.join(dir,
+                                           '{}-{}.{}'.format(filename,
+                                                             str(i+1).zfill(2), ext))
+                nii.to_filename(output_path)
         else:
-            sidx = orient_info['orient_order'].index(2)
-            slice_orient = slice_orient_map[sidx]
-            resol = spatial_info['spatial_resol'][0]
-            rmat = orient_info['orient_matrix']
-            pose = orient_info['volume_position']
-            if is_reversed:
-                distance = slice_info['slice_distances_each_pack']
-                pose = reversed_pose_correction(pose, rmat, distance)
-            affine = build_affine_from_orient_info(resol, rmat, pose,
-                                                   subj_pose, subj_type,
-                                                   slice_orient)
-        return affine
+            output_path = os.path.join(dir, '{}.{}'.format(filename, ext))
+            niiobj.to_filename(output_path)
 
-    def _get_matrix_size(self, visu_pars, dataobj=None):
-
-        spatial_info = self._get_spatial_info(visu_pars)
+    def _set_default_header(self, niiobj, visu_pars, method):
         slice_info = self._get_slice_info(visu_pars)
-        temporal_info = self._get_temp_info(visu_pars)
+        niiobj.header.default_x_flip = False
+        temporal_resol = self._get_temp_info(visu_pars)['temporal_resol']
+        temporal_resol = float(temporal_resol) / 1000
+        slice_order = get_value(method, 'PVM_ObjOrderScheme')
+        acq_method = get_value(method, 'Method')
 
-        matrix_size = spatial_info['matrix_size']
-        num_temporal_frame = temporal_info['num_frames']
-        num_slice_packs = slice_info['num_slice_packs']
+        data_slp = get_value(visu_pars, 'VisuCoreDataSlope')
+        if isinstance(data_slp, list):
+            data_slp = data_slp[0] if is_all_element_same(data_slp) else data_slp
+        data_off = get_value(visu_pars, 'VisuCoreDataOffs')
+        if isinstance(data_off, list):
+            data_off = data_off[0] if is_all_element_same(data_off) else data_off
 
-        if num_slice_packs > 1:
-            if is_all_element_same(matrix_size):
-                matrix_size = list(matrix_size[0])
-                total_num_slices = sum(slice_info['num_slices_each_pack'])
-                matrix_size[-1] = total_num_slices
+        if re.search('epi', acq_method, re.IGNORECASE) and not \
+                re.search('dti', acq_method, re.IGNORECASE):
+
+            niiobj.header.set_xyzt_units('mm', 'sec')
+            niiobj.header['pixdim'][4] = temporal_resol
+            niiobj.header.set_dim_info(slice=2)
+            num_slices = slice_info['num_slices_each_pack'][0]
+            niiobj.header['slice_duration'] = temporal_resol / num_slices
+
+            if slice_order == 'User_defined_slice_scheme':
+                niiobj.header['slice_code'] = 0
+            elif slice_order == 'Sequential':
+                niiobj.header['slice_code'] = 1
+            elif slice_order == 'Reverse_sequential':
+                niiobj.header['slice_code'] = 2
+            elif slice_order == 'Interlaced':
+                niiobj.header['slice_code'] = 3
+            elif slice_order == 'Reverse_interlacesd':
+                niiobj.header['slice_code'] = 4
+            elif slice_order == 'Angiopraphy':
+                niiobj.header['slice_code'] = 0
             else:
-                raise Exception(ERROR_MESSAGES['DimSize'])
+                raise Exception(ERROR_MESSAGES['NotIntegrated'])
+            niiobj.header['slice_start'] = 0
+            niiobj.header['slice_end'] = num_slices - 1
         else:
-            matrix_size =  list(matrix_size[0])
-            if num_temporal_frame > 1:
-                matrix_size.append(num_temporal_frame)
-        if dataobj is not None:
-            dataobj_shape = dataobj.shape[0]
-            if multiply_all(matrix_size) != dataobj_shape:
-                print(matrix_size, dataobj_shape)
-                raise Exception(ERROR_MESSAGES['DimSize'])
-        return matrix_size
+            niiobj.header.set_xyzt_units('mm', 'unknown')
+        niiobj.header['qform_code'] = 1
+        niiobj.header['sform_code'] = 0
+        niiobj.header['scl_slope'] = data_slp
+        niiobj.header['scl_inter'] = data_off
+        return niiobj
 
-    # methods for collecting header information
+    ## - FSL bval, bvec, and bmat
+    def save_bdata(self, scan_id, filename, dir='./'):
+        method = self._method[scan_id]
+        bval, bvec, bmat = self._get_bdata(method)
+        output_path = os.path.join(dir, filename)
+
+        with open('{}.bval'.format(output_path), 'w') as bval_fobj:
+            for item in bval:
+                bval_fobj.write("%f " % item)
+            bval_fobj.write("\n")
+
+        with open('{}.bvec'.format(output_path), 'w') as bvec_fobj:
+            for row in bvec:
+                for item in row:
+                    bvec_fobj.write("%f " % item)
+                bvec_fobj.write("\n")
+
+        with open('{}.bmat'.format(output_path), 'w') as bmat_fobj:
+            for row in bmat:
+                for item in row.flatten():
+                    bmat_fobj.write("%s " % item)
+                bmat_fobj.write("\n")
+
+    # BIDS JSON
+    def save_json(self, scan_id, reco_id, filename, dir='./'):
+        """ Save JSON file with BIDS standard MR acquisition parameter
+
+        Args:
+            scan_id:    Scan ID
+            reco_id:    Reco ID
+            filename:   Filename to save (without extension)
+            dir:        Dirname to save
+
+        Returns: None
+        """
+
+        acqp        = self._acqp[scan_id]
+        method      = self._method[scan_id]
+        visu_pars   = self._get_visu_pars(scan_id, reco_id)
+
+        json_obj = dict()
+        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
+        for k, v in METADATA_FILED_INFO.items():
+            val = meta_get_value(v, acqp, method, visu_pars)
+            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+                val = encdir_dic[val]
+
+            if isinstance(val, np.ndarray):
+                val = val.tolist()
+            if isinstance(val, list):
+                val = ','.join(map(str, val))
+            json_obj[k] = val
+
+        with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
+            import json
+            json.dump(json_obj, f)
+
+    # method to parse information of each scan
+    # methods of protocol specific
+    # EPI
+    def _get_temp_info(self, visu_pars):
+        """return temporal resolution for each volume of image"""
+        total_time = get_value(visu_pars, 'VisuAcqScanTime')
+        frame_group_info = self._get_frame_group_info(visu_pars)
+        parser = []
+        if frame_group_info is not None:
+            for id, fg in enumerate(frame_group_info['group_id']):
+                if not re.search('slice', fg, re.IGNORECASE):
+                    parser.append(frame_group_info['matrix_shape'][id])
+
+        frame_size = multiply_all(parser) if len(parser) > 0 else 1
+        return dict(temporal_resol=(total_time / frame_size),
+                    num_frames=frame_size,
+                    unit='msec')
+
+    # DTI
+    def _get_bdata(self, method):
+        bval = get_value(method, 'PVM_DwEffBval')
+        bvec = get_value(method, 'PVM_DwGradVec')
+        bmat = get_value(method, 'PVM_DwBMat')
+        return bval, bvec, bmat
+
+    # Generals
     def _get_gradient_encoding_info(self, visu_pars):
         version = get_value(visu_pars, 'VisuVersion')
 
@@ -137,17 +249,6 @@ class BrukerLoader():
         else:
             return dim, 'spatial_only'
 
-    def _get_origin(self, slice_position, gradient_orient):
-        slice_position = cp(slice_position)
-        dx, dy, dz = map(lambda x: x.max() - x.min(), slice_position.T)
-        max_delta_axis = np.argmax([dx, dy, dz])
-        if max_delta_axis == 2:
-            idx = slice_position.T[max_delta_axis].argmin()
-        else:
-            idx = slice_position.T[max_delta_axis].argmax()
-        origin = slice_position[idx]
-        return origin
-
     def _get_spatial_info(self, visu_pars):
         dim, dim_type = self._get_dim_info(visu_pars)
         if dim_type != 'spatial_only':
@@ -175,7 +276,6 @@ class BrukerLoader():
                         )
 
     def _get_slice_info(self, visu_pars):
-
         version = get_value(visu_pars, 'VisuVersion')
         frame_group_info = self._get_frame_group_info(visu_pars)
         num_slice_packs = None
@@ -190,7 +290,7 @@ class BrukerLoader():
             slice_distances_each_pack = [get_value(visu_pars, 'VisuCoreFrameThickness')]
         else:
             frame_groups = frame_group_info['group_id']
-            if version == 1:
+            if version == 1: # PV 5.1 support
                 phase_enc_dir = get_value(visu_pars, 'VisuAcqImagePhaseEncDir')
                 phase_enc_dir = [phase_enc_dir[0]] if is_all_element_same(phase_enc_dir) else phase_enc_dir
                 matrix_shape = frame_group_info['matrix_shape']
@@ -291,203 +391,81 @@ class BrukerLoader():
                     gradient_orient = gradient_orient,
                     )
 
-    # methods of protocol specific
-    # EPI
-    def _get_temp_info(self, visu_pars):
-        """return temporal resolution for each volume of image"""
-        total_time = get_value(visu_pars, 'VisuAcqScanTime')
-        frame_group_info = self._get_frame_group_info(visu_pars)
-        parser = []
-        if frame_group_info is not None:
-            for id, fg in enumerate(frame_group_info['group_id']):
-                if not re.search('slice', fg, re.IGNORECASE):
-                    parser.append(frame_group_info['matrix_shape'][id])
-
-        frame_size = multiply_all(parser) if len(parser) > 0 else 1
-        return dict(temporal_resol = (total_time / frame_size),
-                    num_frames     = frame_size,
-                    unit           = 'msec')
-
-    # DTI
-    def _get_bdata(self, method):
-        bval = get_value(method, 'PVM_DwEffBval')
-        bvec = get_value(method, 'PVM_DwGradVec')
-        bmat = get_value(method, 'PVM_DwBMat')
-        return bval, bvec, bmat
-
-    # methods to dump data into file object
-
-    ## - NifTi1
-    def _get_niftiobj(self, scan_id, reco_id):
-        from nibabel import Nifti1Image
-        visu_pars = self._get_visu_pars(scan_id, reco_id)
-        method = self._method[scan_id]
-        affine = self._get_affine(visu_pars, method)
-        dataobj = self._get_dataobj(scan_id, reco_id)
-        shape = self._get_matrix_size(visu_pars, dataobj)
-        imgobj = dataobj.reshape(shape[::-1]).T
-
-        if isinstance(affine, list):
-            parser = []
-            slice_info = self._get_slice_info(visu_pars)
-            num_slice_packs = slice_info['num_slice_packs']
-            for spack_idx in range(num_slice_packs):
-                slice_info = self._get_slice_info(visu_pars)
-                num_slices_each_pack = slice_info['num_slices_each_pack']
-                start = int(spack_idx * num_slices_each_pack[spack_idx])
-                end = start + num_slices_each_pack[spack_idx]
-                seg_imgobj = imgobj[..., start:end]
-                niiobj = Nifti1Image(seg_imgobj, affine[spack_idx])
-                niiobj = self._set_default_header(niiobj, visu_pars, method)
-                parser.append(niiobj)
-            return parser
-
-        niiobj = Nifti1Image(imgobj, affine)
-        niiobj = self._set_default_header(niiobj, visu_pars, method)
-        return niiobj
-
-    def save_as(self, scan_id, reco_id, filename, dir='./', ext='nii.gz'):
-        niiobj = self._get_niftiobj(scan_id, reco_id)
-        if isinstance(niiobj, list):
-            for i, nii in enumerate(niiobj):
-                output_path = os.path.join(dir,
-                                           '{}-{}.{}'.format(filename,
-                                                             str(i+1).zfill(2), ext))
-                nii.to_filename(output_path)
-        else:
-            output_path = os.path.join(dir, '{}.{}'.format(filename, ext))
-            niiobj.to_filename(output_path)
-
-    def _set_default_header(self, niiobj, visu_pars, method):
+    def _get_affine(self, visu_pars, method):
+        is_reversed = True if self._get_disk_slice_order(visu_pars) == 'reverse' else False
         slice_info = self._get_slice_info(visu_pars)
-        niiobj.header.default_x_flip = False
-        temporal_resol = self._get_temp_info(visu_pars)['temporal_resol']
-        temporal_resol = float(temporal_resol) / 1000
-        slice_order = get_value(method, 'PVM_ObjOrderScheme')
-        acq_method = get_value(method, 'Method')
+        spatial_info = self._get_spatial_info(visu_pars)
+        orient_info = self._get_orient_info(visu_pars, method)
+        slice_orient_map = {0: 'sagital', 1: 'coronal', 2: 'axial'}
+        num_slice_packs = slice_info['num_slice_packs']
+        subj_pose = orient_info['subject_position']
+        subj_type = orient_info['subject_type']
 
-        data_slp = get_value(visu_pars, 'VisuCoreDataSlope')
-        if isinstance(data_slp, list):
-            data_slp = data_slp[0] if is_all_element_same(data_slp) else data_slp
-        data_off = get_value(visu_pars, 'VisuCoreDataOffs')
-        if isinstance(data_off, list):
-            data_off = data_off[0] if is_all_element_same(data_off) else data_off
-
-        if re.search('epi', acq_method, re.IGNORECASE) and not \
-                re.search('dti', acq_method, re.IGNORECASE):
-
-            niiobj.header.set_xyzt_units('mm', 'sec')
-            niiobj.header['pixdim'][4] = temporal_resol
-            niiobj.header.set_dim_info(slice=2)
-            num_slices = slice_info['num_slices_each_pack'][0]
-            niiobj.header['slice_duration'] = temporal_resol / num_slices
-
-            if slice_order == 'User_defined_slice_scheme':
-                niiobj.header['slice_code'] = 0
-            elif slice_order == 'Sequential':
-                niiobj.header['slice_code'] = 1
-            elif slice_order == 'Reverse_sequential':
-                niiobj.header['slice_code'] = 2
-            elif slice_order == 'Interlaced':
-                niiobj.header['slice_code'] = 3
-            elif slice_order == 'Reverse_interlacesd':
-                niiobj.header['slice_code'] = 4
-            elif slice_order == 'Angiopraphy':
-                niiobj.header['slice_code'] = 0
-            else:
-                raise Exception(ERROR_MESSAGES['NotIntegrated'])
-            niiobj.header['slice_start'] = 0
-            niiobj.header['slice_end'] = num_slices - 1
+        if num_slice_packs > 1:
+            affine = []
+            for slice_idx in range(num_slice_packs):
+                sidx = orient_info['orient_order'][slice_idx].index(2)
+                slice_orient = slice_orient_map[sidx]
+                resol = spatial_info['spatial_resol'][slice_idx]
+                rmat = orient_info['orient_matrix'][slice_idx]
+                pose = orient_info['volume_position'][slice_idx]
+                if is_reversed:
+                    raise Exception(ERROR_MESSAGES['NotIntegrated'])
+                    # TODO: The reversed disk does not integrated for the multiple slicepack data
+                affine.append(build_affine_from_orient_info(resol, rmat, pose,
+                                                            subj_pose, subj_type,
+                                                            slice_orient))
         else:
-            niiobj.header.set_xyzt_units('mm', 'unknown')
-        niiobj.header['qform_code'] = 1
-        niiobj.header['sform_code'] = 0
-        niiobj.header['scl_slope'] = data_slp
-        niiobj.header['scl_inter'] = data_off
-        return niiobj
+            sidx = orient_info['orient_order'].index(2)
+            slice_orient = slice_orient_map[sidx]
+            resol = spatial_info['spatial_resol'][0]
+            rmat = orient_info['orient_matrix']
+            pose = orient_info['volume_position']
+            if is_reversed:
+                distance = slice_info['slice_distances_each_pack']
+                pose = reversed_pose_correction(pose, rmat, distance)
+            affine = build_affine_from_orient_info(resol, rmat, pose,
+                                                   subj_pose, subj_type,
+                                                   slice_orient)
+        return affine
 
-    ## - FSL bval, bvec, and bmat
-    def save_bdata(self, scan_id, filename, dir='./'):
-        method = self._method[scan_id]
-        bval, bvec, bmat = self._get_bdata(method)
-        output_path = os.path.join(dir, filename)
+    def _get_matrix_size(self, visu_pars, dataobj=None):
 
-        with open('{}.bval'.format(output_path), 'w') as bval_fobj:
-            for item in bval:
-                bval_fobj.write("%f " % item)
-            bval_fobj.write("\n")
+        spatial_info = self._get_spatial_info(visu_pars)
+        slice_info = self._get_slice_info(visu_pars)
+        temporal_info = self._get_temp_info(visu_pars)
 
-        with open('{}.bvec'.format(output_path), 'w') as bvec_fobj:
-            for row in bvec:
-                for item in row:
-                    bvec_fobj.write("%f " % item)
-                bvec_fobj.write("\n")
+        matrix_size = spatial_info['matrix_size']
+        num_temporal_frame = temporal_info['num_frames']
+        num_slice_packs = slice_info['num_slice_packs']
 
-        with open('{}.bmat'.format(output_path), 'w') as bmat_fobj:
-            for row in bmat:
-                for item in row.flatten():
-                    bmat_fobj.write("%s " % item)
-                bmat_fobj.write("\n")
+        if num_slice_packs > 1:
+            if is_all_element_same(matrix_size):
+                matrix_size = list(matrix_size[0])
+                total_num_slices = sum(slice_info['num_slices_each_pack'])
+                matrix_size[-1] = total_num_slices
+            else:
+                raise Exception(ERROR_MESSAGES['DimSize'])
+        else:
+            matrix_size =  list(matrix_size[0])
+            if num_temporal_frame > 1:
+                matrix_size.append(num_temporal_frame)
+        if dataobj is not None:
+            dataobj_shape = dataobj.shape[0]
+            if multiply_all(matrix_size) != dataobj_shape:
+                print(matrix_size, dataobj_shape)
+                raise Exception(ERROR_MESSAGES['DimSize'])
+        return matrix_size
 
-    # BIDS JSON
-    def save_json(self, scan_id, reco_id, filename, dir='./'):
-
-        acqp        = self._acqp[scan_id]
-        method      = self._method[scan_id]
-        visu_pars   = self._get_visu_pars(scan_id, reco_id)
-
-        json_obj = dict()
-        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
-        for k, v in METADATA_FILED_INFO.items():
-            val = meta_get_value(v, acqp, method, visu_pars)
-            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-                val = encdir_dic[val]
-
-            if isinstance(val, np.ndarray):
-                val = val.tolist()
-            if isinstance(val, list):
-                val = ', '.join(map(str, val))
-            json_obj[k] = val
-
-        with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
-            import json
-            json.dump(json_obj, f)
-
-    def print_bids(self, scan_id, reco_id):
-
-        acqp = self._acqp[scan_id]
-        method = self._method[scan_id]
-        visu_pars = self._get_visu_pars(scan_id, reco_id)
-
-        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
-        for k, v in METADATA_FILED_INFO.items():
-            n_tap = int(5 - int(len(k) / 8))
-            if len(k) % 8 >= 7:
-                n_tap -= 1
-
-            tap = ''.join(['\t'] * n_tap)
-            val = meta_get_value(v, acqp, method, visu_pars)
-            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-                val = encdir_dic[val]
-
-            if isinstance(val, np.ndarray):
-                val = val.tolist()
-            if isinstance(val, list):
-                val = ', '.join(map(str, val))
-
-            print('{}:{}{}'.format(k, tap, val))
-
-
-    # method to parse information of each scan
     def _get_disk_slice_order(self, visu_pars):
-        # check disk_slice_order # TODO: Exceptoin handling use reverence
+        # check disk_slice_order #
         _fo = get_value(visu_pars, 'VisuCoreDiskSliceOrder')
         if _fo in [None, 'disk_normal_slice_order']:
             disk_slice_order = 'normal'
         elif _fo == 'disk_reverse_slice_order':
             disk_slice_order = 'reverse'
         else:
-            raise Exception('unexpected value in "VisuCoreDiskSliceOrder"')
+            raise Exception(ERROR_MESSAGES['NotIntegrated'])
         return disk_slice_order
 
     def _get_visu_pars(self, scan_id, reco_id):
@@ -541,6 +519,14 @@ class BrukerLoader():
         return self._pvobj.avail_reco_id
 
     def get_scan_time(self, visu_pars=None):
+        """
+
+        Args:
+            visu_pars:
+
+        Returns:
+
+        """
         import datetime as dt
         subject_date = get_value(self._subject, 'SUBJECT_date')
         subject_date = subject_date[0] if isinstance(subject_date, list) else subject_date
@@ -582,6 +568,29 @@ class BrukerLoader():
                     start_time = start_time)
 
     # printing functions / help documents
+    def print_bids(self, scan_id, reco_id):
+        acqp = self._acqp[scan_id]
+        method = self._method[scan_id]
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
+
+        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
+        for k, v in METADATA_FILED_INFO.items():
+            n_tap = int(5 - int(len(k) / 8))
+            if len(k) % 8 >= 7:
+                n_tap -= 1
+
+            tap = ''.join(['\t'] * n_tap)
+            val = meta_get_value(v, acqp, method, visu_pars)
+            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+                val = encdir_dic[val]
+
+            if isinstance(val, np.ndarray):
+                val = val.tolist()
+            if isinstance(val, list):
+                val = ', '.join(map(str, val))
+
+            print('{}:{}{}'.format(k, tap, val))
+
     def summary(self):
         pvobj = self._pvobj
         user_account    = pvobj.user_account
