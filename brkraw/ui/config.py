@@ -1,5 +1,5 @@
-import os
-if os.name == 'posix':
+import sys
+if sys.platform == 'darwin':
     font = 'arial 14'
     button_size = 10
 else:
