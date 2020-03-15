@@ -79,7 +79,7 @@ def main():
 
         list_of_candidates = [d for d in os.listdir(bpath) if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d)))]
         backup_objs = []
-        for d in tqdm.tqdm(os.listdir(bpath)):
+        for d in tqdm.tqdm(list_of_candidates):
             if d not in cached_dataset:
                 dataset_path = opj(bpath, d)
                 if not zipfile.is_zipfile(dataset_path):
