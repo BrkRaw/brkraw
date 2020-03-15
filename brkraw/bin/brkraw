@@ -100,7 +100,7 @@ def main():
 
         print('Checking backup state of raw datasets...')
         for d in tqdm.tqdm(list_of_raw):
-            if d not in cached_dataset.keys():
+            if d not in cached_dataset.values():
                 print(d)
 
     elif args.function == 'gui':
