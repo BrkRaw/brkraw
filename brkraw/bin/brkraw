@@ -69,19 +69,20 @@ def main():
         rpath = args.raw_path
         bpath = args.backup_path
 
-        # check backup cache
+        # load backed-up cache
         backup_cache = opj(bpath, '.brkraw_cache')
         if exists(backup_cache):
-            with open(backup_cache, 'r') as f:
+            with open(backup_cache, 'rb') as f:
                 cached_dataset = pickle.load(f)
         else:
             cached_dataset = dict()
 
+        # parse list of datasets
         list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
         list_of_candidates = [d for d in os.listdir(bpath) if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d)))]
         list_of_candidates = [d for d in list_of_candidates if d not in cached_dataset.keys()]
 
-        backup_required = []
+        print('Updating list of datasets in backup folder...', file=sys.stdout)
         for d in tqdm.tqdm(list_of_candidates):
             if d not in cached_dataset:
                 dataset_path = opj(bpath, d)
@@ -91,14 +92,16 @@ def main():
                     dataset = brkraw.load(dataset_path)
                     if dataset.is_pvdataset():
                         raw_path = dataset._pvobj.path
-                        if raw_path in list_of_raw:
-                            cached_dataset[d] = raw_path
-                        else:
-                            backup_required.append(raw_path)
-        print('List of dataset need to be backed up: \n{}'.format('\n'.join(backup_required)))
+                        cached_dataset[d] = raw_path
 
-        with open(backup_cache, 'w') as f:
+        # save cache
+        with open(backup_cache, 'wb') as f:
             pickle.dump(cached_dataset, f)
+
+        print('Checking backup state of raw datasets...')
+        for d in tqdm.tqdm(list_of_raw):
+            if d not in cached_dataset.keys():
+                print(d)
 
     elif args.function == 'gui':
         ipath = args.input
