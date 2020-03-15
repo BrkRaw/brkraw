@@ -95,8 +95,10 @@ def main():
                         cached_dataset[d] = raw_path
                     else:
                         if raw_path in list_of_raw:
-                            print('{} still exists!!'.format(raw_path))
-                    print('Num_scans = {}'.format(len(dataset._pvobj.avail_scan_id)), file=sys.stderr)
+                            raw_dataset = brkraw.load(opj(rpath, raw_path))
+                            print('Num_scan on rawdataset = {}'.format(print(len(raw_dataset._pvobj.avail_scan_id))))
+                        else:
+                            print('Num_scans = {}'.format(len(dataset._pvobj.avail_scan_id)), file=sys.stderr)
 
         # save cache
         with open(backup_cache, 'wb') as f:
