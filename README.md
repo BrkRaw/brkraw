@@ -21,7 +21,7 @@ To overcome these issues, **BrkRaw** module is designed to provide comprehensive
 - providing robust and easy-to-use python API for developers, including JCAMP-DX parser
 
 ![example_alignment](imgs/brkraw_alignment.png)
-Fig1. Example subject alignment shown on FSLeyes, three axis localizer and a EPI image are align in the same space
+**Fig1.** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis and a EPI image are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
 
 ### Compatibility
 - cross-platform compatibility (OSX, Linux, and Windows 10 with Anaconda3)
@@ -42,7 +42,7 @@ pip install bruker
 brkraw summary <session path or compressed dataset>
 ```
 ![brkraw summary](imgs/brkraw_print_summary.png)
-Fig2. Example of printed out dataset information
+**Fig2.** Example of printed out dataset information
 
 - Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
 ```angular2html
@@ -60,14 +60,14 @@ brkraw tonii <session path or compressed dataset> -s <scan id> -r <reco id>
 brkraw tonii_all <parent folder>
 ```
 ![brkraw summary](imgs/brkraw_bids.png)
-Fig3. Example of automatically generated BIDS dataset
+**Fig3.** Example of automatically generated BIDS dataset
 
 - Run GUI with input and output path
 ```angular2html
 brkraw gui -i <session path> -o <output path>
 ```
 ![brkraw GUI](imgs/brkraw_gui.png)
-Fig4. brkraw gui interface.
+**Fig4.** brkraw gui interface.
 
 - Run GUI without path
 ```angular2html
