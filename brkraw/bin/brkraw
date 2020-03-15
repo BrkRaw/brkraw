@@ -109,7 +109,7 @@ def main():
         for d in tqdm.tqdm(list_of_raw):
             if d not in cached_dataset.values():
                 print('{} need to be backed up'.format(d))
-                print('{}'.format(brkraw.load(d)._pvobj.user_name))
+                print('{}'.format(brkraw.load(opj(rpath, d))._pvobj.user_name))
 
     elif args.function == 'gui':
         ipath = args.input
