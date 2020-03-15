@@ -93,13 +93,13 @@ def main():
                     raw_path = dataset._pvobj.path
                     if dataset.is_pvdataset():
                         cached_dataset[d] = raw_path
-                    else:
-                        if raw_path in list_of_raw:
-                            raw_dataset = brkraw.load(opj(rpath, raw_path))
-                            print('Num_scan on rawdataset = {}'.format(len(raw_dataset._pvobj.avail_scan_id)))
-                            print('Num_fid on rawdataset = {}'.format(len(raw_dataset._pvobj._fid.keys())))
-                        else:
-                            print('Num_scans = {}'.format(len(dataset._pvobj.avail_scan_id)), file=sys.stderr)
+                    # else:
+                    #     if raw_path in list_of_raw:
+                    #         raw_dataset = brkraw.load(opj(rpath, raw_path))
+                    #         print('Num_scan on rawdataset = {}'.format(len(raw_dataset._pvobj.avail_scan_id)))
+                    #         print('Num_fid on rawdataset = {}'.format(len(raw_dataset._pvobj._fid.keys())))
+                    #     else:
+                    #         print('Num_scans = {}'.format(len(dataset._pvobj.avail_scan_id)), file=sys.stderr)
 
         # save cache
         with open(backup_cache, 'wb') as f:
@@ -108,8 +108,8 @@ def main():
         print('Checking backup state of raw datasets...')
         for d in tqdm.tqdm(list_of_raw):
             if d not in cached_dataset.values():
-                print('{} need to be backed up'.format(d))
-                print('{}'.format(brkraw.load(opj(rpath, d))._pvobj.user_name))
+                raw_dataset = brkraw.load(opj(rpath, d))
+                print('{}'.format(raw_dataset._pvobj.user_name))
 
     elif args.function == 'gui':
         ipath = args.input
