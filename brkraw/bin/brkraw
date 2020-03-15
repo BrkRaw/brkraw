@@ -97,6 +97,7 @@ def main():
                         if raw_path in list_of_raw:
                             raw_dataset = brkraw.load(opj(rpath, raw_path))
                             print('Num_scan on rawdataset = {}'.format(print(len(raw_dataset._pvobj.avail_scan_id))))
+                            print('Num_fid on rawdataset = {}'.format(print(len(raw_dataset._pvobj._fid.keys()))))
                         else:
                             print('Num_scans = {}'.format(len(dataset._pvobj.avail_scan_id)), file=sys.stderr)
 
