@@ -59,21 +59,33 @@ def main():
                 study.summary()
 
     elif args.function == 'chk_bckstatus':
-        from os.path import join as opj, isdir, isfile
+        from os.path import join as opj, isdir, isfile, exists
         import brkraw
         import tqdm
+        import pickle
+        import sys
+        import zipfile
+
         rpath = args.raw_path
         bpath = args.backup_path
-        list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
 
-        backedup_objs = []
+        # check backup cache
+        backup_cache = opj(bpath, '.brkraw_cache')
+        if exists(backup_cache):
+            with open(backup_cache, 'r'):
+                cached_dataset = pickle.load()
+        else:
+            cached_dataset = []
+
+        list_of_candidates = [d for d in os.listdir(bpath) if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d)))]
+        backup_objs = []
         for d in tqdm.tqdm(os.listdir(bpath)):
-            if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d))):
-                try:
-                    backedup_objs.append(brkraw.load(opj(bpath, d)))
-                except Exception as e:
-                    print('{} is abnormal dataset'.format(opj(bpath, d)))
-                    print(e)
+            if d not in cached_dataset:
+                dataset_path = opj(bpath, d)
+                if zipfile.is_zipfile(dataset_path):
+                    print('{} is abnormal dataset'.format(dataset_path))
+
+        list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
 
         # backedup_objs = sorted([brkraw.load(d) for d in os.listdir(bpath) \
         #                       if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDataset' in d)))])
