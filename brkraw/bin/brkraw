@@ -93,6 +93,8 @@ def main():
                     if dataset.is_pvdataset():
                         raw_path = dataset._pvobj.path
                         cached_dataset[d] = raw_path
+                    else:
+                        print('{} need to be checked'.format(dataset_path), file=sys.stderr)
 
         # save cache
         with open(backup_cache, 'wb') as f:
@@ -101,7 +103,7 @@ def main():
         print('Checking backup state of raw datasets...')
         for d in tqdm.tqdm(list_of_raw):
             if d not in cached_dataset.values():
-                print(d)
+                print('{} need to be backed up'.format(d))
 
     elif args.function == 'gui':
         ipath = args.input
