@@ -67,9 +67,9 @@ def main():
 
         backedup_objs = []
         for d in os.listdir(bpath):
-            if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDataset' in d))):
+            if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d))):
                 try:
-                    backedup_objs.append(brkraw.load(d))
+                    backedup_objs.append(brkraw.load(opj(bpath, d)))
                 except Exception as e:
                     print('{} is abnormal dataset'.format(opj(bpath, d)))
                     print(e)
