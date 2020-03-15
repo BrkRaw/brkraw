@@ -3,8 +3,6 @@
 
 ### Description
 
-![brkraw GUI](imgs/brkraw_gui.png)
-
 While the Bruker MRI scanner has been widely used for preclinical MR imaging research, 
 the direct accessibility of Bruker's raw dataset is poor compared to the clinical MRI scanner due to the limited resource to handle the format.
 So far, several Bruker raw data converter had been introduced, still, a few issues remain.
@@ -57,11 +55,14 @@ brkraw tonii <session path or compressed dataset> -s <scan id> -r <reco id>
 ```angular2html
 brkraw tonii_all <parent folder>
 ```
+![brkraw summary](imgs/brkraw_bids.png)
 
 - Run GUI with input and output path
 ```angular2html
 brkraw gui -i <session path> -o <output path>
 ```
+![brkraw GUI](imgs/brkraw_gui.png)
+
 - Run GUI without path
 ```angular2html
 brkraw gui
