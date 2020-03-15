@@ -2,6 +2,9 @@
 ## Version: 0.2.2
 
 ### Description
+
+![BrkRaw GUI]('./imgs/brkraw_gui.png')
+
 While the Bruker MRI scanner has been widely used for preclinical MR imaging research, 
 the direct accessibility of Bruker's raw dataset is poor compared to the clinical MRI scanner due to the limited resource to handle the format.
 So far, several Bruker raw data converter had been introduced, still, a few issues remain.
