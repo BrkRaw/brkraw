@@ -72,35 +72,33 @@ def main():
         # check backup cache
         backup_cache = opj(bpath, '.brkraw_cache')
         if exists(backup_cache):
-            with open(backup_cache, 'r'):
-                cached_dataset = pickle.load()
+            with open(backup_cache, 'r') as f:
+                cached_dataset = pickle.load(f)
         else:
-            cached_dataset = []
+            cached_dataset = dict()
 
+        list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
         list_of_candidates = [d for d in os.listdir(bpath) if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d)))]
-        backup_objs = []
+        list_of_candidates = [d for d in list_of_candidates if d not in cached_dataset.keys()]
+
+        backup_required = []
         for d in tqdm.tqdm(list_of_candidates):
             if d not in cached_dataset:
                 dataset_path = opj(bpath, d)
                 if not zipfile.is_zipfile(dataset_path):
-                    print('{} is abnormal dataset'.format(dataset_path))
+                    print('{} is abnormal dataset'.format(dataset_path), file=sys.stderr)
+                else:
+                    dataset = brkraw.load(dataset_path)
+                    if dataset.is_pvdataset():
+                        raw_path = dataset._pvobj.path
+                        if raw_path in list_of_raw:
+                            cached_dataset[d] = raw_path
+                        else:
+                            backup_required.append(raw_path)
+        print('List of dataset need to be backed up: \n{}'.format('\n'.join(backup_required)))
 
-        list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
-
-        # backedup_objs = sorted([brkraw.load(d) for d in os.listdir(bpath) \
-        #                       if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDataset' in d)))])
-        # list_of_bck = [rawobj._pvobj.path for rawobj in backedup_objs]
-        #
-        # for dset in list_of_raw:
-        #     raw_path = opj(rpath, dset)
-        #     if isdir(raw_path):
-        #         dset_obj = brkraw.load(raw_path)
-        #         try:
-        #             if dset_obj._subject != None:
-        #                 if dset not in list_of_bck:
-        #                     print(dset_obj._pvobj.path)
-        #         except:
-        #             print('{} is abnormal dataset'.format(raw_path))
+        with open(backup_cache, 'w') as f:
+            pickle.dump(cached_dataset, f)
 
     elif args.function == 'gui':
         ipath = args.input
