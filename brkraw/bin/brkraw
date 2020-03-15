@@ -70,8 +70,9 @@ def main():
             if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDataset' in d))):
                 try:
                     backedup_objs.append(brkraw.load(d))
-                except:
+                except Exception as e:
                     print('{} is abnormal dataset'.format(opj(bpath, d)))
+                    print(e)
 
         # backedup_objs = sorted([brkraw.load(d) for d in os.listdir(bpath) \
         #                       if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDataset' in d)))])
