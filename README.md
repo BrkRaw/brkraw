@@ -11,7 +11,7 @@ So far, several Bruker raw data converter had been introduced, still, a few issu
 
 To overcome these issues, **BrkRaw** module is designed to provide comprehensive access to the Bruker's PVdataset via below features
 - preserving the subject position and orientation to converted the NifTi1 file.
-- correction of animal orientation based on their species ()
+- correction of animal orientation based on their species.
 - providing the GUI tool for preview the dataset and NifTi1 format conversion.
 - the command-line tool for converting to NifTi1 format, previewing metadata of the dataset, checking backup status.
 - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.

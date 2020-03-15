@@ -60,12 +60,21 @@ def main():
 
     elif args.function == 'chk_bckstatus':
         from os.path import join as opj, isdir, isfile
+        import brkraw
         rpath = args.raw_path
         bpath = args.backup_path
         list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
-        list_of_bck = sorted([d for d in os.listdir(bpath) \
+        backedup_objs = sorted([brkraw.load(d) for d in os.listdir(bpath) \
                               if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDataset' in d)))])
+        list_of_bck = [rawobj._pvobj.path for rawobj in backedup_objs]
 
+        for dset in list_of_raw:
+            raw_path = opj(rpath, dset)
+            if isdir(raw_path):
+                dset_obj = brkraw.load(raw_path)
+                if dset_obj._subject != None:
+                    if dset not in list_of_bck:
+                        print(dset_obj._pvobj.path)
 
     elif args.function == 'gui':
         ipath = args.input
