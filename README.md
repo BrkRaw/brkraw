@@ -38,7 +38,7 @@ pip install bruker
 brkraw summary <session path or compressed dataset>
 ```
 
-- Convert a whole session
+- Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
 ```angular2html
 brkraw tonii <session path or compressed dataset>
 ```
@@ -72,11 +72,25 @@ brkraw gui
 C:\> brkraw-win gui
 ```
 
+#### Python API
+- import module
+```angular2html
+import brkraw
+```
+
+- load dataset
+```angular2html
+rawdata = brkraw.load(<PATH>)
+```
+
+- For more detail, Please check Jupyter Notebooks in the example directory.
+
 ### Contributing
 - Please contact shlee@unc.edu if you interest to contribute for following items.
 1. improve compatibility with other python versions.
 2. integration of reconstruction tool with Python API (such as BART tool).
 3. develop online analysis tools for fMRI study.
+4. Documentation
 - Also if you experience any bug or have any suggestion to improve this tool, please let us know.
 
 ### Credits:
