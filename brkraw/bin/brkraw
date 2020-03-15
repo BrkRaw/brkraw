@@ -61,12 +61,13 @@ def main():
     elif args.function == 'chk_bckstatus':
         from os.path import join as opj, isdir, isfile
         import brkraw
+        import tqdm
         rpath = args.raw_path
         bpath = args.backup_path
         list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
 
         backedup_objs = []
-        for d in os.listdir(bpath):
+        for d in tqdm.tqdm(os.listdir(bpath)):
             if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d))):
                 try:
                     backedup_objs.append(brkraw.load(opj(bpath, d)))

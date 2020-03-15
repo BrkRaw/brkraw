@@ -17,9 +17,9 @@ def load(path):
         if zipfile.is_zipfile(path):
             return PvDatasetZip(path)
         else:
-            raise Exception(err_message)
+            raise Exception(err_message.format(path))
     else:
-        raise Exception(err_message)
+        raise Exception(err_message.format(path))
 
 
 class BrukerLoader():
