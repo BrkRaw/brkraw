@@ -72,9 +72,12 @@ def main():
             raw_path = opj(rpath, dset)
             if isdir(raw_path):
                 dset_obj = brkraw.load(raw_path)
-                if dset_obj._subject != None:
-                    if dset not in list_of_bck:
-                        print(dset_obj._pvobj.path)
+                try:
+                    if dset_obj._subject != None:
+                        if dset not in list_of_bck:
+                            print(dset_obj._pvobj.path)
+                except:
+                    print('{} is abnormal dataset'.format(raw_path))
 
     elif args.function == 'gui':
         ipath = args.input
