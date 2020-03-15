@@ -90,11 +90,13 @@ def main():
                     print('{} is abnormal dataset'.format(dataset_path), file=sys.stderr)
                 else:
                     dataset = brkraw.load(dataset_path)
+                    raw_path = dataset._pvobj.path
                     if dataset.is_pvdataset():
-                        raw_path = dataset._pvobj.path
                         cached_dataset[d] = raw_path
                     else:
-                        print('Num_scans = {}'.format(len(dataset._pvobj.avail_scan_id)), file=sys.stderr)
+                        if raw_path in list_of_raw:
+                            print('{} still exists!!'.format(raw_path))
+                    print('Num_scans = {}'.format(len(dataset._pvobj.avail_scan_id)), file=sys.stderr)
 
         # save cache
         with open(backup_cache, 'wb') as f:
