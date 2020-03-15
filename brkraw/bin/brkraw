@@ -108,8 +108,11 @@ def main():
         print('Checking backup state of raw datasets...')
         for d in tqdm.tqdm(list_of_raw):
             if d not in cached_dataset.values():
-                raw_dataset = brkraw.load(opj(rpath, d))
-                print('{}'.format(raw_dataset._pvobj.user_name))
+                try:
+                    raw_dataset = brkraw.load(opj(rpath, d))
+                    print('{}'.format(raw_dataset._pvobj.user_name))
+                except:
+                    print(d)
 
     elif args.function == 'gui':
         ipath = args.input
