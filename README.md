@@ -3,8 +3,6 @@
 
 ### Description
 
-![example_alignment](imgs/brkraw_alignment.png)
-
 While the Bruker MRI scanner has been widely used for preclinical MR imaging research, 
 the direct accessibility of Bruker's raw dataset is poor compared to the clinical MRI scanner due to the limited resource to handle the format.
 So far, several Bruker raw data converter had been introduced, still, a few issues remain.
@@ -21,6 +19,9 @@ To overcome these issues, **BrkRaw** module is designed to provide comprehensive
 - Object-oriented robust dataset parser.
 - compressed data readability (compatible with .zip and .PVdatasets format).
 - providing robust and easy-to-use python API for developers, including JCAMP-DX parser
+
+![example_alignment](imgs/brkraw_alignment.png)
+Fig1. Example subject alignment shown on FSLeyes, three axis localizer and a EPI image are align in the same space
 
 ### Compatibility
 - cross-platform compatibility (OSX, Linux, and Windows 10 with Anaconda3)
@@ -41,6 +42,7 @@ pip install bruker
 brkraw summary <session path or compressed dataset>
 ```
 ![brkraw summary](imgs/brkraw_print_summary.png)
+Fig2. Example of printed out dataset information
 
 - Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
 ```angular2html
@@ -58,12 +60,14 @@ brkraw tonii <session path or compressed dataset> -s <scan id> -r <reco id>
 brkraw tonii_all <parent folder>
 ```
 ![brkraw summary](imgs/brkraw_bids.png)
+Fig3. Example of automatically generated BIDS dataset
 
 - Run GUI with input and output path
 ```angular2html
 brkraw gui -i <session path> -o <output path>
 ```
 ![brkraw GUI](imgs/brkraw_gui.png)
+Fig4. brkraw gui interface.
 
 - Run GUI without path
 ```angular2html
