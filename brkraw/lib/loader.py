@@ -171,7 +171,8 @@ class BrukerLoader():
         for k, v in METADATA_FILED_INFO.items():
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-                val = encdir_dic[val]
+                if val != None:
+                    val = encdir_dic[val]
 
             if isinstance(val, np.ndarray):
                 val = val.tolist()
@@ -582,7 +583,8 @@ class BrukerLoader():
             tap = ''.join(['\t'] * n_tap)
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-                val = encdir_dic[val]
+                if val != None:
+                    val = encdir_dic[val]
 
             if isinstance(val, np.ndarray):
                 val = val.tolist()

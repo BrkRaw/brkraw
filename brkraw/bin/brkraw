@@ -21,9 +21,9 @@ def main():
     summary = subparsers.add_parser("summary", help='Print out data summary')
     summary.add_argument("path", help="Folder location for the Bruker raw data", type=str)
 
-    chkbackup = subparsers.add_parser("chkbackup", help='Check if rawdata had been backed up')
-    chkbackup.add_argument("raw_path", help="Folder location for the Bruker raw data", type=str)
-    chkbackup.add_argument("backup_path", help="Folder location for the backed-up data", type=str)
+    chkbckstatus = subparsers.add_parser("chk_bckstatus", help='Check the backup status')
+    chkbckstatus.add_argument("raw_path", help="Folder location of the Bruker raw datasets", type=str)
+    chkbckstatus.add_argument("backup_path", help="Folder location of the backed-up datasets", type=str)
 
     gui = subparsers.add_parser("gui", help='Start GUI')
     gui.add_argument("-i", "--input", help="Folder location for the Bruker raw data", type=str, default=None)
@@ -57,6 +57,15 @@ def main():
             for p in list_path:
                 study = BrukerLoader(p)
                 study.summary()
+
+    elif args.function == 'chk_bckstatus':
+        from os.path import join as opj, isdir, isfile
+        rpath = args.raw_path
+        bpath = args.backup_path
+        list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
+        list_of_bck = sorted([d for d in os.listdir(bpath) \
+                              if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDataset' in d)))])
+
 
     elif args.function == 'gui':
         ipath = args.input

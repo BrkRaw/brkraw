@@ -1,69 +1,87 @@
-# Bruker PVdataset Loader and Converter
-## Version: 0.2.0
+# BrkRaw: Comprehensive tool to handle Bruker PV dataset
+## Version: 0.2.2
 
-The tools to convert Bruker raw to Nifti format.
-This converter is optimized for PV 6.0.1, but also works with PV 5.1 (lower version was not fully tested)
+### Description
+While the Bruker MRI scanner has been widely used for preclinical MR imaging research, 
+the direct accessibility of Bruker's raw dataset is poor compared to the clinical MRI scanner due to the limited resource to handle the format.
+So far, several Bruker raw data converter had been introduced, still, a few issues remain.
+1. The converted data does not preserve the original subject orientation, as well as the subject type-specific position.
+2. Lack of a robust tool to handle and preview of raw dataset.
 
-### Features
-- The object will parse almost all parameters as python friendly datatype (developed lower level parser tool for JCAMP DX format, which help to use it to apply custom reconstruction tool such as BART)
-- The orientation issues are corrected. This means the image in the same session will be aligned at the same space on scanner coordination system. (Please report and provide the dataset if you have any issue regarding the orientation.)
-- Orientation correction for species (R-L, A-P, I-S is labelled based on the species brain position and orientation).
-- For the position correction, currently only Head_Prone and Head_Supine are available.
-- Data slope and offset are applied on nifti header - dataobj will be 16bit integer for most case that help saving the storage
-- Zip file conversion (including .PVdatasets from transferred or achieved from PV 6.0.1)
-- Summary print out
-- Automatic BIDS structure conversion (pynipt project)
-- Working at Windows system (with anaconda 3.7 distribution)
-- Slice timing will be integrated for EPI image (for fMRI study)
-- bvec, bval, bmat generation for DTI image
-- JSON file generation according to BIDS recommended MR parameters
-- GUI support
+To overcome these issues, **BrkRaw** module is designed to provide comprehensive access to the Bruker's PVdataset via below features
+- preserving the subject position and orientation to converted the NifTi1 file.
+- correction of animal orientation based on their species ()
+- providing the GUI tool for preview the dataset and NifTi1 format conversion.
+- the command-line tool for converting to NifTi1 format, previewing metadata of the dataset, checking backup status.
+- providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
+- BIDS(v1.2.2) support: parameter file generation, automatic generation of the folder structure.
+- Object-oriented robust dataset parser.
+- compressed data readability (compatible with .zip and .PVdatasets format).
+- providing robust and easy-to-use python API for developers, including JCAMP-DX parser
 
-### Requirements
-- Linux, Mac OSX, Windows 10 with Anaconda python 3.7 (pip install only)
-- tested at Python 3.7.6 only, compatible issue with python 2.7 (due to the re module, no plan for backward compatibility)
+### Compatibility
+- cross-platform compatibility (OSX, Linux, and Windows 10 with Anaconda3)
+- Best work on Python 3.7.6, does not have backward compatibility with Python 2.
 
 ### Installation
+- Suggesting using the pyenv and Python 3.7.6 on Linux and mac,
+- Suggesting using local installed Anaconda3 (at UserHome) with Python 3.7.6 (ver. 2020.02)
+
 ```angular2html
 pip install bruker
 ```
 
-### Contribute
-- please contact me (shlee@unc.edu)
-
-### Command line tool
-- Help function
+### Usage
+#### Linux/Unix
+- Printing out dataset information
 ```angular2html
-brkraw -h
-```
-
-- Print out summary of the scan
-```angular2html
-brkraw summary <session path>
+brkraw summary <session path or compressed dataset>
 ```
 
 - Convert a whole session
 ```angular2html
-brkraw tonii <session path>
+brkraw tonii <session path or compressed dataset>
 ```
 
-- Convert only one scan in the session
+- Convert a scan, (default reco_id is 1)
 ```angular2html
-brkraw tonii <session path> -s <scan id> -r <reco id>
+brkraw tonii <session path or compressed dataset> -s <scan id> -r <reco id>
 ```
 
-- If reco_id is not provided, then default is 1
-
-- To convert all raw data under the folder. This command will scan all folder under the parent folder and the derived file will be structured as BIDS
+- Build BIDS dataset with multiple Bruker raw datasets. 
+- All dataset under parent folder will be converted into ./Data folder with BIDS
 ```angular2html
 brkraw tonii_all <parent folder>
 ```
 
-- Run GUI
+- Run GUI with input and output path
 ```angular2html
 brkraw gui -i <session path> -o <output path>
 ```
-or just simply
+- Run GUI without path
 ```angular2html
 brkraw gui
 ```
+
+#### Windows 10
+- Same as above, but use brkraw-win.bat instead of brkraw command.
+- If this command is not working, please check the version of your Anaconda and Python.
+- Your anaconda package must be installed at C:\Users\<UserHome>\Anaconda3, if not, please update the 'brkraw-win.bat' to target correct path for python and brkraw script.
+
+```angular2html
+C:\> brkraw-win gui
+```
+
+### Contributing
+- Please contact shlee@unc.edu if you interest to contribute for following items.
+1. improve compatibility with other python versions.
+2. integration of reconstruction tool with Python API (such as BART tool).
+3. develop online analysis tools for fMRI study.
+- Also if you experience any bug or have any suggestion to improve this tool, please let us know.
+
+### Credits:
+- SungHo Lee (shlee@unc.edu)
+- Woomi Ban (banwoomi@unc.edu) 
+
+### License:
+GNU General Public License v3.0

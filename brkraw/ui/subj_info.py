@@ -1,6 +1,7 @@
 import tkinter as tk
 from .config import font, button_size
 
+
 class LabelItem(tk.Frame):
     def __init__(self, *args, **kwargs):
         super(LabelItem, self).__init__(*args, **kwargs)
@@ -47,8 +48,6 @@ class SubjInfo(tk.Frame):
         self._path = tk.Text(self._upper_frame, height=1, font=font)
         self._path.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, anchor=tk.CENTER)
         self._path.config(state=tk.DISABLED)
-
-
 
         self._main_frame = tk.Frame(self)
         self._main_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, anchor=tk.CENTER)

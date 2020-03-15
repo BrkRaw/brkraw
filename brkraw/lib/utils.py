@@ -5,8 +5,10 @@ from collections import OrderedDict
 from functools import partial, reduce
 from copy import copy as cp
 
+
 def apply_affine(matrix, affine):
     return affine.dot(matrix)
+
 
 def apply_rotate(matrix, rad_x=0, rad_y=0, rad_z=0):
     ''' axis = x or y or z '''
@@ -104,11 +106,13 @@ def calc_eulerangle(matrix):
                      math.degrees(y),
                      math.degrees(z)])
 
+
 def from_matvec(mat, vec):
     affine = np.eye(4)
     affine[:3,:3] = mat
     affine[:3, 3] = vec
     return affine
+
 
 def to_matvec(matrix):
     return matrix[:3, :3], matrix[:3, 3]
@@ -403,8 +407,11 @@ def meta_check_express(value, acqp, method, visu_pars):
             exec('global {}'.format(k))
             val = meta_get_value(v, acqp, method, visu_pars)
             exec('{} = {}'.format(k, val))
-    exec("output = {}".format(value['Equation']), globals(), lcm)
-    return lcm['output']
+    try:
+        exec("output = {}".format(value['Equation']), globals(), lcm)
+        return lcm['output']
+    except:
+        return None
 
 
 def meta_check_source(key_string, acqp, method, visu_pars):
