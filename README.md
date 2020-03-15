@@ -3,7 +3,7 @@
 
 ### Description
 
-![BrkRaw GUI](imgs/brkraw_gui.png)
+![brkraw GUI](imgs/brkraw_gui.png)
 
 While the Bruker MRI scanner has been widely used for preclinical MR imaging research, 
 the direct accessibility of Bruker's raw dataset is poor compared to the clinical MRI scanner due to the limited resource to handle the format.
@@ -40,6 +40,7 @@ pip install bruker
 ```angular2html
 brkraw summary <session path or compressed dataset>
 ```
+![brkraw summary](imgs/brkraw_print_summary.png)
 
 - Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
 ```angular2html
