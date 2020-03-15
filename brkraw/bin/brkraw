@@ -82,7 +82,7 @@ def main():
         for d in tqdm.tqdm(os.listdir(bpath)):
             if d not in cached_dataset:
                 dataset_path = opj(bpath, d)
-                if zipfile.is_zipfile(dataset_path):
+                if not zipfile.is_zipfile(dataset_path):
                     print('{} is abnormal dataset'.format(dataset_path))
 
         list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
