@@ -68,6 +68,7 @@ def main():
 
         rpath = args.raw_path
         bpath = args.backup_path
+        bar_fmt = '{l_bar}{bar:10}{r_bar}{bar:-10b}'
 
         if args.logging:
             import datetime
@@ -97,7 +98,8 @@ def main():
 
         if len(cached_dataset['failed_backup']):
             print('Checking failed backup datasets...')
-            for bck_path in cached_dataset['failed_backup']:
+            for bck_path in tqdm.tqdm(cached_dataset['failed_backup'],
+                                      bar_format=bar_fmt):
                 if not exists(opj(bpath, bck_path)):
                     print(" -'{}' has been removed.".format(bck_path))
                     cached_dataset['failed_backup'].remove(bck_path)
@@ -105,7 +107,8 @@ def main():
 
         if len(cached_dataset['failed_raw']):
             print('Checking failed raw datasets...')
-            for raw_path in cached_dataset['failed_raw']:
+            for raw_path in tqdm.tqdm(cached_dataset['failed_raw'],
+                                      bar_format=bar_fmt):
                 if not exists(opj(rpath, raw_path)):
                     print(" -'{}' has been removed.".format(raw_path))
                     cached_dataset['failed_raw'].remove(raw_path)
@@ -117,7 +120,8 @@ def main():
 
         if len(cached_dataset['incompleted'].items()):
             print('Checking incompleted backup datasets...')
-            for bck_path, raw_path in cached_dataset['incompleted'].items():
+            for bck_path, raw_path in tqdm.tqdm(cached_dataset['incompleted'].items(),
+                                                bar_format=bar_fmt):
                 if not exists(opj(bpath, bck_path)):
                     print(" -'{}' has been removed.".format(bck_path))
                     del cached_dataset['incompleted'][bck_path]
@@ -131,7 +135,8 @@ def main():
 
         if len(cached_dataset['garbages'].items()):
             print('Checking garbages datasets...')
-            for bck_path, raw_path  in cached_dataset['garbages'].items():
+            for bck_path, raw_path  in tqdm.tqdm(cached_dataset['garbages'].items(),
+                                                 bar_format=bar_fmt):
                 if not exists(opj(bpath, bck_path)):
                     print(" -'{}' has been removed.".format(bck_path))
                     if not exists(opj(rpath, raw_path)):
@@ -143,7 +148,7 @@ def main():
 
         print('\nUpdating condition of backup datasets...')
         for bck_path in tqdm.tqdm(list_of_candidates,
-                                  bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'):
+                                  bar_format=bar_fmt):
             if not zipfile.is_zipfile(opj(bpath, bck_path)):
                 if bck_path not in cached_dataset['failed_backup']:
                     cached_dataset['failed_backup'].append(bck_path)
@@ -164,9 +169,9 @@ def main():
                             cached_dataset['garbages'][bck_path] = raw_path
         print('...Done')
 
-        print('\nChecking backup state of raw datasets...')
+        print('Checking backup state of raw datasets...')
         for raw_path in tqdm.tqdm(list_of_raw,
-                                  bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'):
+                                  bar_format=bar_fmt):
             if raw_path not in cached_dataset['completed'].values():
                 try:
                     raw_data = brkraw.load(opj(rpath, raw_path))
@@ -175,7 +180,7 @@ def main():
                     if raw_path not in cached_dataset['failed_raw']:
                         cached_dataset['failed_raw'].append(raw_path)
         print('...Done')
-        print('\n**** Summary ****', file=fobj)
+        print('**** Summary ****', file=fobj)
         if len(cached_dataset['backup_required'].keys()):
             print('>> The list of raw datasets need backup...', file=fobj)
             for raw_path, user_name in cached_dataset['backup_required'].items():
@@ -200,7 +205,6 @@ def main():
         # save cache
         with open(backup_cache, 'wb') as f:
             pickle.dump(cached_dataset, f)
-            print('\nSaving caches...\n')
 
     elif args.function == 'gui':
         ipath = args.input
