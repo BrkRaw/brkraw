@@ -101,6 +101,10 @@ def main():
                 if not exists(opj(rpath, raw_path)):
                     print(" -'{}' has been removed.".format(raw_path))
                     cached_dataset['failed_raw'].remove(raw_path)
+                else:
+                    if raw_path in cached_dataset['completed'].values():
+                        print(" -'{}' has been backed-up.".format(raw_path))
+                        cached_dataset['failed_raw'].remove(raw_path)
             print('...Done\n')
 
         if len(cached_dataset['incompleted'].items()):
@@ -155,7 +159,7 @@ def main():
             if raw_path not in cached_dataset['completed'].values():
                 try:
                     raw_data = brkraw.load(opj(rpath, raw_path))
-                    cached_dataset['backup_required'][raw_path] = raw_data.user_name
+                    cached_dataset['backup_required'][raw_path] = raw_data._pvobj.user_name
                 except:
                     cached_dataset['failed_raw'].append(raw_path)
         print('...Done\n')
