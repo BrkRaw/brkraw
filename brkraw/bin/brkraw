@@ -136,7 +136,8 @@ def main():
         print('Updating condition of backup datasets...', file=sys.stdout)
         for bck_path in tqdm.tqdm(list_of_candidates):
             if not zipfile.is_zipfile(opj(bpath, bck_path)):
-                cached_dataset['failed_backup'].append(bck_path)
+                if bck_path not in cached_dataset['failed_backup']:
+                    cached_dataset['failed_backup'].append(bck_path)
             else:
                 bck_data = brkraw.load(opj(bpath, bck_path))
                 raw_path = bck_data._pvobj.path
