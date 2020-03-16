@@ -19,7 +19,6 @@ To overcome these issues, **BrkRaw** module is designed to provide comprehensive
 - Object-oriented robust dataset parser.
 - compressed data readability (compatible with .zip and .PVdatasets format).
 - providing robust and easy-to-use python API for developers, including JCAMP-DX parser.
-- 
 
 ![example_alignment](imgs/brkraw_alignment.png)
 **Fig1.** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis and a EPI image are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
