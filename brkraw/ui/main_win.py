@@ -167,7 +167,7 @@ class MainWindow(tk.Tk):
                                                title="Select Output Sirectory")
 
     def _save_as(self):
-        date = self._raw.get_scan_time()['date'].strftime('%m%d%y')
+        date = self._raw.get_scan_time()['date'].strftime("%y%m%d")
         pvobj = self._raw._pvobj
         filename = '{}_{}_{}_{}_{}_{}'.format(date,
                                               pvobj.subj_id,
