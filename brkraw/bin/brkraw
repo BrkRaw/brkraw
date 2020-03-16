@@ -75,44 +75,116 @@ def main():
             with open(backup_cache, 'rb') as f:
                 cached_dataset = pickle.load(f)
         else:
-            cached_dataset = dict()
+            cached_dataset = dict(failed_backup=[],  # data backup failed (raw data is not exist)
+                                  failed_raw=[],     # failed data acquisition
+                                  completed=dict(),  # data backup completed
+                                  incompleted=dict(),  # data backup incompleted (need to re-run)
+                                  backup_required=dict(),  # data backup is needed (backup data is not exist)
+                                  garbages=dict())              # garbage data (no scan info)
 
         # parse list of datasets
         list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
         list_of_candidates = [d for d in os.listdir(bpath) if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d)))]
-        list_of_candidates = [d for d in list_of_candidates if d not in cached_dataset.keys()]
+        list_of_candidates = [d for d in list_of_candidates if d not in cached_dataset['completed'].keys()]
 
-        print('Updating list of datasets in backup folder...', file=sys.stdout)
-        for d in tqdm.tqdm(list_of_candidates):
-            if d not in cached_dataset:
-                dataset_path = opj(bpath, d)
-                if not zipfile.is_zipfile(dataset_path):
-                    print('{} is abnormal dataset'.format(dataset_path), file=sys.stderr)
+        if len(cached_dataset['failed_backup']):
+            print('Checking failed backup datasets...', file=sys.stdout)
+            for bck_path in cached_dataset['failed_backup']:
+                if not exists(opj(bpath, bck_path)):
+                    print(" -'{}' has been removed.".format(bck_path))
+                    cached_dataset['failed_backup'].remove(bck_path)
+            print('...Done\n')
+
+        if len(cached_dataset['failed_raw']):
+            print('Checking failed raw datasets...', file=sys.stdout)
+            for raw_path in cached_dataset['failed_raw']:
+                if not exists(opj(rpath, raw_path)):
+                    print(" -'{}' has been removed.".format(raw_path))
+                    cached_dataset['failed_raw'].remove(raw_path)
+            print('...Done\n')
+
+        if len(cached_dataset['incompleted'].items()):
+            print('Checking incompleted backup datasets...', file=sys.stdout)
+            for bck_path, raw_path in cached_dataset['incompleted'].items():
+                if not exists(opj(bpath, bck_path)):
+                    print(" -'{}' has been removed.".format(bck_path))
+                    del cached_dataset['incompleted'][bck_path]
                 else:
-                    dataset = brkraw.load(dataset_path)
-                    raw_path = dataset._pvobj.path
-                    if dataset.is_pvdataset():
-                        cached_dataset[d] = raw_path
-                    # else:
-                    #     if raw_path in list_of_raw:
-                    #         raw_dataset = brkraw.load(opj(rpath, raw_path))
-                    #         print('Num_scan on rawdataset = {}'.format(len(raw_dataset._pvobj.avail_scan_id)))
-                    #         print('Num_fid on rawdataset = {}'.format(len(raw_dataset._pvobj._fid.keys())))
-                    #     else:
-                    #         print('Num_scans = {}'.format(len(dataset._pvobj.avail_scan_id)), file=sys.stderr)
+                    bck_data = brkraw.load(opj(bpath, bck_path))
+                    raw_data = brkraw.load(opj(rpath, raw_path))
+                    if bck_data.num_recos == raw_data.num_recos:
+                        del cached_dataset['incompleted'][bck_path]
+                        cached_dataset['completed'][bck_path] = raw_path
+            print('...Done\n')
+
+        if len(cached_dataset['garbages'].items()):
+            print('Checking garbages datasets...', file=sys.stdout)
+            for bck_path, raw_path  in cached_dataset['garbages'].items():
+                if not exists(opj(bpath, bck_path)):
+                    print(" -'{}' has been removed.".format(bck_path))
+                    if not exists(opj(rpath, raw_path)):
+                        print(" -'{}' has been removed.".format(raw_path))
+                        del cached_dataset['garbages'][bck_path]
+                    else:
+                        print(" -'{}' was not removed.".format(raw_path))
+            print('...Done\n')
+
+        print('Updating condition of backup datasets...', file=sys.stdout)
+        for bck_path in tqdm.tqdm(list_of_candidates):
+            if not zipfile.is_zipfile(opj(bpath, bck_path)):
+                cached_dataset['failed_backup'].append(bck_path)
+            else:
+                bck_data = brkraw.load(opj(bpath, bck_path))
+                raw_path = bck_data._pvobj.path
+                if bck_data.is_pvdataset():
+                    if exists(opj(rpath, raw_path)):
+                        # if the rawdata still exists, check backed data is same as original
+                        raw_data = brkraw.load(opj(rpath, raw_path))
+                        if raw_data.num_recos == bck_data.num_recos:
+                            cached_dataset['completed'][bck_path] = raw_path
+                        else:
+                            cached_dataset['incompleted'][bck_path] = raw_path
+                    else:
+                        cached_dataset['completed'][bck_path] = raw_path
+                        if bck_data.num_recos < 1:
+                            cached_dataset['garbages'][bck_path] = raw_path
+        print('...Done\n')
+
+        print('Checking backup state of raw datasets...')
+        for raw_path in tqdm.tqdm(list_of_raw):
+            if raw_path not in cached_dataset['completed'].values():
+                try:
+                    raw_data = brkraw.load(opj(rpath, raw_path))
+                    cached_dataset['backup_required'][raw_path] = raw_data.user_name
+                except:
+                    cached_dataset['failed_raw'].append(raw_path)
+        print('...Done\n')
+
+        if len(cached_dataset['backup_required'].keys()):
+            print('>> The list of raw datasets need backup...')
+            for raw_path, user_name in cached_dataset['backup_required'].items():
+                print(' -{} ::Operator::{}'.format(user_name, raw_path))
+        if len(cached_dataset['incompleted'].keys()):
+            print('>> The list of raw datasets need re-backup...')
+            for bck_path, raw_path in cached_dataset['incompleted'].items():
+                print(' -raw dataset:{}, backup dataset:{}'.format(raw_path, bck_path))
+        if len(cached_dataset['garbages'].keys()):
+            print('>> The raw datasets can be removed...')
+            for bck_path, raw_path in cached_dataset['garbages'].items():
+                print(' -raw dataset:{}, backup dataset:{}'.format(raw_path, bck_path))
+        if len(cached_dataset['failed_raw']):
+            print('>> The list of failed raw datasets...')
+            for raw_path in cached_dataset['failed_raw']:
+                print(' -{}'.format(raw_path))
+        if len(cached_dataset['failed_backup']):
+            print('>> The list of failed backup datasets...')
+            for raw_path in cached_dataset['failed_backup']:
+                print(' -{}'.format(raw_path))
 
         # save cache
         with open(backup_cache, 'wb') as f:
             pickle.dump(cached_dataset, f)
-
-        print('Checking backup state of raw datasets...')
-        for d in tqdm.tqdm(list_of_raw):
-            if d not in cached_dataset.values():
-                try:
-                    raw_dataset = brkraw.load(opj(rpath, d))
-                    print('{}'.format(raw_dataset._pvobj.user_name))
-                except:
-                    print(d)
+            print('saving caches...\n')
 
     elif args.function == 'gui':
         ipath = args.input

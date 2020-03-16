@@ -26,10 +26,18 @@ class BrukerLoader():
     def __init__(self, path):
         self._pvobj = load(path)
 
-        if len(self._pvobj.avail_scan_id) and (self._subject != None):
+        if (self.num_scans > 0) and (self._subject != None):
             self._is_pvdataset = True
         else:
             self._is_pvdataset = False
+
+    @property
+    def num_scans(self):
+        return len(self._pvobj._fid.keys())
+
+    @property
+    def num_recos(self):
+        return sum([len(r) for r in self._avail.values()])
 
     def is_pvdataset(self):
         return self._is_pvdataset
