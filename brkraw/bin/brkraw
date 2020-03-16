@@ -161,13 +161,14 @@ def main():
                     raw_data = brkraw.load(opj(rpath, raw_path))
                     cached_dataset['backup_required'][raw_path] = raw_data._pvobj.user_name
                 except:
-                    cached_dataset['failed_raw'].append(raw_path)
+                    if raw_path not in cached_dataset['failed_raw']:
+                        cached_dataset['failed_raw'].append(raw_path)
         print('...Done\n')
 
         if len(cached_dataset['backup_required'].keys()):
             print('>> The list of raw datasets need backup...')
             for raw_path, user_name in cached_dataset['backup_required'].items():
-                print(' -{} ::Operator::{}'.format(user_name, raw_path))
+                print(' -Operator: {}\t-Path: {}'.format(user_name, raw_path))
         if len(cached_dataset['incompleted'].keys()):
             print('>> The list of raw datasets need re-backup...')
             for bck_path, raw_path in cached_dataset['incompleted'].items():
