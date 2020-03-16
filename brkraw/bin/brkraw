@@ -68,7 +68,7 @@ def main():
 
         rpath = args.raw_path
         bpath = args.backup_path
-        bar_fmt = '{l_bar}{bar:10}{r_bar}{bar:-10b}'
+        bar_fmt = '{l_bar}{bar:20}{r_bar}{bar:-20b}'
 
         if args.logging:
             import datetime
@@ -103,7 +103,6 @@ def main():
                 if not exists(opj(bpath, bck_path)):
                     print(" -'{}' has been removed.".format(bck_path))
                     cached_dataset['failed_backup'].remove(bck_path)
-            print('...Done')
 
         if len(cached_dataset['failed_raw']):
             print('Checking failed raw datasets...')
@@ -116,7 +115,6 @@ def main():
                     if raw_path in cached_dataset['completed'].values():
                         print(" -'{}' has been backed-up.".format(raw_path))
                         cached_dataset['failed_raw'].remove(raw_path)
-            print('...Done')
 
         if len(cached_dataset['incompleted'].items()):
             print('Checking incompleted backup datasets...')
@@ -131,7 +129,6 @@ def main():
                     if bck_data.num_recos == raw_data.num_recos:
                         del cached_dataset['incompleted'][bck_path]
                         cached_dataset['completed'][bck_path] = raw_path
-            print('...Done')
 
         if len(cached_dataset['garbages'].items()):
             print('Checking garbages datasets...')
@@ -144,7 +141,6 @@ def main():
                         del cached_dataset['garbages'][bck_path]
                     else:
                         print(" -'{}' was not removed.".format(raw_path))
-            print('...Done')
 
         print('\nUpdating condition of backup datasets...')
         for bck_path in tqdm.tqdm(list_of_candidates,
@@ -167,7 +163,6 @@ def main():
                         cached_dataset['completed'][bck_path] = raw_path
                         if bck_data.num_recos < 1:
                             cached_dataset['garbages'][bck_path] = raw_path
-        print('...Done')
 
         print('Checking backup state of raw datasets...')
         for raw_path in tqdm.tqdm(list_of_raw,
@@ -179,7 +174,6 @@ def main():
                 except:
                     if raw_path not in cached_dataset['failed_raw']:
                         cached_dataset['failed_raw'].append(raw_path)
-        print('...Done')
         print('**** Summary ****', file=fobj)
         if len(cached_dataset['backup_required'].keys()):
             print('>> The list of raw datasets need backup...', file=fobj)
