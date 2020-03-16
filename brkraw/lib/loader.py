@@ -1,14 +1,13 @@
-import os, re
+import os
+import re
+import zipfile
 from .pvobj import PvDatasetDir, PvDatasetZip
 from .utils import *
 from .reference import ERROR_MESSAGES
 import numpy as np
-from copy import copy as cp
+
 
 def load(path):
-    import os
-    import zipfile
-
     err_message = ERROR_MESSAGES['ImportError']
 
     if os.path.isdir(path):
@@ -23,7 +22,67 @@ def load(path):
 
 
 class BrukerLoader():
+    """ The front-end handler for Bruker PvDataset
+
+    This class is designed to use for handle PvDataset and optimized for PV 6.0.1, but
+    also provide backward compatibility with PV 5.1. This class can import naive
+    PvDataset with directory as well as compressed dataset by zip and Paravision 6.0.1
+    (*.zip and *.PvDatasets).
+
+    Attributes:
+        num_scans (int): The number of scan objects on the loaded dataset.
+        num_recos (int): The number of reco objects on the loaded dataset.
+        is_pvdataset (bool): Return True if imported path is PvDataset, else False
+
+    Methods:
+        - get method for data object
+        get_dataobj(scan_id, reco_id)
+            return dataobj without reshape (numpy.array)
+        get_fid(scan_id)
+            return binary fid object
+        get_niftiobj(scan_id, reco_id)
+            return nibabel's NifTi1Image object
+
+        - get method for parameter objects
+        get_acqp(scan_id)
+            return acqp parameter object
+        get_method(scan_id)
+            return method parameter object
+        get_visu_pars(scan_id, reco_id)
+            return visu_pars parameter object
+
+        - get method for image parameters
+        get_matrixsize(scan_id, reco_id)
+            return matrix shape to reshape dataobj
+        get_affine(scan_id, reco_id)
+            return affine transform matrix
+        get_bdata(scan_id, reco_id)
+            return bmat, bvec, bval as string
+        get_scan_time(visu_pars=None)
+            return dictionary contains the datetime object for session initiate time
+            if visu_pars parameter object is given, it will contains scan start time
+
+        - method to generate files
+        save_nifti(scan_id, reco_id, filename, dir='./', ext='nii.gz')
+            generate NifTi1 file
+        save_bdata(scan_id, filename, dir='./')
+            generate FSL's Bdata files for DTI image processing
+        save_json(scan_id, reco_id, filename, dir='./')
+            generate JSON with given filename for BIDS MRI parameters
+
+        - method to print meta informations
+        print_bids(scan_id, reco_id, fobj=None)
+            print out BIDS MRI parameters defined at reference.py
+            if fileobject is given, it will be written in file instead of stdout
+        summary(fobj=None)
+            print out the PvDataset major parameters
+            if fileobject is given, it will be written in file instead of stdout
+    """
     def __init__(self, path):
+        """ class method to initiate object.
+        Args:
+            path (str): Path of PvDataset.
+        """
         self._pvobj = load(path)
 
         if (self.num_scans > 0) and (self._subject != None):
@@ -46,11 +105,35 @@ class BrukerLoader():
         self._pvobj.close()
         self._pvobj = None
 
+    def get_affine(self, scan_id, reco_id):
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
+        method = self._method[scan_id]
+        return self._get_affine(visu_pars, method)
+
     def get_dataobj(self, scan_id, reco_id):
         return self._pvobj.get_dataobj(scan_id, reco_id)
 
     def get_fid(self, scan_id):
         return self._pvobj.get_fid(scan_id)
+
+    @property
+    def get_visu_pars(self):
+        return self._get_visu_pars
+
+    def get_method(self, scan_id):
+        return self._method[scan_id]
+
+    def get_acqp(self, scan_id):
+        return self._acqp[scan_id]
+
+    def get_bdata(self, scan_id):
+        method = self.get_method(scan_id)
+        return self._get_bdata(method)
+
+    def get_matrixsize(self, scan_id, reco_id):
+        visu_pars = self.get_visu_pars(scan_id, reco_id)
+        dataobj = self.get_dataobj(scan_id, reco_id)
+        return self._get_matrix_size(visu_pars, dataobj)
 
     # methods to dump data into file object
     ## - NifTi1
@@ -82,6 +165,10 @@ class BrukerLoader():
         niiobj = self._set_default_header(niiobj, visu_pars, method)
         return niiobj
 
+    @property
+    def save_nifti(self):
+        return self.save_as
+
     def save_as(self, scan_id, reco_id, filename, dir='./', ext='nii.gz'):
         niiobj = self.get_niftiobj(scan_id, reco_id)
         if isinstance(niiobj, list):
@@ -93,6 +180,221 @@ class BrukerLoader():
         else:
             output_path = os.path.join(dir, '{}.{}'.format(filename, ext))
             niiobj.to_filename(output_path)
+
+    ## - FSL bval, bvec, and bmat
+    def save_bdata(self, scan_id, filename, dir='./'):
+        method = self._method[scan_id]
+        bval, bvec, bmat = self._get_bdata(method)
+        output_path = os.path.join(dir, filename)
+
+        with open('{}.bval'.format(output_path), 'w') as bval_fobj:
+            for item in bval:
+                bval_fobj.write("%f " % item)
+            bval_fobj.write("\n")
+
+        with open('{}.bvec'.format(output_path), 'w') as bvec_fobj:
+            for row in bvec:
+                for item in row:
+                    bvec_fobj.write("%f " % item)
+                bvec_fobj.write("\n")
+
+        with open('{}.bmat'.format(output_path), 'w') as bmat_fobj:
+            for row in bmat:
+                for item in row.flatten():
+                    bmat_fobj.write("%s " % item)
+                bmat_fobj.write("\n")
+
+    # BIDS JSON
+    def save_json(self, scan_id, reco_id, filename, dir='./'):
+        acqp        = self._acqp[scan_id]
+        method      = self._method[scan_id]
+        visu_pars   = self._get_visu_pars(scan_id, reco_id)
+
+        json_obj = dict()
+        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
+        for k, v in METADATA_FILED_INFO.items():
+            val = meta_get_value(v, acqp, method, visu_pars)
+            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+                if val != None:
+                    val = encdir_dic[val]
+
+            if isinstance(val, np.ndarray):
+                val = val.tolist()
+            if isinstance(val, list):
+                val = ','.join(map(str, val))
+            json_obj[k] = val
+
+        with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
+            import json
+            json.dump(json_obj, f)
+
+    def get_scan_time(self, visu_pars=None):
+        import datetime as dt
+        subject_date = get_value(self._subject, 'SUBJECT_date')
+        subject_date = subject_date[0] if isinstance(subject_date, list) else subject_date
+        pattern_1 = r'(\d{2}:\d{2}:\d{2})\s(\d{2}\s\w+\s\d{4})'
+        pattern_2 = r'(\d{4}-\d{2}-\d{2})[T](\d{2}:\d{2}:\d{2})'
+        if re.match(pattern_1, subject_date):
+            # start time
+            start_time = dt.time(*map(int, re.sub(pattern_1, r'\1', subject_date).split(':')))
+            # date
+            date = dt.datetime.strptime(re.sub(pattern_1, r'\2', subject_date), '%d %b %Y').date()
+            # end time
+            if visu_pars is not None:
+                last_scan_time = get_value(visu_pars, 'VisuAcqDate')
+                last_scan_time = dt.time(*map(int, re.sub(pattern_1, r'\1', last_scan_time).split(':')))
+                acq_time = get_value(visu_pars, 'VisuAcqScanTime') / 1000.0
+                time_delta = dt.timedelta(0, acq_time)
+                scan_time = (dt.datetime.combine(date, last_scan_time) + time_delta).time()
+                return dict(date=date,
+                            start_time=start_time,
+                            scan_time=scan_time)
+        elif re.match(pattern_2, subject_date):
+            # start time
+            # subject_date = get_value(self._subject, 'SUBJECT_date')[0]
+            start_time = dt.time(*map(int, re.sub(pattern_2, r'\2', subject_date).split(':')))
+            # date
+            date = dt.date(*map(int, re.sub(pattern_2, r'\1', subject_date).split('-')))
+
+            # end date
+            if visu_pars is not None:
+                scan_time = get_value(visu_pars, 'VisuCreationDate')[0]
+                scan_time = dt.time(*map(int, re.sub(pattern_2, r'\2', scan_time).split(':')))
+                return dict(date=date,
+                            start_time=start_time,
+                            scan_time=scan_time)
+        else:
+            raise Exception(ERROR_MESSAGES['NotIntegrated'])
+
+        return dict(date=date,
+                    start_time=start_time)
+
+    # printing functions / help documents
+    def print_bids(self, scan_id, reco_id, fobj=None):
+        if fobj == None:
+            import sys
+            fobj = sys.stdout
+
+        acqp = self._acqp[scan_id]
+        method = self._method[scan_id]
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
+
+        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
+        for k, v in METADATA_FILED_INFO.items():
+            n_tap = int(5 - int(len(k) / 8))
+            if len(k) % 8 >= 7:
+                n_tap -= 1
+
+            tap = ''.join(['\t'] * n_tap)
+            val = meta_get_value(v, acqp, method, visu_pars)
+            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+                if val != None:
+                    val = encdir_dic[val]
+
+            if isinstance(val, np.ndarray):
+                val = val.tolist()
+            if isinstance(val, list):
+                val = ', '.join(map(str, val))
+
+            print('{}:{}{}'.format(k, tap, val), file=fobj)
+
+    def summary(self, fobj=None):
+        """
+
+        Args:
+            fobj:
+
+        Returns:
+
+        """
+        if fobj == None:
+            import sys
+            fobj = sys.stdout
+
+        pvobj = self._pvobj
+        user_account = pvobj.user_account
+        subj_id = pvobj.subj_id
+        study_id = pvobj.study_id
+        session_id = pvobj.session_id
+        user_name = pvobj.user_name
+        subj_entry = pvobj.subj_entry
+        subj_pose = pvobj.subj_pose
+        subj_sex = pvobj.subj_sex
+        subj_type = pvobj.subj_type
+        subj_weight = pvobj.subj_weight
+        subj_dob = pvobj.subj_dob
+
+        lines = []
+        for i, (scan_id, recos) in enumerate(self._avail.items()):
+            for j, reco_id in enumerate(recos):
+                visu_pars = self._get_visu_pars(scan_id, reco_id)
+                if i == 0:
+                    sw_version = get_value(visu_pars, 'VisuCreatorVersion')
+
+                    title = 'Paravision {}'.format(sw_version)
+                    lines.append(title)
+                    lines.append('-' * len(title))
+
+                    try:
+                        datetime = self.get_scan_time()
+                    except:
+                        raise Exception('Empty dataset...')
+                    lines.append('UserAccount:\t{}'.format(user_account))
+                    lines.append('Date:\t\t{}'.format(datetime['date']))
+                    lines.append('Researcher:\t{}'.format(user_name))
+                    lines.append('Subject ID:\t{}'.format(subj_id))
+                    lines.append('Session ID:\t{}'.format(session_id))
+                    lines.append('Study ID:\t{}'.format(study_id))
+                    lines.append('Date of Birth:\t{}'.format(subj_dob))
+                    lines.append('Sex:\t\t{}'.format(subj_sex))
+                    lines.append('Weight:\t\t{} kg'.format(subj_weight))
+                    lines.append('Subject Type:\t{}'.format(subj_type))
+                    lines.append('Position:\t{}\t\tEntry:\t{}'.format(subj_pose, subj_entry))
+
+                    lines.append('\n[ScanID]\tSequence::Protocol::[Parameters]')
+                tr = get_value(visu_pars, 'VisuAcqRepetitionTime')
+                tr = ','.join(map(str, tr)) if isinstance(tr, list) else tr
+                te = get_value(visu_pars, 'VisuAcqEchoTime')
+                te = 0 if te is None else te
+                te = ','.join(map(str, te)) if isinstance(te, list) else te
+                pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
+                flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
+                param_values = [tr, te, pixel_bw, flip_angle]
+                if j == 0:
+                    params = "[ TR: {0} ms, TE: {1:.3f} ms, pixelBW: {2:.2f} Hz, FlipAngle: {3} degree]".format(
+                        *param_values)
+                    protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
+                    sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
+                    lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
+                                                               sequence_name,
+                                                               protocol_name,
+                                                               params))
+
+                dim = self._get_dim_info(visu_pars)[0]
+                size = self._get_matrix_size(visu_pars)
+                size = ' x '.join(map(str, size))
+                spatial_info = self._get_spatial_info(visu_pars)
+                temp_info = self._get_temp_info(visu_pars)
+                s_resol = spatial_info['spatial_resol']
+                fov_size = spatial_info['fov_size']
+                fov_size = ' x '.join(map(str, fov_size))
+                s_unit = spatial_info['unit']
+                t_resol = '{0:.3f}'.format(temp_info['temporal_resol'])
+                t_unit = temp_info['unit']
+                s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
+                s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
+
+                lines.append('    [{}] dim: {}D, matrix_size: {}, fov_size: {} (unit:mm)\n'
+                             '         spatial_resol: {} (unit:{}), temporal_resol: {} (unit:{})'.format(
+                    str(reco_id).zfill(2), dim, size,
+                    fov_size,
+                    s_resol, s_unit,
+                    t_resol, t_unit))
+        lines.append('\n')
+        print('\n'.join(lines), file=fobj)
+
+    # method to parse information of each scan
+    # methods of protocol specific
 
     def _set_default_header(self, niiobj, visu_pars, method):
         slice_info = self._get_slice_info(visu_pars)
@@ -142,66 +444,6 @@ class BrukerLoader():
         niiobj.header['scl_inter'] = data_off
         return niiobj
 
-    ## - FSL bval, bvec, and bmat
-    def save_bdata(self, scan_id, filename, dir='./'):
-        method = self._method[scan_id]
-        bval, bvec, bmat = self._get_bdata(method)
-        output_path = os.path.join(dir, filename)
-
-        with open('{}.bval'.format(output_path), 'w') as bval_fobj:
-            for item in bval:
-                bval_fobj.write("%f " % item)
-            bval_fobj.write("\n")
-
-        with open('{}.bvec'.format(output_path), 'w') as bvec_fobj:
-            for row in bvec:
-                for item in row:
-                    bvec_fobj.write("%f " % item)
-                bvec_fobj.write("\n")
-
-        with open('{}.bmat'.format(output_path), 'w') as bmat_fobj:
-            for row in bmat:
-                for item in row.flatten():
-                    bmat_fobj.write("%s " % item)
-                bmat_fobj.write("\n")
-
-    # BIDS JSON
-    def save_json(self, scan_id, reco_id, filename, dir='./'):
-        """ Save JSON file with BIDS standard MR acquisition parameter
-
-        Args:
-            scan_id:    Scan ID
-            reco_id:    Reco ID
-            filename:   Filename to save (without extension)
-            dir:        Dirname to save
-
-        Returns: None
-        """
-
-        acqp        = self._acqp[scan_id]
-        method      = self._method[scan_id]
-        visu_pars   = self._get_visu_pars(scan_id, reco_id)
-
-        json_obj = dict()
-        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
-        for k, v in METADATA_FILED_INFO.items():
-            val = meta_get_value(v, acqp, method, visu_pars)
-            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-                if val != None:
-                    val = encdir_dic[val]
-
-            if isinstance(val, np.ndarray):
-                val = val.tolist()
-            if isinstance(val, list):
-                val = ','.join(map(str, val))
-            json_obj[k] = val
-
-        with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
-            import json
-            json.dump(json_obj, f)
-
-    # method to parse information of each scan
-    # methods of protocol specific
     # EPI
     def _get_temp_info(self, visu_pars):
         """return temporal resolution for each volume of image"""
@@ -534,159 +776,4 @@ class BrukerLoader():
     @property
     def _avail(self):
         return self._pvobj.avail_reco_id
-
-    def get_scan_time(self, visu_pars=None):
-        """
-
-        Args:
-            visu_pars:
-
-        Returns:
-
-        """
-        import datetime as dt
-        subject_date = get_value(self._subject, 'SUBJECT_date')
-        subject_date = subject_date[0] if isinstance(subject_date, list) else subject_date
-        pattern_1 = r'(\d{2}:\d{2}:\d{2})\s(\d{2}\s\w+\s\d{4})'
-        pattern_2 = r'(\d{4}-\d{2}-\d{2})[T](\d{2}:\d{2}:\d{2})'
-        if re.match(pattern_1, subject_date):
-            # start time
-            start_time = dt.time(*map(int, re.sub(pattern_1, r'\1', subject_date).split(':')))
-            # date
-            date = dt.datetime.strptime(re.sub(pattern_1, r'\2', subject_date), '%d %b %Y').date()
-            # end time
-            if visu_pars is not None:
-                last_scan_time = get_value(visu_pars, 'VisuAcqDate')
-                last_scan_time = dt.time(*map(int, re.sub(pattern_1, r'\1', last_scan_time).split(':')))
-                acq_time = get_value(visu_pars, 'VisuAcqScanTime') / 1000.0
-                time_delta = dt.timedelta(0, acq_time)
-                scan_time = (dt.datetime.combine(date, last_scan_time) + time_delta).time()
-                return dict(date=date,
-                            start_time=start_time,
-                            scan_time=scan_time)
-        elif re.match(pattern_2, subject_date):
-            # start time
-            # subject_date = get_value(self._subject, 'SUBJECT_date')[0]
-            start_time = dt.time(*map(int, re.sub(pattern_2, r'\2', subject_date).split(':')))
-            # date
-            date = dt.date(*map(int, re.sub(pattern_2, r'\1', subject_date).split('-')))
-
-            # end date
-            if visu_pars is not None:
-                scan_time = get_value(visu_pars, 'VisuCreationDate')[0]
-                scan_time = dt.time(*map(int, re.sub(pattern_2, r'\2', scan_time).split(':')))
-                return dict(date=date,
-                            start_time=start_time,
-                            scan_time=scan_time)
-        else:
-            raise Exception(ERROR_MESSAGES['NotIntegrated'])
-
-        return dict(date       = date,
-                    start_time = start_time)
-
-    # printing functions / help documents
-    def print_bids(self, scan_id, reco_id):
-        acqp = self._acqp[scan_id]
-        method = self._method[scan_id]
-        visu_pars = self._get_visu_pars(scan_id, reco_id)
-
-        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
-        for k, v in METADATA_FILED_INFO.items():
-            n_tap = int(5 - int(len(k) / 8))
-            if len(k) % 8 >= 7:
-                n_tap -= 1
-
-            tap = ''.join(['\t'] * n_tap)
-            val = meta_get_value(v, acqp, method, visu_pars)
-            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-                if val != None:
-                    val = encdir_dic[val]
-
-            if isinstance(val, np.ndarray):
-                val = val.tolist()
-            if isinstance(val, list):
-                val = ', '.join(map(str, val))
-
-            print('{}:{}{}'.format(k, tap, val))
-
-    def summary(self):
-        pvobj = self._pvobj
-        user_account    = pvobj.user_account
-        subj_id         = pvobj.subj_id
-        study_id        = pvobj.study_id
-        session_id      = pvobj.session_id
-        user_name       = pvobj.user_name
-        subj_entry      = pvobj.subj_entry
-        subj_pose       = pvobj.subj_pose
-        subj_sex        = pvobj.subj_sex
-        subj_type       = pvobj.subj_type
-        subj_weight     = pvobj.subj_weight
-        subj_dob        = pvobj.subj_dob
-
-        lines = []
-        for i, (scan_id, recos) in enumerate(self._avail.items()):
-            for j, reco_id in enumerate(recos):
-                visu_pars = self._get_visu_pars(scan_id, reco_id)
-                if i == 0:
-                    sw_version    = get_value(visu_pars, 'VisuCreatorVersion')
-
-                    title = 'Paravision {}'.format(sw_version)
-                    lines.append(title)
-                    lines.append('-' * len(title))
-
-                    try:
-                        datetime = self.get_scan_time()
-                    except:
-                        raise Exception('Empty dataset...')
-                    lines.append('UserAccount:\t{}'.format(user_account))
-                    lines.append('Date:\t\t{}'.format(datetime['date']))
-                    lines.append('Researcher:\t{}'.format(user_name))
-                    lines.append('Subject ID:\t{}'.format(subj_id))
-                    lines.append('Session ID:\t{}'.format(session_id))
-                    lines.append('Study ID:\t{}'.format(study_id))
-                    lines.append('Date of Birth:\t{}'.format(subj_dob))
-                    lines.append('Sex:\t\t{}'.format(subj_sex))
-                    lines.append('Weight:\t\t{} kg'.format(subj_weight))
-                    lines.append('Subject Type:\t{}'.format(subj_type))
-                    lines.append('Position:\t{}\t\tEntry:\t{}'.format(subj_pose, subj_entry))
-
-                    lines.append('\n[ScanID]\tSequence::Protocol::[Parameters]')
-                tr = get_value(visu_pars, 'VisuAcqRepetitionTime')
-                tr = ','.join(map(str, tr)) if isinstance(tr, list) else tr
-                te = get_value(visu_pars, 'VisuAcqEchoTime')
-                te = 0 if te is None else te
-                te = ','.join(map(str, te)) if isinstance(te, list) else te
-                pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
-                flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
-                param_values = [tr, te, pixel_bw, flip_angle]
-                if j == 0:
-                    params = "[ TR: {0} ms, TE: {1:.3f} ms, pixelBW: {2:.2f} Hz, FlipAngle: {3} degree]".format(*param_values)
-                    protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
-                    sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
-                    lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
-                                                          sequence_name,
-                                                          protocol_name,
-                                                          params))
-
-                dim = self._get_dim_info(visu_pars)[0]
-                size = self._get_matrix_size(visu_pars)
-                size = ' x '.join(map(str, size))
-                spatial_info = self._get_spatial_info(visu_pars)
-                temp_info = self._get_temp_info(visu_pars)
-                s_resol = spatial_info['spatial_resol']
-                fov_size = spatial_info['fov_size']
-                fov_size = ' x '.join(map(str, fov_size))
-                s_unit = spatial_info['unit']
-                t_resol = '{0:.3f}'.format(temp_info['temporal_resol'])
-                t_unit = temp_info['unit']
-                s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
-                s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
-
-                lines.append('    [{}] dim: {}D, matrix_size: {}, fov_size: {} (unit:mm)\n'
-                             '         spatial_resol: {} (unit:{}), temporal_resol: {} (unit:{})'.format(str(reco_id).zfill(2), dim, size,
-                                                                                         fov_size,
-                                                                                         s_resol, s_unit,
-                                                                                         t_resol, t_unit))
-        lines.append('\n')
-        print('\n'.join(lines))
 
