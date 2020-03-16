@@ -756,11 +756,6 @@ class BrukerLoader():
             parser['frame_size'] = reduce(lambda x, y: x * y, parser['matrix_shape'])
             return parser
 
-    # properties of the class
-    @property
-    def _version(self):
-        return None
-
     @property
     def _subject(self):
         return self._pvobj._subject
