@@ -164,7 +164,7 @@ def main():
                         if bck_data.num_recos < 1:
                             cached_dataset['garbages'][bck_path] = raw_path
 
-        print('Checking backup state of raw datasets...')
+        print('Checking backup status of raw datasets...')
         for raw_path in tqdm.tqdm(list_of_raw,
                                   bar_format=bar_fmt):
             if raw_path not in cached_dataset['completed'].values():
@@ -174,25 +174,26 @@ def main():
                 except:
                     if raw_path not in cached_dataset['failed_raw']:
                         cached_dataset['failed_raw'].append(raw_path)
+
         print('**** Summary ****', file=fobj)
         if len(cached_dataset['backup_required'].keys()):
-            print('>> The list of raw datasets need backup...', file=fobj)
+            print('>> The list of raw datasets need backup... [no backup file]', file=fobj)
             for raw_path, user_name in cached_dataset['backup_required'].items():
                 print(' -{} (user:{})'.format(raw_path, user_name), file=fobj)
         if len(cached_dataset['incompleted'].keys()):
-            print('>> The list of raw datasets need re-backup...', file=fobj)
+            print('>> The list of raw datasets need re-backup... [number of reconstructed image mismatch between raw and backup]', file=fobj)
             for bck_path, raw_path in cached_dataset['incompleted'].items():
                 print(' -{} (backup:{})'.format(raw_path, bck_path), file=fobj)
         if len(cached_dataset['garbages'].keys()):
-            print('>> The raw datasets can be removed...', file=fobj)
+            print('>> The raw datasets can be removed... [no reconstructed image]', file=fobj)
             for bck_path, raw_path in cached_dataset['garbages'].items():
                 print(' -{} (backup:{})'.format(raw_path, bck_path), file=fobj)
         if len(cached_dataset['failed_raw']):
-            print('>> The list of failed raw datasets...', file=fobj)
+            print('>> The list of failed raw datasets... [issue found in rawdata]', file=fobj)
             for raw_path in cached_dataset['failed_raw']:
                 print(' -{}'.format(raw_path), file=fobj)
         if len(cached_dataset['failed_backup']):
-            print('>> The list of failed backup datasets...', file=fobj)
+            print('>> The list of failed backup datasets... [crashed backup file]', file=fobj)
             for raw_path in cached_dataset['failed_backup']:
                 print(' -{}'.format(raw_path), file=fobj)
 
