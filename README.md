@@ -18,14 +18,16 @@ To overcome these issues, **BrkRaw** module is designed to provide comprehensive
 - BIDS(v1.2.2) support: parameter file generation, automatic generation of the folder structure.
 - Object-oriented robust dataset parser.
 - compressed data readability (compatible with .zip and .PVdatasets format).
-- providing robust and easy-to-use python API for developers, including JCAMP-DX parser
+- providing robust and easy-to-use python API for developers, including JCAMP-DX parser.
+- 
 
 ![example_alignment](imgs/brkraw_alignment.png)
 **Fig1.** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis and a EPI image are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
 
 ### Compatibility
-- cross-platform compatibility (OSX, Linux, and Windows 10 with Anaconda3)
+- Cross-platform compatibility (OSX, Linux, and Windows 10 with Anaconda3)
 - Best work on Python 3.7.6, does not have backward compatibility with Python 2.
+- Dependency: numpy, pillow, nibabel, tqdm
 
 ### Installation
 - Suggesting using the pyenv and Python 3.7.6 on Linux and mac,
@@ -72,6 +74,11 @@ brkraw gui -i <session path> -o <output path>
 - Run GUI without path
 ```angular2html
 brkraw gui
+```
+
+- Check backup status and generate log file at backup path
+```angular2html
+brkraw chk_bckstatus <rawdata path> <backup path> -l
 ```
 
 #### Windows 10
