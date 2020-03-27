@@ -96,7 +96,7 @@ def main():
 
         # parse list of datasets
         list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
-        list_of_candidates = [d for d in os.listdir(bpath) if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d)))]
+        list_of_candidates = [d for d in os.listdir(bpath) if (isfile(opj(bpath, d)) and (d.endswith('zip') or d.endswith('PvDatasets')))]
         list_of_candidates = [d for d in list_of_candidates if d not in cached_dataset['completed'].keys()]
 
         if len(cached_dataset['completed'].items()):
