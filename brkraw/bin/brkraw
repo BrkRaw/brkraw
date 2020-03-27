@@ -191,6 +191,8 @@ def main():
                         raw_data = brkraw.load(opj(rpath, raw_path))
                         if raw_data.num_recos == bck_data.num_recos:
                             cached_dataset['completed'][bck_path] = raw_path
+                            if raw_path in cached_dataset['backup_required'].keys():
+                                del cached_dataset['backup_required'][raw_path]
                         else:
                             cached_dataset['incompleted'][bck_path] = raw_path
                     else:
@@ -205,14 +207,12 @@ def main():
             if raw_path not in cached_dataset['completed'].values():
                 try:
                     raw_data = brkraw.load(opj(rpath, raw_path))
-
-
                     cached_dataset['backup_required'][raw_path] = raw_data._pvobj.user_name
                 except:
                     if raw_path not in cached_dataset['failed_raw']:
                         cached_dataset['failed_raw'].append(raw_path)
             else:
-                print(" -'{}' has been backed-up.".format(raw_path))
+                # print(" -'{}' has been backed-up.".format(raw_path))
                 if raw_path in cached_dataset['backup_required'].keys():
                     print(" -'{}' has been removed from the list.".format(raw_path))
                     del cached_dataset['backup_required'][raw_path]
