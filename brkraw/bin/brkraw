@@ -3,6 +3,7 @@
 from brkraw import BrukerLoader, __version__
 import argparse
 import os, re
+from copy import copy
 
 
 def main():
@@ -102,7 +103,7 @@ def main():
         if len(cached_dataset['completed'].items()):
             print('Checking completed backup datasets...')
             cache_tested = []
-            for bck_path, raw_path in tqdm.tqdm(cached_dataset['completed'].items(),
+            for bck_path, raw_path in tqdm.tqdm(copy(cached_dataset['completed'].items()),
                                                 bar_format=bar_fmt):
                 if raw_path not in cache_tested:
                     raw_in_list = [rp for rp in cached_dataset['completed'].values() if rp == raw_path]
@@ -121,7 +122,7 @@ def main():
 
         if len(cached_dataset['duplicated']):
             print('Checking duplicated backup datasets...')
-            for raw_path, bck_paths in tqdm.tqdm(cached_dataset['duplicated'].items(),
+            for raw_path, bck_paths in tqdm.tqdm(copy(cached_dataset['duplicated'].items()),
                                                  bar_format=bar_fmt):
                 for bck_path in bck_paths:
                     if not os.path.exists(os.path.join(bpath, bck_path)):
@@ -132,7 +133,7 @@ def main():
 
         if len(cached_dataset['failed_backup']):
             print('Checking failed backup datasets...')
-            for bck_path in tqdm.tqdm(cached_dataset['failed_backup'],
+            for bck_path in tqdm.tqdm(copy(cached_dataset['failed_backup']),
                                       bar_format=bar_fmt):
                 if not exists(opj(bpath, bck_path)):
                     print(" -'{}' has been removed.".format(bck_path))
@@ -140,7 +141,7 @@ def main():
 
         if len(cached_dataset['failed_raw']):
             print('Checking failed raw datasets...')
-            for raw_path in tqdm.tqdm(cached_dataset['failed_raw'],
+            for raw_path in tqdm.tqdm(copy(cached_dataset['failed_raw']),
                                       bar_format=bar_fmt):
                 if not exists(opj(rpath, raw_path)):
                     print(" -'{}' has been removed.".format(raw_path))
@@ -152,7 +153,7 @@ def main():
 
         if len(cached_dataset['incompleted'].items()):
             print('Checking incompleted backup datasets...')
-            for bck_path, raw_path in tqdm.tqdm(cached_dataset['incompleted'].items(),
+            for bck_path, raw_path in tqdm.tqdm(copy(cached_dataset['incompleted'].items()),
                                                 bar_format=bar_fmt):
                 if not exists(opj(bpath, bck_path)):
                     print(" -'{}' has been removed.".format(bck_path))
@@ -166,7 +167,7 @@ def main():
 
         if len(cached_dataset['garbages'].items()):
             print('Checking garbages datasets...')
-            for bck_path, raw_path  in tqdm.tqdm(cached_dataset['garbages'].items(),
+            for bck_path, raw_path  in tqdm.tqdm(copy(cached_dataset['garbages'].items()),
                                                  bar_format=bar_fmt):
                 if not exists(opj(bpath, bck_path)):
                     print(" -'{}' has been removed.".format(bck_path))
