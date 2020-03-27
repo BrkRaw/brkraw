@@ -226,6 +226,10 @@ def main():
             print('\n>> The list of raw datasets need re-backup... [number of reconstructed image mismatch between raw and backup]', file=fobj)
             for bck_path, raw_path in cached_dataset['incompleted'].items():
                 print(' -{} (backup:{})'.format(raw_path, bck_path), file=fobj)
+        if len(cached_dataset['duplicated'].keys()):
+            print('\n>> The list of duplicated backup datasets... [the same rawdata backed up on separate file]', file=fobj)
+            for raw_path, bck_paths in cached_dataset['duplicated'].items():
+                print(' -{}: {}'.format(raw_path, bck_paths), file=fobj)
         if len(cached_dataset['garbages'].keys()):
             print('\n>> The raw datasets can be removed... [no reconstructed image]', file=fobj)
             for bck_path, raw_path in cached_dataset['garbages'].items():
