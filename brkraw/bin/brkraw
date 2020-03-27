@@ -209,7 +209,8 @@ def main():
             if raw_path not in cached_dataset['completed'].values():
                 try:
                     raw_data = brkraw.load(opj(rpath, raw_path))
-                    cached_dataset['backup_required'][raw_path] = raw_data._pvobj.user_name
+                    if raw_data.is_pvdataset():
+                        cached_dataset['backup_required'][raw_path] = raw_data._pvobj.user_name
                 except:
                     if raw_path not in cached_dataset['failed_raw']:
                         cached_dataset['failed_raw'].append(raw_path)
