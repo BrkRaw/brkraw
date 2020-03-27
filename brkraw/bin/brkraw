@@ -203,7 +203,6 @@ def main():
         print('Checking backup status of raw datasets...')
         for raw_path in tqdm.tqdm(list_of_raw,
                                   bar_format=bar_fmt):
-            cache_ = []
             if raw_path not in cached_dataset['completed'].values():
                 try:
                     raw_data = brkraw.load(opj(rpath, raw_path))
