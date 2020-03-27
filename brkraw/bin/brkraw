@@ -197,6 +197,9 @@ def main():
                         cached_dataset['completed'][bck_path] = raw_path
                         if bck_data.num_recos < 1:
                             cached_dataset['garbages'][bck_path] = raw_path
+                else:
+                    cached_dataset['completed'][bck_path] = raw_path
+                    cached_dataset['garbages'][bck_path] = raw_path
 
         cached_dataset['backup_required'] = dict() #reset the list
 
