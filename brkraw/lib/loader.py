@@ -110,8 +110,25 @@ class BrukerLoader():
         method = self._method[scan_id]
         return self._get_affine(visu_pars, method)
 
+    def _get_dataobj(self, scan_id, reco_id):
+        dataobj = self._pvobj.get_dataobj(scan_id, reco_id)
+        return dataobj
+
     def get_dataobj(self, scan_id, reco_id):
-        return self._pvobj.get_dataobj(scan_id, reco_id)
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
+        matrix_size = self.get_matrixsize(scan_id, reco_id)
+        dataobj = self._pvobj.get_dataobj(scan_id, reco_id).reshape(matrix_size[::-1]).T
+        data_slp = get_value(visu_pars, 'VisuCoreDataSlope')
+        if isinstance(data_slp, list):
+            data_slp = data_slp[0] if is_all_element_same(data_slp) else data_slp
+        data_off = get_value(visu_pars, 'VisuCoreDataOffs')
+        if isinstance(data_off, list):
+            data_off = data_off[0] if is_all_element_same(data_off) else data_off
+        try:
+            corrected_dataobj = dataobj * data_slp + data_off
+        except:
+            raise Exception('size mismatch between data with slope or offset parameter.')
+        return corrected_dataobj
 
     def get_fid(self, scan_id):
         return self._pvobj.get_fid(scan_id)
@@ -132,7 +149,7 @@ class BrukerLoader():
 
     def get_matrixsize(self, scan_id, reco_id):
         visu_pars = self.get_visu_pars(scan_id, reco_id)
-        dataobj = self.get_dataobj(scan_id, reco_id)
+        dataobj = self._get_dataobj(scan_id, reco_id)
         return self._get_matrix_size(visu_pars, dataobj)
 
     # methods to dump data into file object
@@ -142,7 +159,7 @@ class BrukerLoader():
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         method = self._method[scan_id]
         affine = self._get_affine(visu_pars, method)
-        dataobj = self.get_dataobj(scan_id, reco_id)
+        dataobj = self._get_dataobj(scan_id, reco_id)
         shape = self._get_matrix_size(visu_pars, dataobj)
         imgobj = dataobj.reshape(shape[::-1]).T
 

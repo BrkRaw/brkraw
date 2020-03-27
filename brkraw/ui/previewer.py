@@ -74,7 +74,7 @@ class Previewer(tk.Frame):
     def _load_image(self, brkraw_obj, scan_id, reco_id):
         # update image when scan_id and reco_id is changed
         visu_pars = brkraw_obj._get_visu_pars(scan_id, reco_id)
-        dataobj = brkraw_obj.get_dataobj(scan_id, reco_id)
+        dataobj = brkraw_obj._get_dataobj(scan_id, reco_id)
         shape = brkraw_obj._get_matrix_size(visu_pars, dataobj)
         self._dataobj = dataobj.reshape(shape[::-1]).T[:,:,::-1, ...]
         n_slicepacks = brkraw_obj._get_slice_info(visu_pars)['num_slice_packs']

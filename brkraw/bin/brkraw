@@ -83,9 +83,12 @@ def main():
         if exists(backup_cache):
             with open(backup_cache, 'rb') as f:
                 cached_dataset = pickle.load(f)
+            if 'duplicated' not in cached_dataset.keys(): # this component added later, so need update for old version
+                cached_dataset['duplicated'] = dict()
         else:
             cached_dataset = dict(failed_backup=[],  # data backup failed (raw data is not exist)
                                   failed_raw=[],     # failed data acquisition
+                                  duplicated=dict(),
                                   completed=dict(),  # data backup completed
                                   incompleted=dict(),  # data backup incompleted (need to re-run)
                                   backup_required=dict(),  # data backup is needed (backup data is not exist)
@@ -95,6 +98,37 @@ def main():
         list_of_raw = sorted([d for d in os.listdir(rpath) if isdir(opj(rpath, d))])
         list_of_candidates = [d for d in os.listdir(bpath) if (isfile(opj(bpath, d)) and (('zip' in d) or ('PvDatasets' in d)))]
         list_of_candidates = [d for d in list_of_candidates if d not in cached_dataset['completed'].keys()]
+
+        if len(cached_dataset['completed'].items()):
+            print('Checking completed backup datasets...')
+            cache_tested = []
+            for bck_path, raw_path in tqdm.tqdm(cached_dataset['completed'].items(),
+                                                bar_format=bar_fmt):
+                if raw_path not in cache_tested:
+                    raw_in_list = [rp for rp in cached_dataset['completed'].values() if rp == raw_path]
+                    if len(raw_in_list) > 1:
+                        if raw_path not in cached_dataset['duplicated'].keys():
+                            cached_dataset['duplicated'][raw_path] = []
+                        if bck_path not in cached_dataset['duplicated'][raw_path]:
+                            cached_dataset['duplicated'][raw_path].append(bck_path)
+                    else:
+                        pass
+                    cache_tested.append(raw_path)
+                else:
+                    if bck_path not in cached_dataset['duplicated'][raw_path]:
+                        cached_dataset['duplicated'][raw_path].append(bck_path)
+            del cache_tested
+
+        if len(cached_dataset['duplicated']):
+            print('Checking duplicated backup datasets...')
+            for raw_path, bck_paths in tqdm.tqdm(cached_dataset['duplicated'].items(),
+                                                 bar_format=bar_fmt):
+                for bck_path in bck_paths:
+                    if not os.path.exists(os.path.join(bpath, bck_path)):
+                        cached_dataset['duplicated'][raw_path].remove(bck_path)
+                        print(" -'{}'[duplicated backup for {}] has been removed.".format(bck_path, raw_path))
+                if len(cached_dataset['duplicated'][raw_path]) == 1:
+                    del cached_dataset['duplicated'][raw_path]
 
         if len(cached_dataset['failed_backup']):
             print('Checking failed backup datasets...')
@@ -142,7 +176,7 @@ def main():
                     else:
                         print(" -'{}' was not removed.".format(raw_path))
 
-        print('\nUpdating condition of backup datasets...')
+        print('Updating condition of backup datasets...')
         for bck_path in tqdm.tqdm(list_of_candidates,
                                   bar_format=bar_fmt):
             if not zipfile.is_zipfile(opj(bpath, bck_path)):
@@ -167,13 +201,21 @@ def main():
         print('Checking backup status of raw datasets...')
         for raw_path in tqdm.tqdm(list_of_raw,
                                   bar_format=bar_fmt):
+            cache_ = []
             if raw_path not in cached_dataset['completed'].values():
                 try:
                     raw_data = brkraw.load(opj(rpath, raw_path))
+
+
                     cached_dataset['backup_required'][raw_path] = raw_data._pvobj.user_name
                 except:
                     if raw_path not in cached_dataset['failed_raw']:
                         cached_dataset['failed_raw'].append(raw_path)
+            else:
+                print(" -'{}' has been backed-up.".format(raw_path))
+                if raw_path in cached_dataset['backup_required'].keys():
+                    print(" -'{}' has been removed from the list.".format(raw_path))
+                    del cached_dataset['backup_required'][raw_path]
 
         print('**** Summary ****', file=fobj)
         if len(cached_dataset['backup_required'].keys()):
@@ -181,19 +223,19 @@ def main():
             for raw_path, user_name in cached_dataset['backup_required'].items():
                 print(' -{} (user:{})'.format(raw_path, user_name), file=fobj)
         if len(cached_dataset['incompleted'].keys()):
-            print('>> The list of raw datasets need re-backup... [number of reconstructed image mismatch between raw and backup]', file=fobj)
+            print('\n>> The list of raw datasets need re-backup... [number of reconstructed image mismatch between raw and backup]', file=fobj)
             for bck_path, raw_path in cached_dataset['incompleted'].items():
                 print(' -{} (backup:{})'.format(raw_path, bck_path), file=fobj)
         if len(cached_dataset['garbages'].keys()):
-            print('>> The raw datasets can be removed... [no reconstructed image]', file=fobj)
+            print('\n>> The raw datasets can be removed... [no reconstructed image]', file=fobj)
             for bck_path, raw_path in cached_dataset['garbages'].items():
                 print(' -{} (backup:{})'.format(raw_path, bck_path), file=fobj)
         if len(cached_dataset['failed_raw']):
-            print('>> The list of failed raw datasets... [issue found in rawdata]', file=fobj)
+            print('\n>> The list of failed raw datasets... [issue found in rawdata]', file=fobj)
             for raw_path in cached_dataset['failed_raw']:
                 print(' -{}'.format(raw_path), file=fobj)
         if len(cached_dataset['failed_backup']):
-            print('>> The list of failed backup datasets... [crashed backup file]', file=fobj)
+            print('\n>> The list of failed backup datasets... [crashed backup file]', file=fobj)
             for raw_path in cached_dataset['failed_backup']:
                 print(' -{}'.format(raw_path), file=fobj)
 
