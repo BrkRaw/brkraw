@@ -62,19 +62,17 @@ class PvDatasetBase():
 
     @property
     def avail_scan_id(self):
-        if self._avail_scanid is None:
-            self._avail_scanid = sorted(self._2dseq.keys())
+        self._avail_scanid = sorted(self._visu_pars.keys())
         return self._avail_scanid
 
     @property
     def avail_reco_id(self):
-        if self._avail_recoid is None:
-            self._avail_recoid = {}
-            for scan_id in self.avail_scan_id:
-                try:
-                    self._avail_recoid[scan_id] = sorted(list(map(lambda x: x.reco_id, self._visu_pars[scan_id])))
-                except:
-                    self.avail_scan_id.remove(scan_id)
+        self._avail_recoid = {}
+        for scan_id in self.avail_scan_id:
+            try:
+                self._avail_recoid[scan_id] = sorted(list(map(lambda x: x.reco_id, self._visu_pars[scan_id])))
+            except:
+                self.avail_scan_id.remove(scan_id)
         return self._avail_recoid
 
     def _open_binary(self, path):
