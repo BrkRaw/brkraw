@@ -158,7 +158,9 @@ class PvDatasetDir(PvDatasetBase):
                         self._method[int(scan_id)] = Parameter(f.read().split('\n'))
                     with open(os.path.join(root, 'acqp'), 'r') as f:
                         self._acqp[int(scan_id)] = Parameter(f.read().split('\n'))
-                    self._fid[int(scan_id)] = os.path.join(root, 'fid')
+                    fid_path = os.path.join(root, 'fid')
+                    if os.path.exists(fid_path):
+                        self._fid[int(scan_id)] = os.path.join(root, 'fid')
             elif '2dseq' in files and 'visu_pars' in files:
                 path_freg = root.split(os.path.sep)
                 scan_id = path_freg[-3]
