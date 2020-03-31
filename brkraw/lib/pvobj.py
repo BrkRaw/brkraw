@@ -147,43 +147,50 @@ class PvDatasetDir(PvDatasetBase):
 
     def _parse_info(self):
         self._reset()
+        root_path_fregs = None
         for root, subdir, files in os.walk(self.__path):
             if 'subject' in files:
-                with open(os.path.join(root, 'subject'), 'r') as f:
-                    self._subject = Parameter(f.read().split('\n'))
+                if root_path_fregs is None:
+                    root_path_fregs = len(root.split(os.sep))
+                    with open(os.path.join(root, 'subject'), 'r') as f:
+                        self._subject = Parameter(f.read().split('\n'))
+                else:
+                    pass
             elif 'method' in files and 'acqp' in files:
-                scan_id = os.path.basename(root)
-                if scan_id.isdigit():
-                    with open(os.path.join(root, 'method'), 'r') as f:
-                        self._method[int(scan_id)] = Parameter(f.read().split('\n'))
-                    with open(os.path.join(root, 'acqp'), 'r') as f:
-                        self._acqp[int(scan_id)] = Parameter(f.read().split('\n'))
-                    fid_path = os.path.join(root, 'fid')
-                    if os.path.exists(fid_path):
-                        self._fid[int(scan_id)] = os.path.join(root, 'fid')
+                if len(root.split(os.sep)) == root_path_fregs + 1:
+                    scan_id = os.path.basename(root)
+                    if scan_id.isdigit():
+                        with open(os.path.join(root, 'method'), 'r') as f:
+                            self._method[int(scan_id)] = Parameter(f.read().split('\n'))
+                        with open(os.path.join(root, 'acqp'), 'r') as f:
+                            self._acqp[int(scan_id)] = Parameter(f.read().split('\n'))
+                        fid_path = os.path.join(root, 'fid')
+                        if os.path.exists(fid_path):
+                            self._fid[int(scan_id)] = os.path.join(root, 'fid')
             elif '2dseq' in files and 'visu_pars' in files:
-                path_freg = root.split(os.path.sep)
-                scan_id = path_freg[-3]
-                reco_id = path_freg[-1]
-                if scan_id.isdigit() and reco_id.isdigit():
-                    if int(scan_id) in self._2dseq.keys():
-                        self._2dseq[int(scan_id)].append(_2dseq(reco_id=int(reco_id),
-                                                                idx=os.path.join(root, '2dseq')))
-                    else:
-                        self._2dseq[int(scan_id)] = [_2dseq(reco_id=int(reco_id),
-                                                            idx=os.path.join(root, '2dseq'))]
-                    if int(scan_id) in self._visu_pars.keys():
-                        self._visu_pars[int(scan_id)].append(_visu_pars(reco_id=int(reco_id),
-                                                                        idx=os.path.join(root, 'visu_pars')))
-                    else:
-                        self._visu_pars[int(scan_id)] = [_visu_pars(reco_id=int(reco_id),
-                                                                    idx=os.path.join(root, 'visu_pars'))]
-                    if int(scan_id) in self._reco.keys():
-                        self._reco[int(scan_id)].append(_reco(reco_id=int(reco_id),
-                                                              idx=os.path.join(root, 'reco')))
-                    else:
-                        self._reco[int(scan_id)] = [_reco(reco_id=int(reco_id),
-                                                          idx=os.path.join(root, 'reco'))]
+                path_freg = root.split(os.sep)
+                if len(root.split(os.sep)) == root_path_fregs + 3:
+                    scan_id = path_freg[-3]
+                    reco_id = path_freg[-1]
+                    if scan_id.isdigit() and reco_id.isdigit():
+                        if int(scan_id) in self._2dseq.keys():
+                            self._2dseq[int(scan_id)].append(_2dseq(reco_id=int(reco_id),
+                                                                    idx=os.path.join(root, '2dseq')))
+                        else:
+                            self._2dseq[int(scan_id)] = [_2dseq(reco_id=int(reco_id),
+                                                                idx=os.path.join(root, '2dseq'))]
+                        if int(scan_id) in self._visu_pars.keys():
+                            self._visu_pars[int(scan_id)].append(_visu_pars(reco_id=int(reco_id),
+                                                                            idx=os.path.join(root, 'visu_pars')))
+                        else:
+                            self._visu_pars[int(scan_id)] = [_visu_pars(reco_id=int(reco_id),
+                                                                        idx=os.path.join(root, 'visu_pars'))]
+                        if int(scan_id) in self._reco.keys():
+                            self._reco[int(scan_id)].append(_reco(reco_id=int(reco_id),
+                                                                  idx=os.path.join(root, 'reco')))
+                        else:
+                            self._reco[int(scan_id)] = [_reco(reco_id=int(reco_id),
+                                                              idx=os.path.join(root, 'reco'))]
 
     def _open_binary(self, path):
         return open(path, 'rb').read()

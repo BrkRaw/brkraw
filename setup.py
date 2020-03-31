@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/scripts/env python
 """
 Bruker PVdataset loader / converter
 """
@@ -18,6 +18,7 @@ __url__ = ''
 setup(name='bruker',
       version=__version__,
       description='Bruker PvDataset Loader',
+      python_requires='>3.5, <3.8',
       author=__author__,
       author_email=__email__,
       url=__url__,
@@ -27,9 +28,12 @@ setup(name='bruker',
                         'numpy',
                         'pillow',
                         'tqdm',],
-      scripts=['brkraw/bin/brkraw',
-               'brkraw/bin/brkraw-win.bat'
-               ],
+      entry_points={
+          'console_scripts': [
+              'brkraw=brkraw.scripts.brkraw:main',
+              'brk-backup=brkraw.scripts.brk_backup:main',
+          ],
+      },
       classifiers=[
             # How mature is this project? Common values are
             #  3 - Alpha

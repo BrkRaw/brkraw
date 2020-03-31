@@ -1,5 +1,7 @@
 from .reference import *
 import re
+import os
+import enum
 import numpy as np
 from collections import OrderedDict
 from functools import partial, reduce
@@ -322,6 +324,7 @@ def reverse_swap(swap_code):
         reversed_code[origin] = target
     return reversed_code
 
+
 # META handler
 def meta_get_value(value, acqp, method, visu_pars):
     if isinstance(value, str):
@@ -425,3 +428,56 @@ def meta_check_source(key_string, acqp, method, visu_pars):
         return get_value(acqp, key_string)
     else:
         raise Exception(key_string)
+
+
+def yes_or_no(question):
+    while True:
+        reply = str(input(question + ' (y/n): ')).lower().strip()
+        if reply[:1] == 'y':
+            return True
+        elif reply[:1] == 'n':
+            return False
+        else:
+            print('  The answer is invalid!')
+
+
+def convert_unit(size_in_bytes, unit):
+    """ Convert the size from bytes to other units like KB, MB or GB"""
+    size = float(size_in_bytes)
+    if unit == 1:
+        return size / 1024
+    elif unit == 2:
+        return size / (1024 * 1024)
+    elif unit == 3:
+        return size / (1024 * 1024 * 1024)
+    else:
+        return int(size)
+
+
+def get_dirsize(dir_path):
+    import os
+    unit_dict = {0: 'B',
+                 1: 'KB',
+                 2: 'MB',
+                 3: 'GB'}
+    dir_size = 0
+    for root, dirs, files in os.walk(dir_path):
+        for f in files:
+            fp = os.path.join(root, f)
+            if not os.path.islink(fp):
+                dir_size += os.path.getsize(fp)
+
+    unit = int(len(str(dir_size)) / 3)
+    return convert_unit(dir_size, unit), unit_dict[unit]
+
+
+def get_filesize(file_path):
+    import os
+    unit_dict = {0: 'B',
+                 1: 'KB',
+                 2: 'MB',
+                 3: 'GB'}
+    file_size = os.path.getsize(file_path)
+
+    unit = int(len(str(file_size)) / 3)
+    return convert_unit(file_size, unit), unit_dict[unit]

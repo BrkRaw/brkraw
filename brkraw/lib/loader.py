@@ -91,6 +91,10 @@ class BrukerLoader():
             self._is_pvdataset = False
 
     @property
+    def pvobj(self):
+        return self._pvobj
+
+    @property
     def num_scans(self):
         return len(self._pvobj._fid.keys())
 
@@ -98,6 +102,7 @@ class BrukerLoader():
     def num_recos(self):
         return sum([len(r) for r in self._avail.values()])
 
+    @property
     def is_pvdataset(self):
         return self._is_pvdataset
 
@@ -114,21 +119,44 @@ class BrukerLoader():
         dataobj = self._pvobj.get_dataobj(scan_id, reco_id)
         return dataobj
 
-    def get_dataobj(self, scan_id, reco_id):
+    def _get_dataslp(self, visu_pars):
+        """ Return data slope and offset for value correction
+        Args:
+            visu_pars:
+
+        Returns:
+            data_slp
+            data_off
+        """
+        data_slp = get_value(visu_pars, 'VisuCoreDataSlope')
+        data_off = get_value(visu_pars, 'VisuCoreDataOffs')
+        if isinstance(data_slp, list):
+            data_slp = data_slp[0] if is_all_element_same(data_slp) else data_slp
+        if isinstance(data_off, list):
+            data_off = data_off[0] if is_all_element_same(data_off) else data_off
+        return data_slp, data_off
+
+    def get_dataobj(self, scan_id, reco_id, slp_correct=True):
+        """
+        Args:
+            scan_id:
+            reco_id:
+            slope_correct:
+
+        Returns:
+        """
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         matrix_size = self.get_matrixsize(scan_id, reco_id)
         dataobj = self._pvobj.get_dataobj(scan_id, reco_id).reshape(matrix_size[::-1]).T
-        data_slp = get_value(visu_pars, 'VisuCoreDataSlope')
-        if isinstance(data_slp, list):
-            data_slp = data_slp[0] if is_all_element_same(data_slp) else data_slp
-        data_off = get_value(visu_pars, 'VisuCoreDataOffs')
-        if isinstance(data_off, list):
-            data_off = data_off[0] if is_all_element_same(data_off) else data_off
-        try:
-            corrected_dataobj = dataobj * data_slp + data_off
-        except:
-            raise Exception('size mismatch between data with slope or offset parameter.')
-        return corrected_dataobj
+        data_slp, data_off = self._get_dataslp(visu_pars)
+        if slp_correct:
+            try:
+                corrected_dataobj = dataobj * data_slp + data_off
+            except:
+                raise Exception('size mismatch between data with slope or offset parameter.')
+            return corrected_dataobj
+        else:
+            return dataobj
 
     def get_fid(self, scan_id):
         return self._pvobj.get_fid(scan_id)
@@ -198,7 +226,7 @@ class BrukerLoader():
             output_path = os.path.join(dir, '{}.{}'.format(filename, ext))
             niiobj.to_filename(output_path)
 
-    ## - FSL bval, bvec, and bmat
+    # - FSL bval, bvec, and bmat
     def save_bdata(self, scan_id, filename, dir='./'):
         method = self._method[scan_id]
         bval, bvec, bmat = self._get_bdata(method)
