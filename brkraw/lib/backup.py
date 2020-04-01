@@ -558,61 +558,62 @@ class BackupCacheHandler:
                 raw_path = os.path.join(self._rpath, r.path)
                 arc_path = os.path.join(self._apath, '{}.zip'.format(r.path))
                 tmp_path = os.path.join(self._apath, '{}.part'.format(r.path))
-                if os.path.exists(tmp_path):
-                    print(' -[{}] is detected and removed...'.format(tmp_path), file=fobj)
-                    os.unlink(tmp_path)
-                if os.path.exists(arc_path):
-                    if not zipfile.is_zipfile(arc_path):
-                        print(' -[{}] is crashed file, removing...'.format(arc_path), file=fobj)
-                        os.unlink(arc_path)
-                    else:
-                        arc = BrukerLoader(arc_path)
-                        raw = BrukerLoader(raw_path)
-                        if arc.is_pvdataset:
-                            if arc.num_recos != raw.num_recos:
+                if os.path.exists(raw_path):
+                    if os.path.exists(tmp_path):
+                        print(' -[{}] is detected and removed...'.format(tmp_path), file=fobj)
+                        os.unlink(tmp_path)
+                    if os.path.exists(arc_path):
+                        if not zipfile.is_zipfile(arc_path):
+                            print(' -[{}] is crashed file, removing...'.format(arc_path), file=fobj)
+                            os.unlink(arc_path)
+                        else:
+                            arc = BrukerLoader(arc_path)
+                            raw = BrukerLoader(raw_path)
+                            if arc.is_pvdataset:
+                                if arc.num_recos != raw.num_recos:
+                                    print(' - [{}] is mismatching with raw dataset, removing...'.format(arc_path), file=fobj)
+                                    os.unlink(arc_path)
+                                else:
+                                    run_backup = False
+                            else:
                                 print(' - [{}] is mismatching with raw dataset, removing...'.format(arc_path), file=fobj)
                                 os.unlink(arc_path)
-                            else:
-                                run_backup = False
+                    if run_backup:
+                        print('\n :: Compressing [{}]...'.format(raw_path), file=fobj)
+                        # Compressing
+                        start = time.time()
+                        try:  # exception handling in case compression is failed
+                            with zipfile.ZipFile(tmp_path, 'w') as zip:
+                                # prepare file counters for use of tqdm
+                                file_counter = 0
+                                for _ in os.walk(raw_path):
+                                    file_counter += 1
+
+                                for i, (root, dirs, files) in tqdm.tqdm(enumerate(os.walk(raw_path)),
+                                                                        bar_format=_bar_fmt,
+                                                                        total=file_counter,
+                                                                        unit=' file(s)'):
+                                    splitted_root = root.split(os.sep)
+                                    if i == 0:
+                                        root_idx = splitted_root.index(r.path)
+                                    for f in files:
+                                        arc_name = os.sep.join(splitted_root[root_idx:] + [f])
+                                        zip.write(os.path.join(root, f), arcname=arc_name)
+                            print(' - [{}] is generated'.format(os.path.basename(arc_path)), file=fobj)
+
+                        except Exception:
+                            print(' - Compressing failed....'.format(r.path), file=fobj)
+
+                        end = time.time()
+                        print(' - processed time: {} sec'.format(end - start), file=fobj)
+
+                        # Backup validation
+                        if not os.path.exists(tmp_path):  # Check if the file is generated
+                            raise Exception('Backup file [{}] is not generated.'.format(arc_path))
                         else:
-                            print(' - [{}] is mismatching with raw dataset, removing...'.format(arc_path), file=fobj)
-                            os.unlink(arc_path)
-                if run_backup:
-                    print('\n :: Compressing [{}]...'.format(raw_path), file=fobj)
-                    # Compressing
-                    start = time.time()
-                    try:  # exception handling in case compression is failed
-                        with zipfile.ZipFile(tmp_path, 'w') as zip:
-                            # prepare file counters for use of tqdm
-                            file_counter = 0
-                            for _ in os.walk(raw_path):
-                                file_counter += 1
-
-                            for i, (root, dirs, files) in tqdm.tqdm(enumerate(os.walk(raw_path)),
-                                                                    bar_format=_bar_fmt,
-                                                                    total=file_counter,
-                                                                    unit=' file(s)'):
-                                splitted_root = root.split(os.sep)
-                                if i == 0:
-                                    root_idx = splitted_root.index(r.path)
-                                for f in files:
-                                    arc_name = os.sep.join(splitted_root[root_idx:] + [f])
-                                    zip.write(os.path.join(root, f), arcname=arc_name)
-                        print(' - [{}] is generated'.format(os.path.basename(arc_path)), file=fobj)
-
-                    except Exception:
-                        print(' - Compressing failed....'.format(r.path), file=fobj)
-
-                    end = time.time()
-                    print(' - processed time: {} sec'.format(end - start), file=fobj)
-
-                    # Backup validation
-                    if not os.path.exists(tmp_path):  # Check if the file is generated
-                        raise Exception('Backup file [{}] is not generated.'.format(arc_path))
-                    else:
-                        print(os.path.exists(tmp_path))
-                        try:
-                            os.rename(tmp_path, arc_path)
-                        except:
-                            raise Exception(
-                                'Compress file failed to rename into zip format. Could be related to backup filesystem.')
+                            print(os.path.exists(tmp_path))
+                            try:
+                                os.rename(tmp_path, arc_path)
+                            except:
+                                raise Exception(
+                                    'Compress file failed to rename into zip format. Could be related to backup filesystem.')

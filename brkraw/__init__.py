@@ -1,6 +1,6 @@
 from .lib import *
 
-__version__ = '0.3.0.b1'
+__version__ = '0.3.0.b2'
 __all__ = ['BrukerLoader', '__version__']
 
 
