@@ -30,6 +30,11 @@ def main():
     review.add_argument("archived_path", help=arc_path_str, type=str)
     review.add_argument("-l", "--logging", help="option for logging output instead printing", action='store_true')
 
+    backup = subparsers.add_parser("backup", help='Backup dataset')
+    backup.add_argument("raw_path", help=raw_path_str, type=str)
+    backup.add_argument("archived_path", help=arc_path_str, type=str)
+    backup.add_argument("-l", "--logging", help="option for logging output instead printing", action='store_true')
+
     clean = subparsers.add_parser("clean", help='Clean unnecessary archived dataset')
     clean.add_argument("raw_path", help=raw_path_str, type=str)
     clean.add_argument("archived_path", help=arc_path_str, type=str)
@@ -37,6 +42,7 @@ def main():
     now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     log_fname = 'brk-backup_{}.log'.format(now)
     lst_fname = 'brk-backup_archived_{}.log'.format(now)
+    rvw_fname = 'brk-backup_review_{}.log'.format(now)
     args = parser.parse_args()
 
     if args.function == 'archived':
@@ -55,10 +61,21 @@ def main():
         handler = BackupCacheHandler(raw_path=rpath, backup_path=bpath)
         handler.scan()
         if args.logging:
-            with open(log_fname, 'w') as f:
+            with open(rvw_fname, 'w') as f:
                 handler.print_status(fobj=f)
         else:
             handler.print_status()
+
+    elif args.function == 'backup':
+        rpath = args.raw_path
+        bpath = args.archived_path
+        handler = BackupCacheHandler(raw_path=rpath, backup_path=bpath)
+        handler.scan()
+        if args.logging:
+            with open(log_fname, 'w') as f:
+                handler.backup(fobj=f)
+        else:
+            handler.backup()
 
     elif args.function == 'clean':
         rpath = args.raw_path
