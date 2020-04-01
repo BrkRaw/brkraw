@@ -8,7 +8,12 @@ import pickle
 import zipfile
 import datetime
 import getpass
-bar_fmt = '{l_bar}{bar:20}{r_bar}{bar:-20b}'
+_bar_fmt = '{l_bar}{bar:20}{r_bar}{bar:-20b}'
+_user = getpass.getuser()
+_width = 80
+_line_sep_1 = '-' * _width
+_line_sep_2 = '=' * _width
+_empty_sep = ''
 
 
 class NamedTuple(object):
@@ -62,11 +67,11 @@ class BackupCache:
     def get_bpath_obj(self, path, by_raw=False):
         if len(self.arc_data):
             if by_raw:
-                rpath_obj = self.get_rpath_obj(path)
-                if rpath_obj is None:
+                r = self.get_rpath_obj(path)
+                if r is None:
                     return []
                 else:
-                    return [b for b in self.arc_data if b.data_pid == rpath_obj.data_pid]
+                    return [b for b in self.arc_data if b.data_pid == r.data_pid]
             else:
                 data_pid = [b for b in self.arc_data if b.path == path][0].data_pid
                 return [b for b in self.arc_data if b.data_pid == data_pid]
@@ -116,19 +121,18 @@ class BackupCache:
             issued = False
             try:
                 arc = BrukerLoader(arc_path)
-                raw_dname   = arc.pvobj.path
-                raw_path    = os.path.join(raw_dir, raw_dname)
-                garbage     = False if arc.is_pvdataset else True
-                crashed     = False
-
+                raw_dname = arc.pvobj.path
+                raw_path = os.path.join(raw_dir, raw_dname)
+                garbage = False if arc.is_pvdataset else True
+                crashed = False
             except:
                 self.logging('{} is crashed.'.format(arc_path),
                              'set_arc')
-                arc         = None
-                raw_dname   = None
-                raw_path    = None
-                garbage     = True
-                crashed     = True
+                arc = None
+                raw_dname = None
+                raw_path = None
+                garbage = True
+                crashed = True
 
             if raw_dname is not None:
                 r = self.get_rpath_obj(raw_dname)
@@ -136,6 +140,7 @@ class BackupCache:
                 r = None
 
             if r is None:
+                raw_dname = os.path.splitext(arc_fname)[0]
                 self.set_raw(raw_dname, raw_dir, removed=True)
                 r = self.get_rpath_obj(raw_dname)
                 r.garbage = garbage
@@ -149,11 +154,11 @@ class BackupCache:
                         raw = BrukerLoader(raw_path)
                         if raw.num_recos != arc.num_recos:
                             issued = True
-            arcobj = NamedTuple(data_pid    = r.data_pid,
-                                path        = arc_fname,
-                                garbage     = garbage,
-                                crashed     = crashed,
-                                issued      = issued)
+            arcobj = NamedTuple(data_pid=r.data_pid,
+                                path=arc_fname,
+                                garbage=garbage,
+                                crashed=crashed,
+                                issued=issued)
             if not crashed:
                 if not issued:
                     # backup completed data must has no issue
@@ -163,10 +168,10 @@ class BackupCache:
 
     def is_duplicated(self, file_path, by_arc=False):
         if by_arc:
-            bpobjs = self.get_bpath_obj(file_path, by_raw=False)
+            b = self.get_bpath_obj(file_path, by_raw=False)
         else:
-            bpobjs = self.get_bpath_obj(file_path, by_raw=True)
-        if len(bpobjs) > 1:
+            b = self.get_bpath_obj(file_path, by_raw=True)
+        if len(b) > 1:
             return True
         else:
             return False
@@ -242,18 +247,18 @@ class BackupCacheHandler:
 
         # parse dataset
         print('\nScanning raw dataset and update cache...')
-        for r in tqdm.tqdm(list_of_raw, bar_format=bar_fmt):
+        for r in tqdm.tqdm(list_of_raw, bar_format=_bar_fmt):
             self._cache.set_raw(r, raw_dir=self._rpath)
         self._save_pickle()
 
         print('\nScanning archived dataset and update cache...')
-        for b in tqdm.tqdm(list_of_brk, bar_format=bar_fmt):
+        for b in tqdm.tqdm(list_of_brk, bar_format=_bar_fmt):
             self._cache.set_arc(b, arc_dir=self._apath, raw_dir=self._rpath)
         self._save_pickle()
 
         # update raw dataset information (raw dataset cache will remain even its removed)
         print('\nScanning raw dataset cache...')
-        for r in tqdm.tqdm(self.raw_data[:], bar_format=bar_fmt):
+        for r in tqdm.tqdm(self.raw_data[:], bar_format=_bar_fmt):
             if r.path is not None:
                 if not os.path.exists(os.path.join(self._rpath, r.path)):
                     if not r.removed:
@@ -261,7 +266,7 @@ class BackupCacheHandler:
         self._save_pickle()
 
         print('\nReviewing archived dataset cache...')
-        for b in tqdm.tqdm(self.arc_data[:], bar_format=bar_fmt):
+        for b in tqdm.tqdm(self.arc_data[:], bar_format=_bar_fmt):
             arc_path = os.path.join(self._apath, b.path)
             if not os.path.exists(arc_path):  # backup dataset is not existing, remove the cache
                 self.arc_data.remove(b)
@@ -327,36 +332,36 @@ class BackupCacheHandler:
     def get_completed(self):
         return [r for r in self.raw_data if r.backup]
 
-    def get_garbages(self):
+    def get_garbage(self):
         return [b for b in self.arc_data if b.garbage]
 
-    def _get_summary(self):
-        user = getpass.getuser()
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    @staticmethod
+    def _gen_header(title, width=_width):
         lines = []
-        line_sep_1 = '-' * 80
-        line_sep_2 = '=' * 80
-        empty_sep = ''
-        title = 'Backup status report on {}'.format(now).center(80)
-        gen_by = 'Generated by {}'.format(user).rjust(80)
+        gen_by = 'Generated by {}'.format(_user).rjust(width)
 
-        lines.append(empty_sep)
-        lines.append(line_sep_2)
-        lines.append(empty_sep)
-        lines.append(title)
+        lines.append(_empty_sep)
+        lines.append(_line_sep_2)
+        lines.append(_empty_sep)
+        lines.append(title.center(width))
         lines.append(gen_by)
-        lines.append(line_sep_2)
-        lines.append(empty_sep)
+        lines.append(_line_sep_2)
+        lines.append(_empty_sep)
+        return lines
+
+    def _get_backup_status(self):
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        lines = self._gen_header('Report of backup status review [{}]'.format(now))
         list_need_to_be_backup = self.get_list_for_backup()[:]
         total_list = len(list_need_to_be_backup)
         if len(list_need_to_be_backup):
             lines.append('>> Raw dataset need to be backup.')
             lines.append('[Note: The raw dataset does not has any "fid" will not be listed here]')
-            lines.append(line_sep_1)
-            lines.append('{}{}'.format('Rawdata Path'.center(70), 'Size'.rjust(10)))
+            lines.append(_line_sep_1)
+            lines.append('{}{}'.format('Rawdata Path'.center(_width-10), 'Size'.rjust(10)))
             for r in list_need_to_be_backup:
-                if len(r.path) > 70:
-                    path_name = '{}... '.format(r.path[:66])
+                if len(r.path) > _width-10:
+                    path_name = '{}... '.format(r.path[:_width-14])
                 else:
                     path_name = r.path
                 raw_path = os.path.join(self._rpath, r.path)
@@ -365,21 +370,22 @@ class BackupCacheHandler:
                     dir_size = '{} {}'.format(dir_size, unit).rjust(10)
                 else:
                     dir_size = '{0:.2f}{1}'.format(dir_size, unit).rjust(10)
-                lines.append('{}{}'.format(path_name.ljust(70), dir_size))
-            lines.append(line_sep_1)
-            lines.append(empty_sep)
+                lines.append('{}{}'.format(path_name.ljust(_width-10), dir_size))
+            lines.append(_line_sep_1)
+            lines.append(_empty_sep)
+
         list_issued = self.get_issued()
         total_list += len(list_issued)
         if len(list_issued):
             lines.append('>> Failed or incompleted archived dataset.')
             lines.append('[Note: The listed files are either crashed or incompleted]')
-            lines.append(line_sep_1)
-            lines.append('{}{}'.format('Backup Path'.center(60),
-                                       'Condition'.rjust(10),
-                                       'Size'.rjust(10)))
+            lines.append(_line_sep_1)
+            lines.append('{}{}{}'.format('Backup Path'.center(60),
+                                         'Condition'.rjust(10),
+                                         'Size'.rjust(10)))
             for b in self.get_issued():
-                if len(b.path) > 60:
-                    path_name = '{}... '.format(b.path[:56])
+                if len(b.path) > _width-20:
+                    path_name = '{}... '.format(b.path[:_width-24])
                 else:
                     path_name = b.path
                 arc_path = os.path.join(self._apath, b.path)
@@ -396,44 +402,76 @@ class BackupCacheHandler:
                     file_size = '{} {}'.format(file_size, unit).rjust(10)
                 else:
                     file_size = '{0:.2f}{1}'.format(file_size, unit).rjust(10)
-                lines.append('{}{}{}'.format(path_name.ljust(70),
+                lines.append('{}{}{}'.format(path_name.ljust(_width-20),
                                              condition.center(10),
                                              file_size))
-            lines.append(line_sep_1)
-            lines.append(empty_sep)
+            lines.append(_line_sep_1)
+            lines.append(_empty_sep)
+
         list_duplicated = self.get_duplicated()
         total_list += len(list_duplicated)
         if len(list_duplicated.keys()):
             lines.append('>> Duplicated archived dataset.')
             lines.append('[Note: The listed raw dataset has multiple archived files]')
-            lines.append(line_sep_1)
-            lines.append('{}  {}'.format('Raw Path'.center(39),
-                                         'Archived'.center(39)))
+            lines.append(_line_sep_1)
+            lines.append('{}  {}'.format('Raw Path'.center(int(_width/2)-1),
+                                         'Archived'.center(int(_width/2)-1)))
             for rpath, bpaths in list_duplicated.items():
-                if rpath == None:
+                if rpath is None:
                     rpath = '-- Removed --'
-                if len(rpath) > 39:
-                    rpath = '{}... '.format(rpath[:35])
+                if len(rpath) > int(_width/2)-1:
+                    rpath = '{}... '.format(rpath[:int(_width/2)-5])
                 for i, bpath in enumerate(bpaths):
-                    if len(bpath) > 39:
-                        bpath = '{}... '.format(bpath[:35])
+                    if len(bpath) > int(_width/2)-1:
+                        bpath = '{}... '.format(bpath[:int(_width/2)-5])
                     if i == 0:
-                        lines.append('{}:-{}'.format(rpath.ljust(39),
-                                                     bpath.ljust(39)))
+                        lines.append('{}:-{}'.format(rpath.ljust(int(_width/2)-1),
+                                                     bpath.ljust(int(_width/2)-1)))
                     else:
-                        lines.append('{} -{}'.format(''.center(39),
-                                                     bpath.ljust(39)))
-            lines.append(line_sep_1)
-            lines.append(empty_sep)
+                        lines.append('{} -{}'.format(''.center(int(_width/2)-1),
+                                                     bpath.ljust(int(_width/2)-1)))
+            lines.append(_line_sep_1)
+            lines.append(_empty_sep)
+
         if total_list == 0:
-            lines.append(empty_sep)
-            lines.append('No Results'.center(80))
-            lines.append(empty_sep)
+            lines.append(_empty_sep)
+            lines.append('Backup status is up-to-date...'.center(80))
+            lines.append(_empty_sep)
+            lines.append(_line_sep_1)
         return '\n'.join(lines)
 
-    def report(self, fobj=sys.stdout):
-        summary = self._get_summary()
+    def print_status(self, fobj=sys.stdout):
+        summary = self._get_backup_status()
         print(summary, file=fobj)
+
+    def print_completed(self, fobj=sys.stdout):
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        lines = self._gen_header('List of archived dataset [{}]'.format(now))
+        list_of_completed = self.get_completed()
+        if len(list_of_completed):
+            lines.append(_line_sep_1)
+            lines.append('{}{}{}'.format('Rawdata Path'.center(_width - 20),
+                                         'Removed'.rjust(10),
+                                         'Archived'.rjust(10)))
+            for r in list_of_completed:
+                if len(r.path) > _width - 20:
+                    path_name = '{}... '.format(r.path[:_width - 24])
+                else:
+                    path_name = r.path
+                removed = 'True' if r.removed else 'False'
+                archived = 'True' if r.backup else 'False'
+                lines.append('{}{}{}'.format(path_name.ljust(_width - 20),
+                                             removed.center(10),
+                                             archived.center(10)))
+            lines.append(_line_sep_1)
+            lines.append(_empty_sep)
+        else:
+            lines.append(_empty_sep)
+            lines.append('No archived data...'.center(80))
+            lines.append(_empty_sep)
+            lines.append(_line_sep_1)
+        summary = '\n'.join(lines)
+        print(summary)
 
     def clean(self):
         print('\n[Warning] This command will remove backup data that classified as garbage and cannot be revert.')
@@ -441,10 +479,10 @@ class BackupCacheHandler:
         ans = yes_or_no('Are you sure to continue?')
 
         if ans:
-            list_data = dict(issued     = self.get_issued()[:],
-                             garbages   = self.get_garbages()[:],
-                             crashed    = self.get_crashed()[:],
-                             duplicated = self.get_duplicated().copy())
+            list_data = dict(issued=self.get_issued()[:],
+                             garbage=self.get_garbage()[:],
+                             crashed=self.get_crashed()[:],
+                             duplicated=self.get_duplicated().copy())
             for label, dset in list_data.items():
                 if label == 'duplicated':
                     print('\nStart removing {} backup dataset...'.format(label.upper()))
@@ -480,8 +518,8 @@ class BackupCacheHandler:
                 else:
                     if len(dset):
                         print('\nStart removing {} backup dataset...'.format(label.upper()))
-                        for a in dset:
-                            path_to_clean = os.path.join(self._apath, a.path)
+
+                        def ask_to_remove():
                             ans_4rm = yes_or_no(' - Are you sure to remove [{}] ?\n  '.format(path_to_clean))
                             if ans_4rm:
                                 try:
@@ -489,6 +527,18 @@ class BackupCacheHandler:
                                     self.arc_data.remove(a)
                                 except:
                                     print('    Failed! The file is locked.')
+                        for a in dset:
+                            path_to_clean = os.path.join(self._apath, a.path)
+                            if label == 'issued':
+                                if a.garbages or a.crashed:
+                                    pass
+                                else:
+                                    ask_to_remove()
+                            elif label == 'garbage':
+                                if a.crashed:
+                                    pass
+                                else:
+                                    ask_to_remove()
         self._save_pickle()
 
     def backup(self, fobj=sys.stdout):
@@ -503,7 +553,7 @@ class BackupCacheHandler:
             elif i == 1:
                 print('\n[step2] Performing backup for the datasets that has issued on archived data.')
 
-            for r in tqdm.tqdm(dlist, unit=' dataset(s)', bar_format=bar_fmt):
+            for r in tqdm.tqdm(dlist, unit=' dataset(s)', bar_format=_bar_fmt):
                 run_backup = True
                 raw_path = os.path.join(self._rpath, r.path)
                 arc_path = os.path.join(self._apath, '{}.zip'.format(r.path))
@@ -534,20 +584,20 @@ class BackupCacheHandler:
                     try:  # exception handling in case compression is failed
                         with zipfile.ZipFile(tmp_path, 'w') as zip:
                             # prepare file counters for use of tqdm
-                            filecounter = 0
+                            file_counter = 0
                             for _ in os.walk(raw_path):
-                                filecounter += 1
+                                file_counter += 1
 
                             for i, (root, dirs, files) in tqdm.tqdm(enumerate(os.walk(raw_path)),
-                                                                    bar_format=bar_fmt,
-                                                                    total=filecounter,
+                                                                    bar_format=_bar_fmt,
+                                                                    total=file_counter,
                                                                     unit=' file(s)'):
                                 splitted_root = root.split(os.sep)
                                 if i == 0:
                                     root_idx = splitted_root.index(r.path)
                                 for f in files:
-                                    arcname = os.sep.join(splitted_root[root_idx:] + [f])
-                                    zip.write(os.path.join(root, f), arcname=arcname)
+                                    arc_name = os.sep.join(splitted_root[root_idx:] + [f])
+                                    zip.write(os.path.join(root, f), arcname=arc_name)
                         print(' - [{}] is generated'.format(os.path.basename(arc_path)), file=fobj)
 
                     except Exception:
@@ -566,4 +616,3 @@ class BackupCacheHandler:
                         except:
                             raise Exception(
                                 'Compress file failed to rename into zip format. Could be related to backup filesystem.')
-

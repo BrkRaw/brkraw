@@ -1,64 +1,70 @@
-#!/usr/scripts/env python
-
+# -*- coding: utf-8 -*-
 from .. import __version__
 from ..lib.backup import BackupCacheHandler
 import argparse
 import datetime
-import os
 
 
 def main():
     parser = argparse.ArgumentParser(prog='brk-backup',
-                                     description="Command line tool for Bruker rawdata backup")
+                                     description="Command line tool for archiving Bruker dataset.")
     parser.add_argument("-v", "--version", action='version', version='%(prog)s v{}'.format(__version__))
 
     subparsers = parser.add_subparsers(title='Sub-commands',
-                                       description='brk-backup provides convenient tool for backup rawdata',
+                                       description='brk-backup provides convenient tool '
+                                                   'for archiving and check the status.',
                                        help='description',
                                        dest='function',
                                        metavar='command')
 
-    scan = subparsers.add_parser("scan", help='Scan the backup status')
-    scan.add_argument("raw_path", help="Folder location of the Bruker raw datasets", type=str)
-    scan.add_argument("backup_path", help="Folder location of the backed-up datasets", type=str)
+    raw_path_str = "Folder location of the Bruker raw dataset"
+    arc_path_str = "Folder location of the archived dataset"
 
-    report = subparsers.add_parser("report", help='Report the backup status')
-    report.add_argument("raw_path", help="Folder location of the Bruker raw datasets", type=str)
-    report.add_argument("backup_path", help="Folder location of the backed-up datasets", type=str)
-    report.add_argument("-l", "--logging", help="option for logging output instead printing", action='store_true')
+    archived = subparsers.add_parser("archived", help='Scan the backup status')
+    archived.add_argument("raw_path", help=raw_path_str, type=str)
+    archived.add_argument("archived_path", help=arc_path_str, type=str)
+    archived.add_argument("-l", "--logging", help="option for logging output instead printing", action='store_true')
+
+    review = subparsers.add_parser("review", help='Report the backup status')
+    review.add_argument("raw_path", help=raw_path_str, type=str)
+    review.add_argument("archived_path", help=arc_path_str, type=str)
+    review.add_argument("-l", "--logging", help="option for logging output instead printing", action='store_true')
 
     clean = subparsers.add_parser("clean", help='Clean unnecessary archived dataset')
-    clean.add_argument("raw_path", help="Folder location of the Bruker raw datasets", type=str)
-    clean.add_argument("backup_path", help="Folder location of the backed-up datasets", type=str)
+    clean.add_argument("raw_path", help=raw_path_str, type=str)
+    clean.add_argument("archived_path", help=arc_path_str, type=str)
 
     now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     log_fname = 'brk-backup_{}.log'.format(now)
+    lst_fname = 'brk-backup_archived_{}.log'.format(now)
     args = parser.parse_args()
 
-    if args.function == 'scan':
+    if args.function == 'archived':
         rpath = args.raw_path
-        bpath = args.backup_path
+        bpath = args.archived_path
         handler = BackupCacheHandler(raw_path=rpath, backup_path=bpath)
         handler.scan()
-
-    elif args.function == 'report':
-        rpath = args.raw_path
-        bpath = args.backup_path
-        handler = BackupCacheHandler(raw_path=rpath, backup_path=bpath)
         if args.logging:
-            if os.path.exists(log_fname):
-                with open(log_fname, 'a') as f:
-                    handler.report(fobj=f)
-            else:
-                with open(log_fname, 'w') as f:
-                    handler.report(fobj=f)
+            with open(lst_fname, 'w') as f:
+                handler.print_completed(fobj=f)
+        handler.print_completed()
+
+    elif args.function == 'review':
+        rpath = args.raw_path
+        bpath = args.archived_path
+        handler = BackupCacheHandler(raw_path=rpath, backup_path=bpath)
+        handler.scan()
+        if args.logging:
+            with open(log_fname, 'w') as f:
+                handler.print_status(fobj=f)
         else:
-            handler.report()
+            handler.print_status()
 
     elif args.function == 'clean':
         rpath = args.raw_path
-        bpath = args.backup_path
+        bpath = args.archived_path
         handler = BackupCacheHandler(raw_path=rpath, backup_path=bpath)
+        handler.scan()
         handler.clean()
 
     else:

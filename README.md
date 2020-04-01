@@ -1,5 +1,5 @@
 # BrkRaw: Comprehensive tool to handle Bruker PV dataset
-## Version: 0.2
+## Version: 0.3
 
 ### Description
 
@@ -95,10 +95,31 @@ $ brkraw gui -i <session path> -o <output path>
 $ brkraw gui
 ```
 
-- Check backup status and generate log file at backup path
+- Print out archived dataset and condition
 ```angular2html
-$ brkraw chk_bckstatus <rawdata path> <backup path> -l
+$ brk-backup archived <rawdata path> <backup path>
 ```
+
+- Generate log file of review archived dataset and condition
+```angular2html
+$ brk-backup archived <rawdata path> <backup path> -l
+```
+
+- Print out review backup status
+```angular2html
+$ brk-backup review <rawdata path> <backup path>
+```
+
+- Generate log file of review backup status
+```angular2html
+$ brk-backup review <rawdata path> <backup path> -l
+```
+
+- Run interactive archived dataset cleaning helper tool
+```angular2html
+$ brk-backup clean <rawdata path> <backup path> -l
+```
+
 
 #### Windows 10
 - Same as above, but use brkraw-win.bat instead of brkraw command.

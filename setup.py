@@ -13,7 +13,7 @@ __version__ = re.search(
 
 __author__ = 'SungHo Lee'
 __email__ = 'shlee@unc.edu'
-__url__ = ''
+__url__ = 'https://github.com/dvm-shlee/bruker'
 
 setup(name='bruker',
       version=__version__,
@@ -39,17 +39,16 @@ setup(name='bruker',
             #  3 - Alpha
             #  4 - Beta
             #  5 - Production/Stable
-            'Development Status :: 5 - Production/Stable',
+            'Development Status :: 3 - Alpha',
 
             # Indicate who your project is intended for
-            'Framework :: Jupyter',
             'Intended Audience :: Science/Research',
             'Topic :: Scientific/Engineering :: Medical Science Apps.',
             'Natural Language :: English',
 
             # Specify the Python version you support here. In particular, ensure
-            # that you indicate whether yoclu support Python 2, Python 3 or both
+            # that you indicate whether you support Python 2, Python 3 or both
             'Programming Language :: Python :: 3.7'
       ],
-      keywords = 'bruker'
+      keywords = 'bruker data_handler converter administrator_tool'
      )
