@@ -1,24 +1,26 @@
-import os
-import re
-import zipfile
+from shleeh import *
 from .pvobj import PvDatasetDir, PvDatasetZip
 from .utils import *
 from .reference import ERROR_MESSAGES
 import numpy as np
+import zipfile
+import pathlib
+import os
+import re
 
 
 def load(path):
     err_message = ERROR_MESSAGES['ImportError']
-
+    path = pathlib.Path(path)
     if os.path.isdir(path):
         return PvDatasetDir(path)
     elif os.path.isfile(path):
         if zipfile.is_zipfile(path):
             return PvDatasetZip(path)
         else:
-            raise Exception(err_message.format(path))
+            raise FileNotValidError(path, DataType.PVDATASET)
     else:
-        raise Exception(err_message.format(path))
+        raise FileNotValidError(path, DataType.PVDATASET)
 
 
 class BrukerLoader():

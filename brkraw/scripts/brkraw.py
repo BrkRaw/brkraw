@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from shleeh import *
 from .. import BrukerLoader, __version__
 import argparse
 import os, re
@@ -113,13 +114,17 @@ def main():
                 subj_path = os.path.join(base_path, 'sub-{}'.format(study._pvobj.subj_id))
                 try:
                     os.mkdir(subj_path)
-                except:
+                except OSError:
                     pass
+                else:
+                    raise UnexpectedError
                 sess_path = os.path.join(subj_path, 'ses-{}'.format(study._pvobj.study_id))
                 try:
                     os.mkdir(sess_path)
-                except:
+                except OSError:
                     pass
+                else:
+                    raise UnexpectedError
                 for scan_id, recos in study._pvobj.avail_reco_id.items():
                     method = study._pvobj._method[scan_id].parameters['Method']
                     if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
@@ -132,8 +137,10 @@ def main():
                         output_path = os.path.join(sess_path, 'etc')
                     try:
                         os.mkdir(output_path)
-                    except:
+                    except OSError:
                         pass
+                    else:
+                        raise UnexpectedError
                     filename = 'sub-{}_ses-{}_{}'.format(study._pvobj.subj_id, study._pvobj.study_id,
                                                          str(scan_id).zfill(2))
                     for reco_id in recos:

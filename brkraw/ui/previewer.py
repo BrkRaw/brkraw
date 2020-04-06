@@ -109,7 +109,6 @@ class Previewer(tk.Frame):
 
             self._set_sliders(n_slice, n_frame)
 
-
     def _convert_image(self):
         if len(self._imgobj.shape) > 3:
             img = self._imgobj[:,:,self._current_slice,self._current_frame]

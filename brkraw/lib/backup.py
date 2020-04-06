@@ -1,3 +1,4 @@
+from shleeh import *
 from .loader import BrukerLoader
 from .utils import get_dirsize, get_filesize, yes_or_no
 import os
@@ -471,7 +472,7 @@ class BackupCacheHandler:
             lines.append(_empty_sep)
             lines.append(_line_sep_1)
         summary = '\n'.join(lines)
-        print(summary)
+        print(summary, file=fobj)
 
     def clean(self):
         print('\n[Warning] This command will remove backup data that classified as garbage and cannot be revert.')
@@ -513,8 +514,12 @@ class BackupCacheHandler:
                                         a = self.get_bpath_obj(arc_fname)
                                         if len(a):
                                             self.arc_data.remove(a[0])
-                                    except:
+                                    except OSError:
+                                        error = RemoveFailedError(path_to_clean)
+                                        self.logging(error.message, 'clean')
                                         print('    Failed! The file is locked.')
+                                    else:
+                                        raise UnexpectedError
                 else:
                     if len(dset):
                         print('\nStart removing {} backup dataset...'.format(label.upper()))
@@ -525,8 +530,12 @@ class BackupCacheHandler:
                                 try:
                                     os.remove(path_to_clean)
                                     self.arc_data.remove(a)
-                                except:
+                                except OSError:
+                                    error = RemoveFailedError(path_to_clean)
+                                    self.logging(error.message, 'clean')
                                     print('    Failed! The file is locked.')
+                                else:
+                                    raise UnexpectedError
                         for a in dset:
                             path_to_clean = os.path.join(self._apath, a.path)
                             if label == 'issued':
@@ -545,13 +554,15 @@ class BackupCacheHandler:
         list_raws = self.get_list_for_backup()[:]
         list_issued = self.get_issued()[:]
         print('\nStarting backup for raw data not listed in the cache...')
-        print('\nBackup process...', file=fobj)
+        self.logging('Backup process start...', 'backup')
 
         for i, dlist in enumerate([list_raws, list_issued]):
             if i == 0:
                 print('\n[step1] Performing backup for the raw datasets that has not been archived.')
+                self.logging('backup the raw dataset has not been archived...', 'backup')
             elif i == 1:
                 print('\n[step2] Performing backup for the datasets that has issued on archived data.')
+                self.logging('backup the raw dataset contain issues...', 'backup')
 
             for r in tqdm.tqdm(dlist, unit=' dataset(s)', bar_format=_bar_fmt):
                 run_backup = True
@@ -581,7 +592,7 @@ class BackupCacheHandler:
                     if run_backup:
                         print('\n :: Compressing [{}]...'.format(raw_path), file=fobj)
                         # Compressing
-                        start = time.time()
+                        timer = TimeCounter()
                         try:  # exception handling in case compression is failed
                             with zipfile.ZipFile(tmp_path, 'w') as zip:
                                 # prepare file counters for use of tqdm
@@ -602,18 +613,25 @@ class BackupCacheHandler:
                             print(' - [{}] is generated'.format(os.path.basename(arc_path)), file=fobj)
 
                         except Exception:
-                            print(' - Compressing failed....'.format(r.path), file=fobj)
+                            error = ArchiveFailedError(raw_path)
+                            self.logging(error.message, 'backup')
+                            raise error
 
-                        end = time.time()
-                        print(' - processed time: {} sec'.format(end - start), file=fobj)
+                        print(' - processed time: {} sec'.format(timer.time()), file=fobj)
 
                         # Backup validation
                         if not os.path.exists(tmp_path):  # Check if the file is generated
-                            raise Exception('Backup file [{}] is not generated.'.format(arc_path))
+                            error = ArchiveFailedError(raw_path)
+                            self.logging(error.message, 'backup')
+                            raise error
                         else:
-                            print(os.path.exists(tmp_path))
                             try:
                                 os.rename(tmp_path, arc_path)
-                            except:
-                                raise Exception(
-                                    'Compress file failed to rename into zip format. Could be related to backup filesystem.')
+                            except OSError:
+                                error = RenameFailedError(tmp_path, arc_path)
+                                self.logging(error.message, 'backup')
+                                raise error
+                            else:
+                                error = UnexpectedError
+                                self.logging(error.message, 'backup')
+                                raise error
