@@ -222,6 +222,7 @@ def main():
         input_xlsx = args.input_xlsx
         df = pd.read_excel(input_xlsx)
 
+        # check if the project is multi-session
         if all(pd.isnull(df['SessID'])):
             # SessID was removed
             multi_session = False
@@ -232,7 +233,7 @@ def main():
             else:
                 multi_session = False
 
-        root_path = os.path.join(os.path.curdir, 'Data')
+        root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
         mkdir(root_path)
 
         for dname in sorted(os.listdir(path)):
@@ -249,16 +250,20 @@ def main():
                     print('Converting {}...'.format(dpath))
                     subj_id = list(set(filtered_dset['SubjID']))[0]
                     subj_code = 'sub-{}'.format(subj_id)
-                    subj_path = os.path.join(root_path, subj_code)
-                    mkdir(subj_path)
 
                     for i, row in filtered_dset.iterrows():
                         if multi_session:
+                            # If multi-session, make session dir
                             sess_code = 'ses-{}'.format(row.SessID)
+                            subj_path = os.path.join(root_path, subj_code)
+                            mkdir(subj_path)
                             subj_path = os.path.join(subj_path, sess_code)
                             mkdir(subj_path)
+                            # add session info to filename as well
                             fname = '{}_{}'.format(subj_code, sess_code)
                         else:
+                            subj_path = os.path.join(root_path, subj_code)
+                            mkdir(subj_path)
                             fname = '{}'.format(subj_code)
 
                         datatype = row.DataType
