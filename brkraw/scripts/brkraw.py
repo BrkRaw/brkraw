@@ -217,7 +217,6 @@ def main():
     elif args.function == 'bids_converter':
         import pandas as pd
         import numpy as np
-        import tqdm
 
         def validation(key, val, num_char_allowed, dtype=None):
             special_char = re.compile(r'[@_!#$%^&*()<>?/\|}{~:]')
@@ -250,7 +249,7 @@ def main():
         mkdir(root_path)
 
         print('Inpecting input BIDS datasheet...')
-        for dname in tqdm.tqdm(sorted(os.listdir(path))):
+        for dname in sorted(os.listdir(path)):
             dpath = os.path.join(path, dname)
             dset = BrukerLoader(dpath)
             if dset.is_pvdataset:
@@ -318,17 +317,17 @@ def main():
                         if temp_fname not in list_tested_fn:
                             # filter the DataFrame that has same filename (updated without run)
                             fn_filter = filtered_dset.loc[:, 'FileName'].isin([row.FileName])
-                            fn_df = filtered_dset[fn_filter].reset_index()
+                            fn_df = filtered_dset[fn_filter].reset_index(drop=True)
 
                             # filter specific modality from above DataFrame
                             md_filter = fn_df.loc[:, 'modality'].isin([row.modality])
-                            md_df = fn_df[md_filter].reset_index()
+                            md_df = fn_df[md_filter].reset_index(drop=True)
 
                             if len(md_df) > 1:
                                 conflict_tested = []
                                 for j, sub_row in md_df.iterrows():
                                     if pd.isnull(sub_row.run):
-                                        fname = '{}_run-{}'.format(sub_row.Filename, str(j+1).zfill(2))
+                                        fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                     else:
                                         _ = validation('run', sub_row.run, 2, dtype=int)
                                         fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
