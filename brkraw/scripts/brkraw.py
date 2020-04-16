@@ -342,11 +342,12 @@ def main():
                                     if pd.isnull(sub_row.run):
                                         fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                     else:
-                                        _ = validation(df, i, 'run', sub_row.run, 2, dtype=int)
+                                        _ = validation(df, i, 'run', sub_row.run, 3, dtype=int)
                                         fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
                                     if fname in conflict_tested:
-                                        raise ValueConflictInField('Conflict value has detected in [run] column.'
-                                                                   'Please review your input BIDS datasheet carefully.')
+                                        raise ValueConflictInField('ScanID:[{}] Conflict error. '
+                                                                   'The [run] index value must be unique '
+                                                                   'among the scans with the same modality.'.format(sub_row.ScanID))
                                     else:
                                         conflict_tested.append(fname)
                                     fname = '{}_{}'.format(fname, sub_row.modality)
@@ -356,7 +357,7 @@ def main():
                                 fname = '{}_{}'.format(fname, row.modality)
                                 dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir)
                             list_tested_fn.append(temp_fname)
-                    print('Done.')
+                    print('...Done.')
     else:
         parser.print_help()
 
