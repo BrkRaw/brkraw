@@ -220,7 +220,7 @@ def main():
 
         def validation(df, idx, key, val, num_char_allowed, dtype=None):
             import string
-            col = string.ascii_uppercase[df.columns.tolist().index('acq')]
+            col = string.ascii_uppercase[df.columns.tolist().index(key)]
             special_char = re.compile(r'[^0-9a-zA-Z]')
             str_val = str(val)
             loc = 'col,row:[{},{}]'.format(col, idx+2)
