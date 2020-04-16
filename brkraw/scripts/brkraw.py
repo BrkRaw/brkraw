@@ -221,7 +221,7 @@ def main():
         def validation(idx, key, val, num_char_allowed, dtype=None):
             special_char = re.compile(r'[^0-9a-zA-Z]')
             str_val = str(val)
-            loc = 'row,col:[{}:{}]'.format(idx+1, key)
+            loc = 'row,col:[{}:{}]'.format(idx+2, key)
             if len(str_val) > num_char_allowed:
                 message = "{} You can't use more than {} characters.".format(loc, num_char_allowed)
                 raise InvalidValueInField(message)
