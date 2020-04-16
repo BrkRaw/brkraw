@@ -10,7 +10,6 @@ import re
 
 
 def load(path):
-    err_message = ERROR_MESSAGES['ImportError']
     path = pathlib.Path(path)
     if os.path.isdir(path):
         return PvDatasetDir(path)
@@ -198,7 +197,6 @@ class BrukerLoader():
             slice_info = self._get_slice_info(visu_pars)
             num_slice_packs = slice_info['num_slice_packs']
             for spack_idx in range(num_slice_packs):
-                slice_info = self._get_slice_info(visu_pars)
                 num_slices_each_pack = slice_info['num_slices_each_pack']
                 start = int(spack_idx * num_slices_each_pack[spack_idx])
                 end = start + num_slices_each_pack[spack_idx]
@@ -211,6 +209,52 @@ class BrukerLoader():
         niiobj = Nifti1Image(imgobj, affine)
         niiobj = self._set_default_header(niiobj, visu_pars, method)
         return niiobj
+
+    def get_sitkimg(self, scan_id, reco_id, slp_correct=True):
+        """ return SimpleITK image obejct instead Nibabel NIFTI obj"""
+        import SimpleITK as sitk
+
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
+        method = self._method[scan_id]
+        res = self._get_spatial_info(visu_pars)['spatial_resol']
+        dataobj = self.get_dataobj(scan_id, reco_id, slp_correct=slp_correct)
+        affine = self._get_affine(visu_pars, method)
+
+        if isinstance(affine, list):
+            parser = []
+            slice_info = self._get_slice_info(visu_pars)
+            num_slice_packs = slice_info['num_slice_packs']
+            for spack_idx in range(num_slice_packs):
+                num_slices_each_pack = slice_info['num_slices_each_pack']
+                start = int(spack_idx * num_slices_each_pack[spack_idx])
+                end = start + num_slices_each_pack[spack_idx]
+                seg_imgobj = dataobj[..., start:end]
+                sitkobj = sitk.GetImageFromArray(seg_imgobj.T)
+                sitkaff = np.matmul(np.diag([-1, -1, 1, 1]), affine[spack_idx])
+                sitkdir, sitkorg = to_matvec(sitkaff)
+                sitkdir = sitkdir.dot(np.linalg.inv(np.diag(res[spack_idx])))
+                sitkobj.SetDirection(sitkdir.flatten().tolist())
+                sitkobj.SetOrigin(sitkorg)
+                sitkobj.SetSpacing(res[spack_idx])
+                parser.append(sitkobj)
+            return parser
+
+        affine = np.matmul(np.diag([-1, -1, 1, 1]), affine)  # RAS to LPS
+        direction, origin = to_matvec(affine)
+        direction = direction.dot(np.linalg.inv(np.diag(res[0])))
+        if len(dataobj) > 3:
+            vol_parser = []
+            for d in dataobj.T:
+                vol_parser.append(sitk.GetImageFromArray(d))
+            imgobj = sitk.JoinSeries(vol_parser)
+            origin = list(origin) + [0.0]
+            res = [list(res[0]) + [self._get_temp_info(visu_pars)['temporal_resol']]]
+        else:
+            imgobj = sitk.GetImageFromArray(dataobj.T)
+        imgobj.SetDirection(direction.flatten().tolist())
+        imgobj.SetOrigin(origin)
+        imgobj.SetSpacing(res[0])
+        return imgobj
 
     @property
     def save_nifti(self):

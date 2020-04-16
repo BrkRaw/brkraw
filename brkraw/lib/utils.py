@@ -1,7 +1,7 @@
 from .reference import *
 import re
 import os
-import enum
+import math
 import numpy as np
 from collections import OrderedDict
 from functools import partial, reduce
@@ -28,12 +28,13 @@ def apply_rotate(matrix, rad_x=0, rad_y=0, rad_z=0):
     rotated_vec = rmat['z'].dot(rmat['y'].dot(rmat['x'].dot(af_vec)))
     return from_matvec(rotated_mat, rotated_vec)
 
+
 # Euler angle
-def get_eulerangle(matrix):
-    rx = np.arctan2(matrix[1, 2], matrix[2, 2])
-    ry = np.arctan2(-matrix[2, 0], np.sqrt(matrix[1, 2]**2 + matrix[2, 2]**2))
-    rz = np.arctan2(matrix[1, 0], matrix[0, 0])
-    return rx/np.pi*180, ry/np.pi*180, rz/np.pi*180
+# def get_eulerangle(matrix):
+#     rx = np.arctan2(matrix[1, 2], matrix[2, 2])
+#     ry = np.arctan2(-matrix[2, 0], np.sqrt(matrix[1, 2]**2 + matrix[2, 2]**2))
+#     rz = np.arctan2(matrix[1, 0], matrix[0, 0])
+#     return rx/np.pi*180, ry/np.pi*180, rz/np.pi*180
 
 
 def reversed_pose_correction(pose, rmat, distance):
@@ -42,13 +43,13 @@ def reversed_pose_correction(pose, rmat, distance):
     corrected_pose = rmat.T.dot(reversed_pose)
     return corrected_pose
 
+
 def build_affine_from_orient_info(resol, rmat, pose,
                                   subj_pose, subj_type, slice_orient):
     if slice_orient in ['axial', 'sagital']:
         resol = np.diag(np.array(resol))
     else:
         resol = np.diag(np.array(resol) * np.array([1, 1, -1]))
-
     rmat = rmat.T.dot(resol)
 
     affine = from_matvec(rmat, pose)
@@ -64,13 +65,13 @@ def build_affine_from_orient_info(resol, rmat, pose,
         affine = apply_rotate(affine, rad_z=np.pi/2)
     elif subj_pose == 'Head_Right':
         affine = apply_rotate(affine, rad_z=-np.pi/2)
-    elif subj_pose == 'Foot_Supine':
+    elif subj_pose in ['Foot_Supine', 'Tail_Supine']:
         affine = apply_rotate(affine, rad_x=np.pi)
-    elif subj_pose == 'Foot_Prone':
+    elif subj_pose in ['Foot_Prone', 'Tail_Prone']:
         affine = apply_rotate(affine, rad_y=np.pi)
-    elif subj_pose == 'Foot_Left':
+    elif subj_pose in ['Foot_Left', 'Tail_Left']:
         affine = apply_rotate(affine, rad_y=np.pi, rad_z=np.pi/2)
-    elif subj_pose == 'Foot_Right':
+    elif subj_pose in ['Foot_Right', 'Tail_Right']:
         affine = apply_rotate(affine, rad_y=np.pi, rad_z=-np.pi/2)
     else:  # in case Bruker put additional value for this header
         raise Exception(ERROR_MESSAGES['NotIntegrated'])
@@ -89,9 +90,8 @@ def is_rotation_matrix(matrix):
     n = np.linalg.norm(i - should_be_identity)
     return n < 1e-6
 
-def calc_eulerangle(matrix):
-    import math
 
+def calc_eulerangle(matrix):
     assert (is_rotation_matrix(matrix))
 
     sy = math.sqrt(matrix[0, 0] * matrix[0, 0] + matrix[1, 0] * matrix[1, 0])
@@ -455,7 +455,6 @@ def convert_unit(size_in_bytes, unit):
 
 
 def get_dirsize(dir_path):
-    import os
     unit_dict = {0: 'B',
                  1: 'KB',
                  2: 'MB',
@@ -472,7 +471,6 @@ def get_dirsize(dir_path):
 
 
 def get_filesize(file_path):
-    import os
     unit_dict = {0: 'B',
                  1: 'KB',
                  2: 'MB',
