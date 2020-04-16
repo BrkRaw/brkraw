@@ -224,7 +224,7 @@ def main():
             if len(str_val) > num_char_allowed:
                 raise InvalidValueInField('Only {} characters are acceptable for {} field'.format(num_char_allowed, key))
             if special_char.search(str_val) is not None:
-                raise InvalidValueInField('Special characters are not allowed in {} field'.format(key))
+                raise InvalidValueInField('Special characters or space are not allowed in {} field: [{}]'.format(key, val))
             if dtype is not None:
                 try:
                     dtype(val)
