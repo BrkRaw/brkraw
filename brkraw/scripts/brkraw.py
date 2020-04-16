@@ -226,12 +226,11 @@ def main():
             # SessID was removed
             multi_session = False
         else:
-            pass
-        num_session = len(list(set(df['SessID'])))
-        if num_session > 1:
-            multi_session = True
-        else:
-            multi_session = False
+            num_session = len(list(set(df['SessID'])))
+            if num_session > 1:
+                multi_session = True
+            else:
+                multi_session = False
 
         root_path = os.path.join(os.path.curdir, 'Data')
         mkdir(root_path)
