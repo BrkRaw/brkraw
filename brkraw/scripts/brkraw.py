@@ -218,18 +218,26 @@ def main():
         import pandas as pd
         import numpy as np
 
-        def validation(key, val, num_char_allowed, dtype=None):
+        def validation(idx, key, val, num_char_allowed, dtype=None):
             special_char = re.compile(r'[^0-9a-zA-Z]')
             str_val = str(val)
+            loc = 'row,col:[{}:{}]'.format(idx+1, key)
             if len(str_val) > num_char_allowed:
-                raise InvalidValueInField('Only {} characters are acceptable for {} field'.format(num_char_allowed, key))
-            if special_char.search(str_val) is not None:
-                raise InvalidValueInField('Special characters or space are not allowed in {} field: [{}]'.format(key, val))
+                message = "{} You can't use more than {} characters.".format(loc, num_char_allowed)
+                raise InvalidValueInField(message)
+            matched = special_char.search(str_val)
+            if matched is not None:
+                if ' ' in matched.group():
+                    message = "{} Empty string is not allowed.".format(loc)
+                else:
+                    message = "{} Special characters are not allowed.".format(loc)
+                raise InvalidValueInField(message)
             if dtype is not None:
                 try:
                     dtype(val)
                 except:
-                    raise InvalidValueInField('The value for {} must be {}'.format(key, dtype.__name__))
+                    message = "{} Invalid data type. Value must be {}.".format(loc, dtype.__name__)
+                    raise InvalidValueInField(message)
             return True
 
         pd.options.mode.chained_assignment = None
@@ -286,16 +294,16 @@ def main():
                         mkdir(dtype_path)
 
                         if pd.notnull(row.task):
-                            if validation('task', row.task, 10):
+                            if validation(i, 'task', row.task, 10):
                                 fname = '{}_task-{}'.format(fname, row.task)
                         if pd.notnull(row.acq):
-                            if validation('acq', row.acq, 5):
+                            if validation(i, 'acq', row.acq, 5):
                                 fname = '{}_acq-{}'.format(fname, row.acq)
                         if pd.notnull(row.ce):
-                            if validation('ce', row.ce, 5):
+                            if validation(i, 'ce', row.ce, 5):
                                 fname = '{}_ce-{}'.format(fname, row.ce)
                         if pd.notnull(row.rec):
-                            if validation('rec', row.rec, 2):
+                            if validation(i, 'rec', row.rec, 2):
                                 fname = '{}_rec-{}'.format(fname, row.rec)
                         filtered_dset.loc[i, 'FileName'] = fname
                         filtered_dset.loc[i, 'Dir'] = dtype_path
@@ -332,7 +340,7 @@ def main():
                                     if pd.isnull(sub_row.run):
                                         fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                     else:
-                                        _ = validation('run', sub_row.run, 2, dtype=int)
+                                        _ = validation(i, 'run', sub_row.run, 2, dtype=int)
                                         fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
                                     if fname in conflict_tested:
                                         raise ValueConflictInField('Conflict value has detected in [run] column.'
