@@ -219,20 +219,23 @@ def main():
         import numpy as np
 
         def validation(key, val, num_char_allowed, dtype=None):
-            special_char = re.compile(r'[@_!#$%^&*()<>?/\|}{~:]')
-            if len(val) > num_char_allowed:
+            special_char = re.compile(r'[^0-9a-zA-Z]')
+            str_val = str(val)
+            if len(str_val) > num_char_allowed:
                 raise InvalidValueInField('Only {} characters are acceptable for {} field'.format(num_char_allowed, key))
-            if special_char.search(val) is not None:
+            if special_char.search(str_val) is not None:
                 raise InvalidValueInField('Special characters are not allowed in {} field'.format(key))
             if dtype is not None:
-                if not isinstance(val, dtype):
+                try:
+                    dtype(val)
+                except:
                     raise InvalidValueInField('The value for {} must be {}'.format(key, dtype.__name__))
             return True
 
         pd.options.mode.chained_assignment = None
         path = args.input_raw
         input_xlsx = args.input_xlsx
-        df = pd.read_excel(input_xlsx)
+        df = pd.read_excel(input_xlsx, dtype={'run': str})
 
         # check if the project is multi-session
         if all(pd.isnull(df['SessID'])):
@@ -248,7 +251,7 @@ def main():
         root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
         mkdir(root_path)
 
-        print('Inpecting input BIDS datasheet...')
+        print('Inspect input BIDS datasheet...')
         for dname in sorted(os.listdir(path)):
             dpath = os.path.join(path, dname)
             dset = BrukerLoader(dpath)
