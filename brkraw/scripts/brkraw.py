@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from shleeh.errors import *
+from shleeh import *
 from .. import BrukerLoader, __version__
 import argparse
 import os, re
