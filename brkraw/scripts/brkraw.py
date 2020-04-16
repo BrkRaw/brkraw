@@ -250,7 +250,7 @@ def main():
         mkdir(root_path)
 
         print('Inpecting input BIDS datasheet...')
-        for dname in tqdm(sorted(os.listdir(path))):
+        for dname in tqdm.tqdm(sorted(os.listdir(path))):
             dpath = os.path.join(path, dname)
             dset = BrukerLoader(dpath)
             if dset.is_pvdataset:
@@ -312,6 +312,7 @@ def main():
 
                     list_tested_fn = []
                     # Converting data according to the updated sheet
+                    print('Converting {}...'.format(dname))
                     for i, row in filtered_dset.iterrows():
                         temp_fname = '{}_{}'.format(row.FileName, row.modality)
                         if temp_fname not in list_tested_fn:
