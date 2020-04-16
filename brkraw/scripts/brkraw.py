@@ -218,10 +218,12 @@ def main():
         import pandas as pd
         import numpy as np
 
-        def validation(idx, key, val, num_char_allowed, dtype=None):
+        def validation(df, idx, key, val, num_char_allowed, dtype=None):
+            import string
+            col = string.ascii_uppercase[df.columns.tolist().index('acq')]
             special_char = re.compile(r'[^0-9a-zA-Z]')
             str_val = str(val)
-            loc = 'row,col:[{}:{}]'.format(idx+2, key)
+            loc = 'col,row:[{},{}]'.format(col, idx+2)
             if len(str_val) > num_char_allowed:
                 message = "{} You can't use more than {} characters.".format(loc, num_char_allowed)
                 raise InvalidValueInField(message)
@@ -294,16 +296,16 @@ def main():
                         mkdir(dtype_path)
 
                         if pd.notnull(row.task):
-                            if validation(i, 'task', row.task, 10):
+                            if validation(df, i, 'task', row.task, 10):
                                 fname = '{}_task-{}'.format(fname, row.task)
                         if pd.notnull(row.acq):
-                            if validation(i, 'acq', row.acq, 5):
+                            if validation(df, i, 'acq', row.acq, 5):
                                 fname = '{}_acq-{}'.format(fname, row.acq)
                         if pd.notnull(row.ce):
-                            if validation(i, 'ce', row.ce, 5):
+                            if validation(df, i, 'ce', row.ce, 5):
                                 fname = '{}_ce-{}'.format(fname, row.ce)
                         if pd.notnull(row.rec):
-                            if validation(i, 'rec', row.rec, 2):
+                            if validation(df, i, 'rec', row.rec, 2):
                                 fname = '{}_rec-{}'.format(fname, row.rec)
                         filtered_dset.loc[i, 'FileName'] = fname
                         filtered_dset.loc[i, 'Dir'] = dtype_path
@@ -340,7 +342,7 @@ def main():
                                     if pd.isnull(sub_row.run):
                                         fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                     else:
-                                        _ = validation(i, 'run', sub_row.run, 2, dtype=int)
+                                        _ = validation(df, i, 'run', sub_row.run, 2, dtype=int)
                                         fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
                                     if fname in conflict_tested:
                                         raise ValueConflictInField('Conflict value has detected in [run] column.'
