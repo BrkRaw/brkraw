@@ -232,7 +232,7 @@ def main():
                     print('Converting {}...'.format(dpath))
                     subj_id = list(set(filtered_dset['SubjID']))[0]
                     sessions = list(set(filtered_dset['SessID']))
-                    subj_code = 'sub_{}'.format(subj_id)
+                    subj_code = 'sub-{}'.format(subj_id)
                     subj_path = os.path.join(root_path, subj_code)
                     mkdir(subj_path)
 
