@@ -214,6 +214,7 @@ def main():
 
     elif args.function == 'bids':
         import pandas as pd
+        import numpy as np
         path = args.path
         datasheet = args.datasheet
         df = pd.read_excel(datasheet)
@@ -228,6 +229,8 @@ def main():
                 pvobj = dset.pvobj
                 rawdata = pvobj.path
                 filtered_dset = df[df['RawData'].isin([rawdata])]
+                filtered_dset['FileName'] = np.nan
+                filtered_dset['Dir'] = np.nan
                 if len(filtered_dset):
                     print('Converting {}...'.format(dpath))
                     subj_id = list(set(filtered_dset['SubjID']))[0]
@@ -257,13 +260,65 @@ def main():
                             fname = '{}_ce-{}'.format(fname, row.ce)
                         if pd.notnull(row.rec):
                             fname = '{}_rec-{}'.format(fname, row.rec)
-                        if pd.notnull(row.run):
-                            fname = '{}_run-{}'.format(fname, row.run)
-                        else:
-                            fname = '{}_sid-{}_rid-{}'.format(fname, row.ScanID, row.RecoID)
-                        if pd.notnull(row.mode):
-                            fname = '{}_{}'.format(fname, row.modality)
-                        dset.save_as(row.ScanID, row.RecoID, fname, dir=dtype_path)
+                        filtered_dset.loc[i, 'FileName'] = fname
+                        filtered_dset.loc[i, 'Dir'] = dtype_path
+
+                    list_tested = []
+                    for i, row in filtered_dset.iterrows():
+                        if row.FileName not in list_tested:
+                            fn_filter = filtered_dset['FileName'].isin([row.FileName])
+                            fn_df = filtered_dset[fn_filter]
+                            if pd.isnull(row.run):
+                                if len(fn_df) > 1:
+                                    for j, sub_row in fn_df.iterrows():
+                                        fname = '{}_run-{}'.format(sub_row.FileName, j)
+                                        if pd.notnull(sub_row.modality):
+                                            fname = '{}_{}'.format(fname, sub_row.modality)
+                                        else:
+                                            method = dset.get_method(sub_row.ScanID).parameters['Method']
+                                            if sub_row.DataType == 'anat':
+                                                if re.search('flash', method, re.IGNORECASE):
+                                                    fname = '{}_FLASH'.format(fname)
+                                                elif re.search('rare', method, re.IGNORECASE):
+                                                    fname = '{}_T2w'.format(fname)
+                                                else:
+                                                    fname = '{}_{}'.format(fname, method.split(':')[-1])
+                                            else:
+                                                fname = '{}_{}'.format(fname, method.split(':')[-1])
+                                        dset.save_as(sub_row.ScanID, sub_row.RecoID, fname, dir=sub_row.Dir)
+                                else:
+                                    fname = '{}'.format(row.FileName)
+                                    if pd.notnull(row.modality):
+                                        fname = '{}_{}'.format(fname, row.modality)
+                                    else:
+                                        method = dset.get_method(row.ScanID).parameters['Method']
+                                        if row.DataType == 'anat':
+                                            if re.search('flash', method, re.IGNORECASE):
+                                                fname = '{}_FLASH'.format(fname)
+                                            elif re.search('rare', method, re.IGNORECASE):
+                                                fname = '{}_T2w'.format(fname)
+                                            else:
+                                                fname = '{}_{}'.format(fname, method.split(':')[-1])
+                                        else:
+                                            fname = '{}_{}'.format(fname, method.split(':')[-1])
+                                    dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir)
+                            else:
+                                fname = '{}_run-{}'.format(row.FileName, row.run)
+                                if pd.notnull(row.modality):
+                                    fname = '{}_{}'.format(fname, row.modality)
+                                else:
+                                    method = dset.get_method(row.ScanID).parameters['Method']
+                                    if row.DataType == 'anat':
+                                        if re.search('flash', method, re.IGNORECASE):
+                                            fname = '{}_FLASH'.format(fname)
+                                        elif re.search('rare', method, re.IGNORECASE):
+                                            fname = '{}_T2w'.format(fname)
+                                        else:
+                                            fname = '{}_{}'.format(fname, method.split(':')[-1])
+                                    else:
+                                        fname = '{}_{}'.format(fname, method.split(':')[-1])
+                                dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir)
+                            list_tested.append(row.FileName)
                     print('Done.')
     else:
         parser.print_help()
