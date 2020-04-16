@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from shleeh import *
+from shleeh.errors import *
 from .. import BrukerLoader, __version__
 import argparse
 import os, re
@@ -212,11 +212,24 @@ def main():
                             item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
                             df = df.append(item, ignore_index=True)
         df.to_excel(output, index=None)
-        print('Please complete the form [{}] according to BIDS standard guide.'.format(os.path.basename(output)))
+        print('Please complete the BIDS datasheet [{}] according to BIDS standard guide.'.format(os.path.basename(output)))
 
     elif args.function == 'bids_converter':
         import pandas as pd
         import numpy as np
+        import tqdm
+
+        def validation(key, val, num_char_allowed, dtype=None):
+            special_char = re.compile(r'[@_!#$%^&*()<>?/\|}{~:]')
+            if len(val) > num_char_allowed:
+                raise InvalidValueInField('Only {} characters are acceptable for {} field'.format(num_char_allowed, key))
+            if special_char.search(val) is not None:
+                raise InvalidValueInField('Special characters are not allowed in {} field'.format(key))
+            if dtype is not None:
+                if not isinstance(val, dtype):
+                    raise InvalidValueInField('The value for {} must be {}'.format(key, dtype.__name__))
+            return True
+
         pd.options.mode.chained_assignment = None
         path = args.input_raw
         input_xlsx = args.input_xlsx
@@ -236,7 +249,8 @@ def main():
         root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
         mkdir(root_path)
 
-        for dname in sorted(os.listdir(path)):
+        print('Inpecting input BIDS datasheet...')
+        for dname in tqdm(sorted(os.listdir(path))):
             dpath = os.path.join(path, dname)
             dset = BrukerLoader(dpath)
             if dset.is_pvdataset:
@@ -247,7 +261,6 @@ def main():
                 filtered_dset.loc[:, 'Dir'] = [np.nan] * len(filtered_dset)
 
                 if len(filtered_dset):
-                    print('Converting {}...'.format(dpath))
                     subj_id = list(set(filtered_dset['SubjID']))[0]
                     subj_code = 'sub-{}'.format(subj_id)
 
@@ -271,13 +284,17 @@ def main():
                         mkdir(dtype_path)
 
                         if pd.notnull(row.task):
-                            fname = '{}_task-{}'.format(fname, row.task)
+                            if validation('task', row.task, 10):
+                                fname = '{}_task-{}'.format(fname, row.task)
                         if pd.notnull(row.acq):
-                            fname = '{}_acq-{}'.format(fname, row.acq)
+                            if validation('acq', row.acq, 5):
+                                fname = '{}_acq-{}'.format(fname, row.acq)
                         if pd.notnull(row.ce):
-                            fname = '{}_ce-{}'.format(fname, row.ce)
+                            if validation('ce', row.ce, 5):
+                                fname = '{}_ce-{}'.format(fname, row.ce)
                         if pd.notnull(row.rec):
-                            fname = '{}_rec-{}'.format(fname, row.rec)
+                            if validation('rec', row.rec, 2):
+                                fname = '{}_rec-{}'.format(fname, row.rec)
                         filtered_dset.loc[i, 'FileName'] = fname
                         filtered_dset.loc[i, 'Dir'] = dtype_path
                         if pd.isnull(row.modality):
@@ -294,28 +311,35 @@ def main():
                             filtered_dset.loc[i, 'modality'] = modality
 
                     list_tested_fn = []
-
+                    # Converting data according to the updated sheet
                     for i, row in filtered_dset.iterrows():
                         temp_fname = '{}_{}'.format(row.FileName, row.modality)
                         if temp_fname not in list_tested_fn:
+                            # filter the DataFrame that has same filename (updated without run)
                             fn_filter = filtered_dset.loc[:, 'FileName'].isin([row.FileName])
-                            fn_df = filtered_dset[fn_filter]
+                            fn_df = filtered_dset[fn_filter].reset_index()
+
+                            # filter specific modality from above DataFrame
                             md_filter = fn_df.loc[:, 'modality'].isin([row.modality])
                             md_df = fn_df[md_filter].reset_index()
 
-                            if pd.isnull(row.run):
-                                if len(md_df) > 1:
-                                    for j, sub_row in md_df.iterrows():
-                                        fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
-                                        fname = '{}_{}'.format(fname, sub_row.modality)
-                                        dset.save_as(sub_row.ScanID, sub_row.RecoID, fname, dir=sub_row.Dir)
-
-                                else:
-                                    fname = '{}'.format(row.FileName)
-                                    fname = '{}_{}'.format(fname, row.modality)
-                                    dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir)
+                            if len(md_df) > 1:
+                                conflict_tested = []
+                                for j, sub_row in md_df.iterrows():
+                                    if pd.isnull(sub_row.run):
+                                        fname = '{}_run-{}'.format(sub_row.Filename, str(j+1).zfill(2))
+                                    else:
+                                        _ = validation('run', sub_row.run, 2, dtype=int)
+                                        fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
+                                    if fname in conflict_tested:
+                                        raise ValueConflictInField('Conflict value has detected in [run] column.'
+                                                                   'Please review your input BIDS datasheet carefully.')
+                                    else:
+                                        conflict_tested.append(fname)
+                                    fname = '{}_{}'.format(fname, sub_row.modality)
+                                    dset.save_as(sub_row.ScanID, sub_row.RecoID, fname, dir=sub_row.Dir)
                             else:
-                                fname = '{}_run-{}'.format(row.FileName, str(int(row.run)).zfill(2))
+                                fname = '{}'.format(row.FileName)
                                 fname = '{}_{}'.format(fname, row.modality)
                                 dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir)
                             list_tested_fn.append(temp_fname)
