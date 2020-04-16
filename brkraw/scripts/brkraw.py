@@ -222,6 +222,17 @@ def main():
         input_xlsx = args.input_xlsx
         df = pd.read_excel(input_xlsx)
 
+        if all(pd.isnull(df['SessID'])):
+            # SessID was removed
+            multi_session = False
+        else:
+            pass
+        num_session = len(list(set(df['SessID'])))
+        if num_session > 1:
+            multi_session = True
+        else:
+            multi_session = False
+
         root_path = os.path.join(os.path.curdir, 'Data')
         mkdir(root_path)
 
@@ -238,13 +249,12 @@ def main():
                 if len(filtered_dset):
                     print('Converting {}...'.format(dpath))
                     subj_id = list(set(filtered_dset['SubjID']))[0]
-                    sessions = list(set(filtered_dset['SessID']))
                     subj_code = 'sub-{}'.format(subj_id)
                     subj_path = os.path.join(root_path, subj_code)
                     mkdir(subj_path)
 
                     for i, row in filtered_dset.iterrows():
-                        if len(sessions) > 1:
+                        if multi_session:
                             sess_code = 'ses-{}'.format(row.SessID)
                             subj_path = os.path.join(subj_path, sess_code)
                             mkdir(subj_path)
