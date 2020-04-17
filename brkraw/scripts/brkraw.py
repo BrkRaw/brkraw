@@ -26,38 +26,36 @@ def main():
                                        metavar='command')
 
     summary = subparsers.add_parser("summary", help='Print out data summary')
-    summary.add_argument("path", help="Folder location for the Bruker raw data", type=str)
+    summary.add_argument("input", help="The source path for single Bruker raw data", type=str)
 
     gui = subparsers.add_parser("gui", help='Start GUI')
-    gui.add_argument("-i", "--input", help="Folder location for the Bruker raw data", type=str, default=None)
-    gui.add_argument("-o", "--output", help="Folder location for converted NifTi data", type=str, default=None)
+    gui.add_argument("-i", "--input", help="The source path for single Bruker raw data", type=str, default=None)
+    gui.add_argument("-o", "--output", help="The destination path for converted NifTi data", type=str, default=None)
 
     nii = subparsers.add_parser("tonii", help='Convert to NifTi format')
-    nii.add_argument("path", help="Folder location for the Bruker raw data", type=str)
-    nii.add_argument("-b", "--bids", help="Create JSON file with BIDS standard MRI acqusition parameter.", action='store_true')
+    nii.add_argument("input", help="The source path for single Bruker raw data", type=str)
+    nii.add_argument("-b", "--bids", help="Create JSON file with BIDS standard MRI acquisition parameter.", action='store_true')
     nii.add_argument("-o", "--output", help="Filename w/o extension to export NifTi image", type=str, default=False)
     nii.add_argument("-r", "--recoid", help="RECO ID (if scan_id has multiple reconstruction data)", type=int, default=1)
     nii.add_argument("-s", "--scanid", help="Scan ID", type=str)
 
-    niiall = subparsers.add_parser("tonii_all", help="Convert All Datasets inside input path, "
-                                                     "Caution: Don't use this function on console computer!! "
-                                                     "It will take forever!!")
-    niiall.add_argument("path", help="Path of dataset root folder", type=str)
-    niiall.add_argument("-b", "--bids", help="Create JSON file with BIDS standard MRI acqusition parameter.",
+    niiall = subparsers.add_parser("tonii_all", help="Convert All Bruker raw data.")
+    niiall.add_argument("input", help="The source path that contains multiple Bruker raw data", type=str)
+    niiall.add_argument("-b", "--bids", help="Create JSON file with BIDS standard MRI acquisition parameter.",
                         action='store_true')
 
-    bids_list = subparsers.add_parser("bids_list", help="Generate data sheet for BIDS organization")
-    bids_list.add_argument("input", help="The root path of raw PVdatasets", type=str)
-    bids_list.add_argument("output", help='The output path for bids list file', type=str)
+    bids_list = subparsers.add_parser("bids_list", help="Generate BIDS datasheets (xlsx format)")
+    bids_list.add_argument("input", help="The source path that contains multiple Bruker raw data", type=str)
+    bids_list.add_argument("output", help='The destination path for BIDS datasheet', type=str)
 
-    bids_converter = subparsers.add_parser("bids_converter", help="BIDS dataset builder based on bids data sheet.")
-    bids_converter.add_argument("input_raw", help="The root path of raw PVdatasets", type=str)
-    bids_converter.add_argument("input_xlsx", help="The filepath of bids list file")
+    bids_converter = subparsers.add_parser("bids_converter", help="Convert ALL Bruker raw data according to the BIDS datasheet")
+    bids_converter.add_argument("input_raw", help="The source path that contains multiple Bruker raw data", type=str)
+    bids_converter.add_argument("input_xlsx", help="The BIDS datasheet")
 
     args = parser.parse_args()
 
     if args.function == 'summary':
-        path = args.path
+        path = args.input
         if any([os.path.isdir(path), ('zip' in path), ('PvDataset' in path)]):
             study = BrukerLoader(path)
             study.summary()
@@ -83,7 +81,7 @@ def main():
         root.mainloop()
 
     elif args.function == 'tonii':
-        path = args.path
+        path = args.input
         scan_id = args.scanid
         reco_id = args.recoid
         study = BrukerLoader(path)
@@ -113,7 +111,7 @@ def main():
                         print('[Warning]::{}'.format(e))
 
     elif args.function == 'tonii_all':
-        path = args.path
+        path = args.input
         from os.path import join as opj, isdir, isfile
         list_of_raw = sorted([d for d in os.listdir(path) if isdir(opj(path, d)) \
                               or (isfile(opj(path, d)) and (('zip' in d) or ('PvDataset' in d)))])
@@ -212,7 +210,7 @@ def main():
                             item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
                             df = df.append(item, ignore_index=True)
         df.to_excel(output, index=None)
-        print('Please complete the BIDS datasheet [{}] according to BIDS standard guide.'.format(os.path.basename(output)))
+        print('Please complete the exported BIDS datasheet [{}] according to BIDS standard guide.'.format(os.path.basename(output)))
 
     elif args.function == 'bids_converter':
         import pandas as pd
