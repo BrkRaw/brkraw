@@ -1,0 +1,14 @@
+*.pyc
+__pycache__
+__pycache__/*
+.idea
+.idea/*
+deploy/local.properties
+ui/styles/*.css
+dist
+build
+*.pid
+test
+test/*
+*.egg-info
+*.egg-info/*
