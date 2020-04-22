@@ -254,7 +254,10 @@ def get_value(pars, key):
 
 
 def is_all_element_same(listobj):
-    return all(map(partial(lambda x, y: x == y, y=listobj[0]), listobj))
+    if listobj is None:
+        return True
+    else:
+        return all(map(partial(lambda x, y: x == y, y=listobj[0]), listobj))
 
 
 def is_numeric(x):

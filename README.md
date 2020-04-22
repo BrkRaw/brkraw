@@ -9,10 +9,10 @@ So far, several Bruker raw data converter had been introduced, still, a few issu
 1. The converted data does not preserve the original subject orientation, as well as the subject type-specific position.
 2. Lack of a robust tool to handle and preview of raw dataset.
 
-To overcome these issues, **BrkRaw** module is designed to provide comprehensive access to the Bruker's PVdataset.
-We focused on providing useful features for Bruker MRI operator and preclinical MRI researcher via below features
+To improve these issues, **BrkRaw** module is designed to provide comprehensive access to the Bruker's PVdataset.
+We focused on providing useful features for Bruker MRI operator and preclinical MRI researcher via below functions
 - preserving the subject position and orientation to converted the NifTi1 file.
-- correction of animal orientation based on their species.
+- correction of animal orientation based on the species and position.
 - providing the GUI tool for preview the dataset and NifTi1 format conversion.
 - the command-line tool for converting to NifTi1 format, previewing metadata of the dataset, checking backup status.
 - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
@@ -20,19 +20,19 @@ We focused on providing useful features for Bruker MRI operator and preclinical 
 - Object-oriented robust dataset parser.
 - compressed data readability (compatible with .zip and .PVdatasets format).
 - providing robust and easy-to-use python API for developers, including JCAMP-DX parser.
+- the python API also providing data handler object through either nibabel and simpleITK to make convenient to the researcher can implement their own code.  
 
 
 ![example_alignment](imgs/brkraw_alignment.png)
-**Fig1.** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis and a EPI image are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
+**Fig1.** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis(gray) and a EPI image(red) are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
 
 ### Compatibility
-- Cross-platform compatibility (OSX, Linux, and Windows 10 with Anaconda3)
+- Cross-platform compatibility (OSX, Linux, Windows 10)
 - Best work on Python 3.7.6, does not support Python 2.
-- Dependency: numpy, pillow, nibabel, tqdm
+- Dependency: numpy, pillow, nibabel, tqdm, simpleITK, pandas, openpyxl, xlrd, shleeh
 
 ### Installation
-- We are highly suggesting to use **the pyenv** and **Python version 3.7.6** on Linux and mac to prevent any compatibility issue.
-- In Windows 10, local installation of Anaconda3 (at UserHome) with Python 3.7.6 (ver. 2020.02) has been tested.
+- We are highly suggesting to use **Python version 3.7.6**
 
 #### Requirement
 - The installed Python must be compiled properly, If you use pyenv and are having any issue with python please refer following link: 
@@ -51,10 +51,14 @@ $ python -m tkinter -c 'tkinter._test()'
 $ pip install bruker
 ```
 
+#### Install via Github
+```angular2html
+$ pip install git+https://github.com/dvm-shlee/bruker
+```
+
 #### Known issues
 - In most case, the issue will related to the pyenv build, please refer the above links to solve the issue.
-- In Windows 10, brkraw-win.bat will use Python installed at C:\Users\<userID>\Anaconda3, but is not work if your userID contains empty space.
-- In above case, you can fix this issue to install Anaconda3 at different location and modify the brkraw-win.bat file locates at <newlocation>\Anaconda3\Scripts
+- If you experience any other issue, please use 'issue' tab in Github to report.
 
 ### Usage
 #### Linux/Unix
@@ -80,6 +84,17 @@ $ brkraw tonii <session path or compressed dataset> -s <scan id> -r <reco id>
 ```angular2html
 $ brkraw tonii_all <parent folder>
 ```
+
+- Create BIDS file table with excel format to rename the file accordingly for BIDS standard
+```angular2html
+$ brkraw bids_list <parent folder> <filname>.xlsx
+```
+
+- Build BIDS dataset according to the excel file generated with 'bids_list' command above.
+```angular2html
+$ brkraw bids_converter <parent folder> <BIDS table file>
+```
+
 ![brkraw summary](imgs/brkraw_bids.png)
 **Fig3.** Example of automatically generated BIDS dataset
 
@@ -120,15 +135,9 @@ $ brk-backup review <rawdata path> <backup path> -l
 $ brk-backup clean <rawdata path> <backup path> -l
 ```
 
-
 #### Windows 10
-- Same as above, but use brkraw-win.bat instead of brkraw command.
+- Same as above, but use brkraw.exe instead of brkraw command.
 - If this command is not working, please check the version of your Anaconda and Python.
-- Your anaconda package must be installed at C:\Users\<UserHome>\Anaconda3, if not, please update the 'brkraw-win.bat' to target correct path for python and brkraw script.
-
-```angular2html
-C:\> brkraw-win gui
-```
 
 #### Python API
 - import module

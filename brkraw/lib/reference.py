@@ -35,7 +35,7 @@ ERROR_MESSAGES = {'ImportError'         : '[{}] is not recognized as ParavisionD
                   'NoSlicePacksDef'     : 'NoneType VisuCoreSlicePacksDef.',
                   'SliceDistDatatype'   : 'unexpected datatype of VisuCoreSliceDist.',
                   'SlicePacksSlices'    : 'unexpected datatype of VisuCoreSlicePacksSlices',
-                  'DimType'             : 'non compatible dimention type.',
+                  'DimType'             : 'non compatible dimension type.',
                   'NumOrientMatrix'     : 'unexpected number of element in VisuCoreOrientation.',
                   'NumSlicePosition'    : 'unexpected number of element in VisuCorePosition.',
                   'PhaseEncDir'         : 'unexpected phase encoding direction.',
@@ -106,8 +106,8 @@ dict(Recommended    = [# SCANNER_HARDWARE
 
 # Matadata Field Mapping for Bruker PvDataset
 # BIDS Meta data will be automatically created according to below reference.
-# If list is entered as value, each parameter will be searched and the first value will be chosen
-# If dict is entered as value, below condition will be checked.
+# If list is entered as value, each parameter will be tested and the first available value will be returned.
+# If dict is entered as value, below condition will be tested.
 #   If key - where pair:  parse value from given key and return index of 'where' from these values
 #   If key - idx pair:    parse value from given key and return value of given 'idx'
 #   If 'Equation' in key: each key assigned as local variable and test in Equation will be executed to return the value

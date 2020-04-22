@@ -181,34 +181,40 @@ def main():
 
         for dname in sorted(os.listdir(path)):
             dpath = os.path.join(path, dname)
-            dset = BrukerLoader(dpath)
-            if dset.is_pvdataset:
-                pvobj = dset.pvobj
+            condition = True
+            try:
+                dset = BrukerLoader(dpath)
+            except:
+                dset = None
 
-                rawdata = pvobj.path
-                subj_id = pvobj.subj_id
-                sess_id = pvobj.session_id
+            if dset is not None:
+                if dset.is_pvdataset:
+                    pvobj = dset.pvobj
 
-                for scan_id, recos in pvobj.avail_reco_id.items():
-                    for reco_id in recos:
-                        visu_pars = dset.get_visu_pars(scan_id, reco_id)
-                        num_spack = dset._get_slice_info(visu_pars)['num_slice_packs']
+                    rawdata = pvobj.path
+                    subj_id = pvobj.subj_id
+                    sess_id = pvobj.session_id
 
-                        if num_spack != 3:  # excluding localizer
-                            method = dset.get_method(scan_id).parameters['Method']
-                            if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
-                                datatype = 'func'
-                            elif re.search('dti', method, re.IGNORECASE):
-                                datatype = 'dwi'
-                            elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
-                                datatype = 'anat'
-                            elif re.search('fieldmap', method, re.IGNORECASE):
-                                datatype = 'fmap'
-                            else:
-                                datatype = 'etc'
+                    for scan_id, recos in pvobj.avail_reco_id.items():
+                        for reco_id in recos:
+                            visu_pars = dset.get_visu_pars(scan_id, reco_id)
+                            num_spack = dset._get_slice_info(visu_pars)['num_slice_packs']
 
-                            item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
-                            df = df.append(item, ignore_index=True)
+                            if num_spack != 3:  # excluding localizer
+                                method = dset.get_method(scan_id).parameters['Method']
+                                if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+                                    datatype = 'func'
+                                elif re.search('dti', method, re.IGNORECASE):
+                                    datatype = 'dwi'
+                                elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
+                                    datatype = 'anat'
+                                elif re.search('fieldmap', method, re.IGNORECASE):
+                                    datatype = 'fmap'
+                                else:
+                                    datatype = 'etc'
+
+                                item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
+                                df = df.append(item, ignore_index=True)
         df.to_excel(output, index=None)
         print('Please complete the exported BIDS datasheet [{}] according to BIDS standard guide.'.format(os.path.basename(output)))
 

@@ -196,6 +196,7 @@ class BrukerLoader():
             parser = []
             slice_info = self._get_slice_info(visu_pars)
             num_slice_packs = slice_info['num_slice_packs']
+
             for spack_idx in range(num_slice_packs):
                 num_slices_each_pack = slice_info['num_slices_each_pack']
                 start = int(spack_idx * num_slices_each_pack[spack_idx])
@@ -296,14 +297,17 @@ class BrukerLoader():
                 bmat_fobj.write("\n")
 
     # BIDS JSON
-    def save_json(self, scan_id, reco_id, filename, dir='./'):
-        acqp        = self._acqp[scan_id]
-        method      = self._method[scan_id]
-        visu_pars   = self._get_visu_pars(scan_id, reco_id)
+    def _parse_json(self, scan_id, reco_id, metadata=None):
+        acqp = self._acqp[scan_id]
+        method = self._method[scan_id]
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
 
         json_obj = dict()
         encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
-        for k, v in METADATA_FILED_INFO.items():
+
+        if metadata is None:
+            metadata = METADATA_FILED_INFO.copy()
+        for k, v in metadata.items():
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
                 if val != None:
@@ -314,6 +318,30 @@ class BrukerLoader():
             if isinstance(val, list):
                 val = ','.join(map(str, val))
             json_obj[k] = val
+        return json_obj
+
+    def save_json(self, scan_id, reco_id, filename, dir='./', metadata=None):
+        # acqp        = self._acqp[scan_id]
+        # method      = self._method[scan_id]
+        # visu_pars   = self._get_visu_pars(scan_id, reco_id)
+        #
+        # json_obj = dict()
+        # encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
+        #
+        # if metadata is None:
+        #     metadata = METADATA_FILED_INFO.copy()
+        # for k, v in metadata.items():
+        #     val = meta_get_value(v, acqp, method, visu_pars)
+        #     if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+        #         if val != None:
+        #             val = encdir_dic[val]
+        #
+        #     if isinstance(val, np.ndarray):
+        #         val = val.tolist()
+        #     if isinstance(val, list):
+        #         val = ','.join(map(str, val))
+        #     json_obj[k] = val
+        json_obj = self._parse_json(scan_id, reco_id, metadata)
 
         with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
             import json
@@ -361,32 +389,40 @@ class BrukerLoader():
                     start_time=start_time)
 
     # printing functions / help documents
-    def print_bids(self, scan_id, reco_id, fobj=None):
+    def print_bids(self, scan_id, reco_id, fobj=None, metadata=None):
         if fobj == None:
             import sys
             fobj = sys.stdout
 
-        acqp = self._acqp[scan_id]
-        method = self._method[scan_id]
-        visu_pars = self._get_visu_pars(scan_id, reco_id)
+        # acqp = self._acqp[scan_id]
+        # method = self._method[scan_id]
+        # visu_pars = self._get_visu_pars(scan_id, reco_id)
+        #
+        # encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
+        # if metadata is None:
+        #     metadata = METADATA_FILED_INFO.copy()
+        # for k, v in metadata.items():
+        #     n_tap = int(5 - int(len(k) / 8))
+        #     if len(k) % 8 >= 7:
+        #         n_tap -= 1
+        #
+        #     tap = ''.join(['\t'] * n_tap)
+        #     val = meta_get_value(v, acqp, method, visu_pars)
+        #     if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+        #         if val != None:
+        #             val = encdir_dic[val]
+        #
+        #     if isinstance(val, np.ndarray):
+        #         val = val.tolist()
+        #     if isinstance(val, list):
+        #         val = ', '.join(map(str, val))
 
-        encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
-        for k, v in METADATA_FILED_INFO.items():
+        json_obj = self._parse_json(scan_id, reco_id, metadata)
+        for k, val in json_obj.items():
             n_tap = int(5 - int(len(k) / 8))
             if len(k) % 8 >= 7:
                 n_tap -= 1
-
             tap = ''.join(['\t'] * n_tap)
-            val = meta_get_value(v, acqp, method, visu_pars)
-            if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-                if val != None:
-                    val = encdir_dic[val]
-
-            if isinstance(val, np.ndarray):
-                val = val.tolist()
-            if isinstance(val, list):
-                val = ', '.join(map(str, val))
-
             print('{}:{}{}'.format(k, tap, val), file=fobj)
 
     def summary(self, fobj=None):
@@ -429,7 +465,8 @@ class BrukerLoader():
                     try:
                         datetime = self.get_scan_time()
                     except:
-                        raise Exception('Empty dataset...')
+                        datetime = dict(date='None')
+                        # raise Exception('Empty dataset...')
                     lines.append('UserAccount:\t{}'.format(user_account))
                     lines.append('Date:\t\t{}'.format(datetime['date']))
                     lines.append('Researcher:\t{}'.format(user_name))
@@ -451,8 +488,11 @@ class BrukerLoader():
                 pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
                 flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
                 param_values = [tr, te, pixel_bw, flip_angle]
+                for k, v in enumerate(param_values):
+                    if v is None:
+                        param_values[k] = ''
                 if j == 0:
-                    params = "[ TR: {0} ms, TE: {1:.3f} ms, pixelBW: {2:.2f} Hz, FlipAngle: {3} degree]".format(
+                    params = "[ TR: {0} ms, TE: {1} ms, pixelBW: {2} Hz, FlipAngle: {3} degree]".format(
                         *param_values)
                     protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
                     sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
@@ -641,18 +681,25 @@ class BrukerLoader():
         else:
             frame_groups = frame_group_info['group_id']
             if version == 1: # PV 5.1 support
-                phase_enc_dir = get_value(visu_pars, 'VisuAcqImagePhaseEncDir')
-                phase_enc_dir = [phase_enc_dir[0]] if is_all_element_same(phase_enc_dir) else phase_enc_dir
+                try:
+                    phase_enc_dir = get_value(visu_pars, 'VisuAcqImagePhaseEncDir')
+                    phase_enc_dir = [phase_enc_dir[0]] if is_all_element_same(phase_enc_dir) else phase_enc_dir
+                    num_slice_packs = len(phase_enc_dir)
+                except:
+                    num_slice_packs = 1
                 matrix_shape = frame_group_info['matrix_shape']
                 frame_thickness = get_value(visu_pars, 'VisuCoreFrameThickness')
-                num_slice_packs = len(phase_enc_dir)
                 num_slice_frames = 0
                 for id, fg in enumerate(frame_groups):
                     if re.search('slice', fg, re.IGNORECASE):
                         num_slice_frames += 1
                         if num_slice_frames > 2:
                             raise Exception(ERROR_MESSAGES['SlicePacksSlices'])
-                        num_slices_each_pack.append(matrix_shape[id])
+                        if num_slice_packs > 1:
+                            for s in range(num_slice_packs):
+                                num_slices_each_pack.append(int(matrix_shape[id]/num_slice_packs))
+                        else:
+                            num_slices_each_pack.append(matrix_shape[id])
                 slice_distances_each_pack = [frame_thickness for _ in range(num_slice_packs)]
             elif version == 3:
                 num_slice_packs = get_value(visu_pars, 'VisuCoreSlicePacksDef')
