@@ -176,7 +176,7 @@ def main():
         path = os.path.abspath(args.input)
         output = os.path.abspath(args.output)
         Headers = ['RawData', 'SubjID', 'SessID', 'ScanID', 'RecoID', 'DataType',
-                   'task', 'acq', 'ce', 'rec', 'run', 'modality']
+                   'task', 'acq', 'ce', 'rec', 'run', 'modality', 'Start', 'End']
         df = pd.DataFrame(columns=Headers)
 
         for dname in sorted(os.listdir(path)):
@@ -325,6 +325,8 @@ def main():
                             else:
                                 modality = '{}'.format(method.split(':')[-1])
                             filtered_dset.loc[i, 'modality'] = modality
+                        else:
+                            validation(df, i, 'modality', row.modality, 5, dtype=str)
 
                     list_tested_fn = []
                     # Converting data according to the updated sheet
@@ -355,11 +357,19 @@ def main():
                                     else:
                                         conflict_tested.append(fname)
                                     fname = '{}_{}'.format(fname, sub_row.modality)
-                                    dset.save_as(sub_row.ScanID, sub_row.RecoID, fname, dir=sub_row.Dir)
+                                    if pd.notnull(sub_row.Start) or pd.notnull(sub_row.End):
+                                        crop = [sub_row.Start, sub_row.End]
+                                    else:
+                                        crop = None
+                                    dset.save_as(sub_row.ScanID, sub_row.RecoID, fname, dir=sub_row.Dir, crop=crop)
                             else:
                                 fname = '{}'.format(row.FileName)
                                 fname = '{}_{}'.format(fname, row.modality)
-                                dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir)
+                                if pd.notnull(row.Start) or pd.notnull(row.End):
+                                    crop = [row.Start, row.End]
+                                else:
+                                    crop = None
+                                dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir, crop=crop)
                             list_tested_fn.append(temp_fname)
                     print('...Done.')
     else:

@@ -1,32 +1,49 @@
 ---
-title: 'Gala: A Python package for galactic dynamics'
+title: 'BrkRaw: Comprehensive tool to handle Bruker PV dataset'
 tags:
-  - Python
-  - astronomy
-  - dynamics
-  - galactic dynamics
-  - milky way
+  - Preclinical MRI converter
+  - Bruker
+  - Python API
+  - Command-line tool
+  - BIDS
 authors:
-  - name: Adrian M. Price-Whelan
-    orcid: 0000-0003-0872-7098
-    affiliation: "1, 2" # (Multiple affiliations must be quoted)
-  - name: Author Without ORCID
-    affiliation: 2
+  - name: Sung-Ho Lee
+    orcid: 0000-0001-5292-0747
+    affiliation: "1, 2, 3"
+  - name: Woomi Ban
+    affiliation: "1, 3"
 affiliations:
- - name: Lyman Spitzer, Jr. Fellow, Princeton University
+ - name: Center for Animal MRI, University of North Carolina at Chapel Hill
    index: 1
- - name: Institution 2
+ - name: Department of Neurology, University of North Carolina at Chapel Hill
    index: 2
-date: 13 August 2017
+ - name: Biomedical Research Imaging Center(BRIC), University of North Carolina at Chapel Hill 
+   index: 3
+date: 22 April 2020
 bibliography: paper.bib
-
-# Optional fields if submitting to a AAS journal too, see this blog post:
-# https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-aas-journal: Astrophysical Journal <- The name of the AAS journal.
 ---
 
 # Summary
+
+
+While the Bruker MRI scanner has been widely used for preclinical MR imaging research, 
+the direct accessibility of Bruker's raw dataset is poor compared to the clinical MRI scanner due to the limited resource to handle the format.
+So far, several Bruker raw data converter had been introduced, still, a few issues remain.
+1. The converted data does not preserve the original subject orientation, as well as the subject type-specific position.
+2. Lack of a robust tool to handle and preview of raw dataset.
+
+To improve these issues, **BrkRaw** module is designed to provide comprehensive access to the Bruker's PVdataset.
+We focused on providing useful features for Bruker MRI operator and preclinical MRI researcher via below functions
+- preserving the subject position and orientation to converted the NifTi1 file.
+- correction of animal orientation based on the species and position.
+- providing the GUI tool for preview the dataset and NifTi1 format conversion.
+- the command-line tool for converting to NifTi1 format, previewing metadata of the dataset, checking backup status.
+- providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
+- BIDS(v1.2.2) support: parameter file generation, automatic generation of the folder structure.
+- Object-oriented robust dataset parser.
+- compressed data readability (compatible with .zip and .PVdatasets format).
+- providing robust and easy-to-use python API for developers, including JCAMP-DX parser.
+- the python API also providing data handler object through either nibabel and simpleITK to make convenient to the researcher can implement their own code.  
 
 The forces on stars, galaxies, and dark matter under external gravitational
 fields lead to the dynamical evolution of structures in the universe. The orbits

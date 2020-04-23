@@ -183,7 +183,7 @@ class BrukerLoader():
 
     # methods to dump data into file object
     ## - NifTi1
-    def get_niftiobj(self, scan_id, reco_id):
+    def get_niftiobj(self, scan_id, reco_id, crop=None):
         from nibabel import Nifti1Image
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         method = self._method[scan_id]
@@ -206,8 +206,15 @@ class BrukerLoader():
                 niiobj = self._set_default_header(niiobj, visu_pars, method)
                 parser.append(niiobj)
             return parser
-
-        niiobj = Nifti1Image(imgobj, affine)
+        if crop is not None:
+            if crop[0] is None:
+                niiobj = Nifti1Image(imgobj[..., :crop[1]], affine)
+            elif crop[1] is None:
+                niiobj = Nifti1Image(imgobj[..., crop[0]:], affine)
+            else:
+                niiobj = Nifti1Image(imgobj[..., crop[0]:crop[1]], affine)
+        else:
+            niiobj = Nifti1Image(imgobj, affine)
         niiobj = self._set_default_header(niiobj, visu_pars, method)
         return niiobj
 
@@ -261,8 +268,9 @@ class BrukerLoader():
     def save_nifti(self):
         return self.save_as
 
-    def save_as(self, scan_id, reco_id, filename, dir='./', ext='nii.gz'):
-        niiobj = self.get_niftiobj(scan_id, reco_id)
+    def save_as(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
+                crop=None):
+        niiobj = self.get_niftiobj(scan_id, reco_id, crop=crop)
         if isinstance(niiobj, list):
             for i, nii in enumerate(niiobj):
                 output_path = os.path.join(dir,
@@ -491,6 +499,8 @@ class BrukerLoader():
                 for k, v in enumerate(param_values):
                     if v is None:
                         param_values[k] = ''
+                    if isinstance(k, float):
+                        param_values[k] = '{0:.2f}'.format(k)
                 if j == 0:
                     params = "[ TR: {0} ms, TE: {1} ms, pixelBW: {2} Hz, FlipAngle: {3} degree]".format(
                         *param_values)
