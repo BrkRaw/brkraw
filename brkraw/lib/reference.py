@@ -26,9 +26,9 @@ BYTEORDER = \
     dict(littleEndian       = '<',
          bigEndian          = '>')
 
-SLICE_ORIENT = {0:{1:'L->R', 3:'R->L'},
-                1:{1:'P->A', 3:'A->P'},
-                2:{1:'F->H', 3:'F->H'},
+SLICE_ORIENT = {0: {1: 'L->R', 3: 'R->L'},
+                1: {1: 'P->A', 3: 'A->P'},
+                2: {1: 'F->H', 3: 'F->H'},
                 }
 
 ERROR_MESSAGES = {'ImportError'         : '[{}] is not recognized as ParavisionDataset.',
@@ -45,64 +45,64 @@ ERROR_MESSAGES = {'ImportError'         : '[{}] is not recognized as ParavisionD
 # BIDS v1.2.2
 # Below is the list of METADATA keywords that BIDS recommended
 COMMON_METADATA_FIELD = \
-dict(Recommended    = [# SCANNER_HARDWARE
-                       'Manufacturer',
-                       'ManufacturersModelName',
-                       'DeviceSerialNumber',
-                       'StationName',
-                       'SoftwareVersion',
-                       'MagneticFieldStrength',
-                       'ReceiveCoilName',
-                       'ReceiveCoilActiveElements',
-                       'GradientSetType',
-                       'MRTransmitCoilSequence',
-                       'MatrixCoilMode',
-                       'CoilCombinationMethod',
+    dict(Recommended    = [  # SCANNER_HARDWARE
+                           'Manufacturer',
+                           'ManufacturersModelName',
+                           'DeviceSerialNumber',
+                           'StationName',
+                           'SoftwareVersion',
+                           'MagneticFieldStrength',
+                           'ReceiveCoilName',
+                           'ReceiveCoilActiveElements',
+                           'GradientSetType',
+                           'MRTransmitCoilSequence',
+                           'MatrixCoilMode',
+                           'CoilCombinationMethod',
 
-                        # SEQUENCE_SPECIFIC
-                       'PulseSequenceType',
-                       'ScanningSequence',
-                       'SequenceVariant',
-                       'ScanOptions',
-                       'SequenceName',
-                       'PulseSequenceDetails',
-                       'NonlinearGradientCorrection',
+                             # SEQUENCE_SPECIFIC
+                           'PulseSequenceType',
+                           'ScanningSequence',
+                           'SequenceVariant',
+                           'ScanOptions',
+                           'SequenceName',
+                           'PulseSequenceDetails',
+                           'NonlinearGradientCorrection',
 
-                        # IN_PLANE_SPATIAL_ENCODING
-                       'NumberShots',
-                       'ParallelReductionFactorInPlane',
-                       'ParallelAcquisitionTechnique',
-                       'PartialFourier',
-                       'PartialFourierDirection',
-                       'PhaseEncodingDirection',
-                       'EffectiveEchoSpacing',
-                       'TotalReadoutTime',
+                             # IN_PLANE_SPATIAL_ENCODING
+                           'NumberShots',
+                           'ParallelReductionFactorInPlane',
+                           'ParallelAcquisitionTechnique',
+                           'PartialFourier',
+                           'PartialFourierDirection',
+                           'PhaseEncodingDirection',
+                           'EffectiveEchoSpacing',
+                           'TotalReadoutTime',
 
-                        # TIMING_PARAMETERS
-                       'EchoTime',
-                       'InversionTime',
-                       'SliceTiming',
-                       'SliceEncodingDirection',
-                       'DwellTime',
+                             # TIMING_PARAMETERS
+                           'EchoTime',
+                           'InversionTime',
+                           'SliceTiming',
+                           'SliceEncodingDirection',
+                           'DwellTime',
 
-                        # RF_AND_CONTRAST, SLICE_ACCELERATION
-                       'FlipAngle',
-                       'MultibandAccerlationFactor',
-                       'AnatomicalLandmarkCoordinates',
+                             # RF_AND_CONTRAST, SLICE_ACCELERATION
+                           'FlipAngle',
+                           'MultibandAccerlationFactor',
+                           'AnatomicalLandmarkCoordinates',
 
-                        # INSTITUTION_INFORMATION
-                       'InstitutionName',
-                       'InstitutionAddress',
-                       'InstitutionalDepartmentName'],
+                             # INSTITUTION_INFORMATION
+                           'InstitutionName',
+                           'InstitutionAddress',
+                           'InstitutionalDepartmentName'],
 
-         Optional   = [ # RF_AND_CONTRAST
-                       'NegativeContrast',
+             Optional   = [  # RF_AND_CONTRAST
+                           'NegativeContrast',
 
-                        # ACQUISITION_SPECIFIC
-                       'ContrastBolusIngredient'],
+                             # ACQUISITION_SPECIFIC
+                           'ContrastBolusIngredient'],
 
-         Deprecated = [ # SCANNER_HARDWARE
-                       'HardcopyDeviceSoftwareVersion'])
+             Deprecated = [  # SCANNER_HARDWARE
+                           'HardcopyDeviceSoftwareVersion'])
 
 # Matadata Field Mapping for Bruker PvDataset
 # BIDS Meta data will be automatically created according to below reference.
@@ -127,12 +127,12 @@ METADATA_FILED_INFO = \
          MRTransmitCoilSequence         = dict(Name         = 'VisuCoilTransmitName',
                                                Manufacture  = 'VisuCoilTransmitManufacturer',
                                                Type         = 'VisuCoilTransmitType'),
-         CoilConfigName                 = 'ACQ_coil_config_file', # if Transmit and Receive coil info in None
+         CoilConfigName                 = 'ACQ_coil_config_file',  # if Transmit and Receive coil info in None
          MatrixCoilMode                 = 'ACQ_experiment_mode',
          CoilCombinationMethod          = None,
 
          # SEQUENCE_SPECIFIC
-         PulseSequenceType              = 'PULPROG', #'VisuAcqEchoSequenceType',
+         PulseSequenceType              = 'PULPROG',  # 'VisuAcqEchoSequenceType'
          ScanningSequence               = 'VisuAcqSequenceName',
          SequenceVariant                = 'VisuAcqEchoSequenceType',
          ScanOptions                    = dict(RG   = 'VisuRespSynchUsed',
@@ -145,7 +145,7 @@ METADATA_FILED_INFO = \
                                                SP   = 'PVM_FovSatOnOff',
                                                FP   = 'VisuAcqSpectralSuppression'),
          SequenceName                   = ['VisuAcquisitionProtocol',
-                                           'ACQ_protocol_name'], # if first component are None
+                                           'ACQ_protocol_name'],  # if first component are None
          PulseSequenceDetails           = 'ACQ_scan_name',
          NonlinearGradientCorrection    = 'VisuAcqKSpaceTraversal',
 
@@ -158,7 +158,7 @@ METADATA_FILED_INFO = \
          PhaseEncodingDirection         = [dict(key         = 'VisuAcqGradEncoding',
                                                 where       = 'phase_enc'),
                                            dict(key         = 'VisuAcqImagePhaseEncDir',
-                                                where       = 'col_dir')], # Deprecated
+                                                where       = 'col_dir')],  # Deprecated
          EffectiveEchoSpacing           = dict(BWhzPixel    = 'VisuAcqPixelBandwidth',
                                                MatSizePE    = dict(key='VisuCoreSize',
                                                                    idx=[dict(key    = 'VisuAcqGradEncoding',
@@ -166,7 +166,7 @@ METADATA_FILED_INFO = \
                                                                         dict(key    = 'VisuAcqImagePhaseEncDir',
                                                                              where  = 'col_dir')]),
                                                ACCfactor    = 'ACQ_phase_factor',
-                                               Equation     = '(1 / (MatSizePE * BWhzPixel)) / ACCfactor'), # in second
+                                               Equation     = '(1 / (MatSizePE * BWhzPixel)) / ACCfactor'),  # in second
          TotalReadoutTime               = dict(ETL          = 'VisuAcqEchoTrainLength',
                                                BWhzPixel    = 'VisuAcqPixelBandwidth',
                                                ACCfactor    = 'ACQ_phase_factor',

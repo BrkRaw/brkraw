@@ -1,9 +1,9 @@
 from shleeh import *
+from shleeh.errors import *
 from .loader import BrukerLoader
 from .utils import get_dirsize, get_filesize, yes_or_no
 import os
 import sys
-import time
 import tqdm
 import pickle
 import zipfile

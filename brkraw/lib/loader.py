@@ -1,4 +1,5 @@
 from shleeh import *
+from shleeh.errors import *
 from .pvobj import PvDatasetDir, PvDatasetZip
 from .utils import *
 from .reference import ERROR_MESSAGES

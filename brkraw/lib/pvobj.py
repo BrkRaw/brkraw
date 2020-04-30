@@ -10,7 +10,7 @@ _visu_pars = namedtuple('visu_pars', ['reco_id', 'idx'])
 _reco = namedtuple('reco', ['reco_id', 'idx'])
 
 
-class PvDatasetBase():
+class PvDatasetBase:
     path = None
     _subject = None
     _fid = None
