@@ -93,7 +93,7 @@ and fMRI data analysis realtime, as well as the BIDS based automatic pipeline pl
 
 # Basic Usage
 
-## command-line tool
+## Command-line tool
 - Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
 ```angular2html
 $ brkraw tonii <session path or compressed dataset>
