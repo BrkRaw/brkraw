@@ -3,16 +3,12 @@
 
 ### Description
 
-While the Bruker MRI scanner has been widely used for preclinical MR imaging research, 
-the direct accessibility of Bruker's raw dataset is poor compared to the clinical MRI scanner due to the limited resource to handle the format.
-So far, several Bruker raw data converter had been introduced, still, a few issues remain.
-1. The converted data does not preserve the original subject orientation, as well as the subject type-specific position.
-2. Lack of a robust tool to handle and preview of raw dataset.
+The **BrkRaw** module designed to cover the needs from various type of user as much as possible, 
+including MRI system operator, maintainer, MR sequence developer, imaging researcher, and data scientist.
+This module provides easy-to-access of the Bruker's PVdataset from PV 5 to PV 6, (has not been tested for 360)
 
-To improve these issues, **BrkRaw** module is designed to provide comprehensive access to the Bruker's PVdataset.
-We focused on providing useful features for Bruker MRI operator and preclinical MRI researcher via below functions
 - preserving the subject position and orientation to converted the NifTi1 file.
-- correction of animal orientation based on the species and position.
+- correction of animal orientation based on the species and position. (Anterior of subject is Anterior)
 - providing the GUI tool for preview the dataset and NifTi1 format conversion.
 - the command-line tool for converting to NifTi1 format, previewing metadata of the dataset, checking backup status.
 - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.

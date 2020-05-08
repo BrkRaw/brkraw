@@ -219,7 +219,7 @@ class BrukerLoader():
         niiobj = self._set_default_header(niiobj, visu_pars, method)
         return niiobj
 
-    def get_sitkimg(self, scan_id, reco_id, slp_correct=True):
+    def get_sitkimg(self, scan_id, reco_id, slp_correct=True, is_vector=False):
         """ return SimpleITK image obejct instead Nibabel NIFTI obj"""
         import SimpleITK as sitk
 
@@ -249,17 +249,20 @@ class BrukerLoader():
             return parser
 
         affine = np.matmul(np.diag([-1, -1, 1, 1]), affine)  # RAS to LPS
-        direction, origin = to_matvec(affine)
-        direction = direction.dot(np.linalg.inv(np.diag(res[0])))
+        direction_, origin_ = to_matvec(affine)
+        direction_ = direction_.dot(np.linalg.inv(np.diag(res[0])))
+        imgobj = sitk.GetImageFromArray(dataobj.T, isVector=is_vector)
+
         if len(dataobj) > 3:
-            vol_parser = []
-            for d in dataobj.T:
-                vol_parser.append(sitk.GetImageFromArray(d))
-            imgobj = sitk.JoinSeries(vol_parser)
-            origin = list(origin) + [0.0]
             res = [list(res[0]) + [self._get_temp_info(visu_pars)['temporal_resol']]]
+            direction = np.eye(4)
+            direction[:3, :3] = direction_
+            direction = direction.flatten()
+            origin = np.zeros([4])
+            origin[:3] = origin_
         else:
-            imgobj = sitk.GetImageFromArray(dataobj.T)
+            direction = direction_
+            origin = origin_
         imgobj.SetDirection(direction.flatten().tolist())
         imgobj.SetOrigin(origin)
         imgobj.SetSpacing(res[0])
@@ -319,7 +322,7 @@ class BrukerLoader():
         for k, v in metadata.items():
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-                if val != None:
+                if val is not None:
                     val = encdir_dic[val]
 
             if isinstance(val, np.ndarray):
@@ -354,7 +357,7 @@ class BrukerLoader():
 
         with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
             import json
-            json.dump(json_obj, f)
+            json.dump(json_obj, f, indent=4)
 
     def get_scan_time(self, visu_pars=None):
         import datetime as dt

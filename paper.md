@@ -6,12 +6,15 @@ tags:
   - Python API
   - Command-line tool
   - BIDS
+  - cross-platform
 authors:
   - name: Sung-Ho Lee
     orcid: 0000-0001-5292-0747
     affiliation: "1, 2, 3"
   - name: Woomi Ban
     affiliation: "1, 3"
+  - name: Yen-Yu Ian Shih
+    affiliation: "1, 2, 3"
 affiliations:
  - name: Center for Animal MRI, University of North Carolina at Chapel Hill
    index: 1
@@ -24,93 +27,58 @@ bibliography: paper.bib
 ---
 
 # Summary
+To access the raw Magnetic Resonance Imaging (MRI) data for research, 
+it required data conversion from the vendor-specific to software compatible format.
+Usually, this step takes an additional layer to convert it as DICOM, 
+the standard imaging format in Medicine, which has the capability of covering 
+a huge variety of Metadata that not really necessary to keep in the preclinical research field, 
+which using the animal as a subject. In addition to this, the data structure 
+of DICOM is not intuitive to understand, so that many software takes field-specific standard formats, 
+such as NifTi and Analyze, that required additional layer of data conversion.
 
+For the above reason, several researchers had developed Bruker raw to the NifTi or 
+Analyze format converter[@Brett:2002; @Ferraris:2017; @Rorden:2018; @Chavarrias:2017]
+to bypass this DICOM conversion step, but still, the converter does not take account too much on metadata access, 
+especially the subject orientation profile, mostly due to the complex nature of the way that Paravision software, 
+the user interface to control Bruker MRI scanner handling this information. 
+So, most of the previous converter does not preserve the originate orientation and 
+position of the subject in the scanner coordinate system.
 
-While the Bruker MRI scanner has been widely used for preclinical MR imaging research, 
-the direct accessibility of Bruker's raw dataset is poor compared to the clinical MRI scanner due to the limited resource to handle the format.
-So far, several Bruker raw data converter had been introduced, still, a few issues remain.
-1. The converted data does not preserve the original subject orientation, as well as the subject type-specific position.
-2. Lack of a robust tool to handle and preview of raw dataset.
+To preserve the position and orientation information of raw data, as well as the metadata 
+required to keep for the research, we developed a python module 'BrkRaw' as a comprehensive tool 
+to access raw MRI data for the Bruker preclinical MRI scanner without losing position and orientation profile \autoref{fig:1}
+Since the converter is the first layer to access raw data, we made more efforts 
+to cover the needs from various type of user as much as possible, 
+including MRI system operator, maintainer, MR sequence developer, imaging researcher, and data scientist.
+Therefore, the module designed not only can be used for the NifTi converter, 
+but also provides features, such as previewing, data archiving, Python data loader, 
+and BIDS data organizer including JSON format Metadata parser using custom syntax.
+The module is compatible with the ZIP file format so that no need to uncompress the file to access data.
 
-To improve these issues, **BrkRaw** module is designed to provide comprehensive access to the Bruker's PVdataset.
-We focused on providing useful features for Bruker MRI operator and preclinical MRI researcher via below functions
-- preserving the subject position and orientation to converted the NifTi1 file.
-- correction of animal orientation based on the species and position.
-- providing the GUI tool for preview the dataset and NifTi1 format conversion.
-- the command-line tool for converting to NifTi1 format, previewing metadata of the dataset, checking backup status.
-- providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
-- BIDS(v1.2.2) support: parameter file generation, automatic generation of the folder structure.
-- Object-oriented robust dataset parser.
-- compressed data readability (compatible with .zip and .PVdatasets format).
-- providing robust and easy-to-use python API for developers, including JCAMP-DX parser.
-- the python API also providing data handler object through either nibabel and simpleITK to make convenient to the researcher can implement their own code.  
+The module provides cross-platform command-line tools for the above features as well as Python API 
+so that it can be utilized for various purposes such as developing automate macro files to post-process 
+and analyze the acquired image online, archiving raw data and backup file inspection and maintenance, 
+and project-level multi dataset automatic conversion into BIDS. 
+To provide more convenience on accessing the raw data during data analysis the BrkRaw python API will load 
+the data as python object using either Nibabel or SimpleITK, which the two major IO modules widely utilizing 
+in python medical imaging communities, that enable to avoid unnecessary file conversion.
+In addition to this, the module provide some minor function for the neuroimaging research as below.
+1. For fMRI image, it preserves slice timing information in NifTi Header
+2. In order to reduce the size of the file, VisuCoreSlope and Offset parameter are used instead correcting it.
+3. Provide function to extract diffuse direction as FSL format (bval, bvec, bmat).
 
-The forces on stars, galaxies, and dark matter under external gravitational
-fields lead to the dynamical evolution of structures in the universe. The orbits
-of these bodies are therefore key to understanding the formation, history, and
-future state of galaxies. The field of "galactic dynamics," which aims to model
-the gravitating components of galaxies to study their structure and evolution,
-is now well-established, commonly taught, and frequently used in astronomy.
-Aside from toy problems and demonstrations, the majority of problems require
-efficient numerical tools, many of which require the same base code (e.g., for
-performing numerical orbit integration).
-
-`Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
-enables wrapping low-level languages (e.g., C) for speed without losing
-flexibility or ease-of-use in the user-interface. The API for `Gala` was
-designed to provide a class-based and user-friendly interface to fast (C or
-Cython-optimized) implementations of common operations such as gravitational
-potential and force evaluation, orbit integration, dynamical transformations,
-and chaos indicators for nonlinear dynamics. `Gala` also relies heavily on and
-interfaces well with the implementations of physical units and astronomical
-coordinate systems in the `Astropy` package [@astropy] (`astropy.units` and
-`astropy.coordinates`).
-
-`Gala` was designed to be used by both astronomical researchers and by
-students in courses on gravitational dynamics or astronomy. It has already been
-used in a number of scientific publications [@Pearson:2017] and has also been
-used in graduate courses on Galactic dynamics to, e.g., provide interactive
-visualizations of textbook material [@Binney:2008]. The combination of speed,
-design, and support for Astropy functionality in `Gala` will enable exciting
-scientific explorations of forthcoming data releases from the *Gaia* mission
-[@gaia] by students and experts alike.
-
-# Mathematics
-
-Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
-
-Double dollars make self-standing equations:
-
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
-
-You can also use plain \LaTeX for equations
-\begin{equation}\label{eq:fourier}
-\hat f(\omega) = \int_{-\infty}^{\infty} f(x) e^{i\omega x} dx
-\end{equation}
-and refer to \autoref{eq:fourier} from text.
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
+Brkraw module is currently utilizing as a first-line tool in our group at The University of North Carolina at 
+Chapel Hill for operating image acquisition core service as well as several on-going projects in our institute 
+for analyzing neuroimaging data. We expect this tool can benefit other animal imaging research sites and researchers 
+to reduce their burden on handling and management of Bruker raw datasets and further data organization 
+for reproducible science. Future direction will be developing online python-based tool to perform quality control
+and fMRI data analysis realtime, as well as the BIDS based automatic pipeline platform for neuroimaging data analysis.
 
 # Figures
 
 Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
+![Figure 1. Example of converted image alignment on Fsleye.\label{fig:1}](imgs/brkraw_alignment.png)
+Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis(gray) and a EPI image(red) are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
 
 Fenced code blocks are rendered with syntax highlighting:
 ```python

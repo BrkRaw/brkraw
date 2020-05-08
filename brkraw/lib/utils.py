@@ -6,6 +6,7 @@ import numpy as np
 from collections import OrderedDict
 from functools import partial, reduce
 from copy import copy as cp
+from slfmri.lib.volume.orient import to_matvec, from_matvec
 
 
 def apply_affine(matrix, affine):
@@ -27,14 +28,6 @@ def apply_rotate(matrix, rad_x=0, rad_y=0, rad_z=0):
     rotated_mat = rmat['z'].dot(rmat['y'].dot(rmat['x'].dot(af_mat)))
     rotated_vec = rmat['z'].dot(rmat['y'].dot(rmat['x'].dot(af_vec)))
     return from_matvec(rotated_mat, rotated_vec)
-
-
-# Euler angle
-# def get_eulerangle(matrix):
-#     rx = np.arctan2(matrix[1, 2], matrix[2, 2])
-#     ry = np.arctan2(-matrix[2, 0], np.sqrt(matrix[1, 2]**2 + matrix[2, 2]**2))
-#     rz = np.arctan2(matrix[1, 0], matrix[0, 0])
-#     return rx/np.pi*180, ry/np.pi*180, rz/np.pi*180
 
 
 def reversed_pose_correction(pose, rmat, distance):
@@ -107,17 +100,6 @@ def calc_eulerangle(matrix):
     return np.array([math.degrees(x),
                      math.degrees(y),
                      math.degrees(z)])
-
-
-def from_matvec(mat, vec):
-    affine = np.eye(4)
-    affine[:3,:3] = mat
-    affine[:3, 3] = vec
-    return affine
-
-
-def to_matvec(matrix):
-    return matrix[:3, :3], matrix[:3, 3]
 
 
 def apply_flip(matrix, axis, mat=True, vec=True):
@@ -348,7 +330,7 @@ def meta_get_value(value, acqp, method, visu_pars):
         parser = []
         for vi in value:
             val = meta_get_value(vi, acqp, method, visu_pars)
-            if val != None:
+            if val is not None:
                 parser.append(val)
         if len(parser) > 0:
             return parser[0]
@@ -381,7 +363,7 @@ def is_express(value):
 
 def meta_check_where(value, acqp, method, visu_pars):
     val = get_value(visu_pars, value['key'])
-    if val != None:
+    if val is not None:
         if isinstance(value['where'], str):
             if value['where'] not in val:
                 return None
@@ -396,7 +378,7 @@ def meta_check_where(value, acqp, method, visu_pars):
 
 def meta_check_index(value, acqp, method, visu_pars):
     val = get_value(visu_pars, value['key'])
-    if val != None:
+    if val is not None:
         if isinstance(value['idx'], int):
             return val[value['idx']]
         else:
@@ -430,7 +412,8 @@ def meta_check_source(key_string, acqp, method, visu_pars):
     elif key_string == 'PULPROG':
         return get_value(acqp, key_string)
     else:
-        raise Exception(key_string)
+        return key_string
+        # raise Exception(key_string)
 
 
 def yes_or_no(question):

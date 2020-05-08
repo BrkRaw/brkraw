@@ -35,7 +35,8 @@ def main():
 
     nii = subparsers.add_parser("tonii", help='Convert to NifTi format')
     nii.add_argument("input", help="The source path for single Bruker raw data", type=str)
-    nii.add_argument("-b", "--bids", help="Create JSON file with BIDS standard MRI acquisition parameter.", action='store_true')
+    nii.add_argument("-b", "--bids", help="Create JSON file with BIDS "
+                                          "standard MRI acquisition parameter.", action='store_true')
     nii.add_argument("-o", "--output", help="Filename w/o extension to export NifTi image", type=str, default=False)
     nii.add_argument("-r", "--recoid", help="RECO ID (if scan_id has multiple reconstruction data)", type=int, default=1)
     nii.add_argument("-s", "--scanid", help="Scan ID", type=str)
@@ -49,9 +50,11 @@ def main():
     bids_list.add_argument("input", help="The source path that contains multiple Bruker raw data", type=str)
     bids_list.add_argument("output", help='The destination path for BIDS datasheet', type=str)
 
-    bids_converter = subparsers.add_parser("bids_converter", help="Convert ALL Bruker raw data according to the BIDS datasheet")
+    bids_converter = subparsers.add_parser("bids_converter", help="Convert ALL Bruker raw data "
+                                                                  "according to the BIDS datasheet")
     bids_converter.add_argument("input_raw", help="The source path that contains multiple Bruker raw data", type=str)
-    bids_converter.add_argument("input_xlsx", help="The BIDS datasheet")
+    bids_converter.add_argument("input_xlsx", help="The BIDS datasheet", type=str)
+    bids_converter.add_argument("-r", "--meta_ref", help="BIDS Metadata reference", type=str, default=False)
 
     args = parser.parse_args()
 
@@ -217,7 +220,13 @@ def main():
                                 item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
                                 df = df.append(item, ignore_index=True)
         df.to_excel(output, index=None)
-        print('Please complete the exported BIDS datasheet [{}] according to BIDS standard guide.'.format(os.path.basename(output)))
+        ref_path = os.path.join(os.path.dirname(output), 'BIDS_META_REF.json')
+        with open(ref_path, 'w') as f:
+            import json
+            from ..lib.reference import METADATA_FILED_INFO
+            json.dump(METADATA_FILED_INFO, f, indent=4)
+        print('Please complete the exported BIDS datasheet [{}] '
+              'according to BIDS standard guide.'.format(os.path.basename(output)))
 
     elif args.function == 'bids_converter':
         import pandas as pd
@@ -251,6 +260,7 @@ def main():
         path = args.input_raw
         input_xlsx = args.input_xlsx
         df = pd.read_excel(input_xlsx, dtype={'run': str})
+        ref_path = args.meta_ref
 
         # check if the project is multi-session
         if all(pd.isnull(df['SessID'])):
@@ -371,6 +381,13 @@ def main():
                                 else:
                                     crop = None
                                 dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir, crop=crop)
+                                if ref_path:
+                                    import json
+                                    if os.path.exists(ref_path) and ref_path.lower().endswith('.json'):
+                                        ref = json.load(open(ref_path))
+                                    else:
+                                        ref = None
+                                    dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir, metadata=ref)
                             list_tested_fn.append(temp_fname)
                     print('...Done.')
     else:

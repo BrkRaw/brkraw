@@ -32,8 +32,9 @@ class MainWindow(tk.Tk):
         self._path = filedialog.askopenfilename(
             initialdir = ".",
             title = "Select file",
-            filetypes = (("Paravision 6 format", "*.PVdatasets"),
-                         ("Zip compressed", "*.zip")))
+            filetypes = (("Zip compressed", "*.zip"),
+                         ("Paravision 6 format", "*.PVdatasets"),
+                         ))
         self._extend_layout()
         self._load_dataset()
 
@@ -64,7 +65,8 @@ class MainWindow(tk.Tk):
             self._subj_info._main_frame.destroy()
             self._subj_info._path.destroy()
             self._subj_info._path_label.destroy()
-            self._subj_info._close.destroy()
+            # self._subj_info._close.destroy()
+            self._subj_info._refresh.destroy()
             self._main_frame.destroy()
 
             self._raw.close()
@@ -85,7 +87,8 @@ class MainWindow(tk.Tk):
 
             # extend level 1
             self._subj_info._extend_layout()
-            self._subj_info._close.config(command=self._close)
+            # self._subj_info._close.config(command=self._close)
+            self._subj_info._refresh.config(command=self._refresh)
 
             self._main_frame = tk.Frame(self)
             self._main_frame.pack(
@@ -108,6 +111,11 @@ class MainWindow(tk.Tk):
                 side=tk.LEFT,   fill=tk.BOTH, padx=10, pady=10)
             self._bind_scanlist()
             self._set_convert_button()
+
+    def _refresh(self):
+        self._close()
+        self._extend_layout()
+        self._load_dataset()
 
     def _load_dataset(self):
         if len(self._path) != 0:
@@ -179,6 +187,7 @@ class MainWindow(tk.Tk):
         messagebox.showinfo(title='File conversion',
                             message='{}/{}.nii.gz has converted'.format(self._output,
                                                                        filename))
+
 
 if __name__ == '__main__':
     root = MainWindow()

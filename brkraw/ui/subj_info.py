@@ -42,9 +42,12 @@ class SubjInfo(tk.Frame):
         self._path_label = tk.Label(self._upper_frame, text='DataPath',
                                     width=button_size, font=font)
         self._path_label.pack(side=tk.LEFT, anchor=tk.E)
-        self._close = tk.Button(self._upper_frame, text='Close',
-                                font=font, width=button_size)
-        self._close.pack(side=tk.RIGHT)
+        # self._close = tk.Button(self._upper_frame, text='Close',
+        #                         font=font, width=button_size)
+        # self._close.pack(side=tk.RIGHT)
+        self._refresh = tk.Button(self._upper_frame, text='Refresh',
+                                  font=font, width=button_size)
+        self._refresh.pack(side=tk.RIGHT)
         self._path = tk.Text(self._upper_frame, height=1, font=font)
         self._path.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, anchor=tk.CENTER)
         self._path.config(state=tk.DISABLED)
