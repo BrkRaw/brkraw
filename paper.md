@@ -44,12 +44,9 @@ the user interface to control Bruker MRI scanner handling this information.
 So, most of the previous converter does not preserve the originate orientation and 
 position of the subject in the scanner coordinate system.
 
-![Figure 1. Example of converted image alignment on Fsleye.\label{fig:1}](imgs/brkraw_alignment.png)
-**Fig.1** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis(gray) and a EPI image(red) are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
-
 To preserve the position and orientation information of raw data, as well as the metadata 
 required to keep for the research, we developed a python module 'BrkRaw' as a comprehensive tool 
-to access raw MRI data for the Bruker preclinical MRI scanner without losing position and orientation profile \autoref{fig:1}
+to access raw MRI data for the Bruker preclinical MRI scanner without losing position and orientation profile \autoref{fig:orientation}
 Since the converter is the first layer to access raw data, we made more efforts 
 to cover the needs from various type of user as much as possible, 
 including MRI system operator, maintainer, MR sequence developer, imaging researcher, and data scientist.
@@ -79,6 +76,8 @@ and fMRI data analysis realtime, as well as the BIDS based automatic pipeline pl
 
 # Figures
 
+![Figure 1. Example of converted image alignment on Fsleye. \label{fig:orientation}](imgs/brkraw_alignment.png)
+**Fig.1** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis(gray) and a EPI image(red) are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
 
 Fenced code blocks are rendered with syntax highlighting:
 ```python
