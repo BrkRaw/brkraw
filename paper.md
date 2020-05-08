@@ -44,6 +44,9 @@ the user interface to control Bruker MRI scanner handling this information.
 So, most of the previous converter does not preserve the originate orientation and 
 position of the subject in the scanner coordinate system.
 
+![Figure 1. Example of converted image alignment on Fsleye.\label{fig:1}](imgs/brkraw_alignment.png)
+**Fig.1** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis(gray) and a EPI image(red) are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
+
 To preserve the position and orientation information of raw data, as well as the metadata 
 required to keep for the research, we developed a python module 'BrkRaw' as a comprehensive tool 
 to access raw MRI data for the Bruker preclinical MRI scanner without losing position and orientation profile \autoref{fig:1}
@@ -62,10 +65,10 @@ and project-level multi dataset automatic conversion into BIDS.
 To provide more convenience on accessing the raw data during data analysis the BrkRaw python API will load 
 the data as python object using either Nibabel or SimpleITK, which the two major IO modules widely utilizing 
 in python medical imaging communities, that enable to avoid unnecessary file conversion.
-In addition to this, the module provide some minor function for the neuroimaging research as below.
-1. For fMRI image, it preserves slice timing information in NifTi Header
-2. In order to reduce the size of the file, VisuCoreSlope and Offset parameter are used instead correcting it.
-3. Provide function to extract diffuse direction as FSL format (bval, bvec, bmat).
+In addition to this, the module provide some minor function for the neuroimaging research as follows.
+1) For fMRI image, it preserves slice timing information in NifTi Header.
+2) In order to reduce the size of the file, VisuCoreSlope and Offset parameter are used instead correcting it.
+3) Provide function to extract diffuse direction as FSL format (bval, bvec, bmat).
 
 Brkraw module is currently utilizing as a first-line tool in our group at The University of North Carolina at 
 Chapel Hill for operating image acquisition core service as well as several on-going projects in our institute 
@@ -76,9 +79,6 @@ and fMRI data analysis realtime, as well as the BIDS based automatic pipeline pl
 
 # Figures
 
-Figures can be included like this:
-![Figure 1. Example of converted image alignment on Fsleye.\label{fig:1}](imgs/brkraw_alignment.png)
-Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis(gray) and a EPI image(red) are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
 
 Fenced code blocks are rendered with syntax highlighting:
 ```python
