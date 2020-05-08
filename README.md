@@ -5,14 +5,14 @@
 
 The **BrkRaw** module designed to cover the needs from various type of user as much as possible, 
 including MRI system operator, maintainer, MR sequence developer, imaging researcher, and data scientist.
-This module provides easy-to-access of the Bruker's PVdataset from PV 5 to PV 6, (has not been tested for 360)
+This module provides easy-to-access of the Bruker's PVdataset from PV 5 to PV 6, (has not been tested for above versions)
 
 - preserving the subject position and orientation to converted the NifTi1 file.
 - correction of animal orientation based on the species and position. (Anterior of subject is Anterior)
 - providing the GUI tool for preview the dataset and NifTi1 format conversion.
 - the command-line tool for converting to NifTi1 format, previewing metadata of the dataset, checking backup status.
 - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
-- BIDS(v1.2.2) support: parameter file generation, automatic generation of the folder structure.
+- BIDS(v1.2.2) support: parameter file generation with custom syntax, automatic generation of the folder structure.
 - Object-oriented robust dataset parser.
 - compressed data readability (compatible with .zip and .PVdatasets format).
 - providing robust and easy-to-use python API for developers, including JCAMP-DX parser.
