@@ -97,6 +97,10 @@ $ brkraw tonii <session path or compressed dataset> -s <scan id> -r <reco id>
 - Build BIDS dataset with multiple Bruker raw datasets.
 - Required to copy the datasets into the parent folder.
 - All dataset under parent folder will be converted into ./Data folder with BIDS
+
+![brkraw summary](imgs/brkraw_bids.png)
+**Example of automatically generated BIDS dataset**
+
 ```angular2html
 $ brkraw tonii_all <parent folder>
 ```
@@ -120,9 +124,6 @@ $ brkraw bids_converter <parent folder> <BIDS table file.xlsx>
 
 $ brkraw bids_converter <parent folder> <BIDS table file.xlsx> -r <BIDS meta reference file.json>
 ```
-
-![brkraw summary](imgs/brkraw_bids.png)
-**Example of automatically generated BIDS dataset**
 
 - Run GUI with input and output path
 ```angular2html
