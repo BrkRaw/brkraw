@@ -198,5 +198,8 @@ $ brk-backup clean <rawdata path> <backup path> -l
 - SungHo Lee (shlee@unc.edu)
 - Woomi Ban (banwoomi@unc.edu)
 
+### Citation
+[![DOI](https://zenodo.org/badge/245546149.svg)](https://zenodo.org/badge/latestdoi/245546149)
+
 ### License:
 GNU General Public License v3.0
