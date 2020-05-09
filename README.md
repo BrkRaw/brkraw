@@ -5,7 +5,7 @@
 
 The **BrkRaw** module designed to cover the needs from various type of user as much as possible, 
 including MRI system operator, maintainer, MR sequence developer, imaging researcher, and data scientist.
-This module provides easy-to-access of the Bruker's PVdataset from PV 5 to PV 6, (has not been tested for above versions)
+This module provides easy-to-access of the Bruker's PVdataset from PV 5 to PV 6.0.1 (it has not been tested for above versions)
 
 - preserving the subject position and orientation to converted the NifTi1 file.
 - correction of animal orientation based on the species and position. (Anterior of subject is Anterior)
@@ -28,7 +28,7 @@ This module provides easy-to-access of the Bruker's PVdataset from PV 5 to PV 6,
 - Dependency: numpy, pillow, nibabel, tqdm, simpleITK, pandas, openpyxl, xlrd, shleeh
 
 ### Installation
-- We are highly suggesting to use **Python version 3.7.6**
+- We are highly suggesting to use **Python 3.7**
 
 #### Requirement
 - The installed Python must be compiled properly, If you use pyenv and are having any issue with python please refer following link: 
@@ -159,6 +159,9 @@ $ brk-backup clean <rawdata path> <backup path> -l
 ### Credits:
 - SungHo Lee (shlee@unc.edu)
 - Woomi Ban (banwoomi@unc.edu) 
+
+### Citation
+- 
 
 ### License:
 GNU General Public License v3.0
