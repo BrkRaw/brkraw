@@ -9,8 +9,10 @@ import os, re
 def mkdir(path):
     try:
         os.stat(path)
-    except:
+    except FileNotFoundError or OSError:
         os.mkdir(path)
+    except:
+        raise UnexpectedError
 
 
 def main():
@@ -179,6 +181,10 @@ def main():
         import pandas as pd
         path = os.path.abspath(args.input)
         output = os.path.abspath(args.output)
+        if not output.endswith('.xlsx'):
+            # to prevent pandas ValueError in case user does not provide valid file extension.
+            output = f'{output}.xlsx'
+
         Headers = ['RawData', 'SubjID', 'SessID', 'ScanID', 'RecoID', 'DataType',
                    'task', 'acq', 'ce', 'rec', 'run', 'modality', 'Start', 'End']
         df = pd.DataFrame(columns=Headers)

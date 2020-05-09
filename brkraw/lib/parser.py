@@ -1,7 +1,7 @@
 from .utils import *
 
 
-class Parameter():
+class Parameter:
     def __init__(self, stringlist):
         # parse the parameter dictionaries from stringlist
         self._set_param(*load_param(stringlist))
