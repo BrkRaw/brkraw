@@ -253,7 +253,7 @@ class BrukerLoader():
         direction_ = direction_.dot(np.linalg.inv(np.diag(res[0])))
         imgobj = sitk.GetImageFromArray(dataobj.T, isVector=is_vector)
 
-        if len(dataobj) > 3:
+        if len(dataobj.shape) > 3:
             res = [list(res[0]) + [self._get_temp_info(visu_pars)['temporal_resol']]]
             direction = np.eye(4)
             direction[:3, :3] = direction_
