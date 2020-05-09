@@ -1,22 +1,36 @@
-# BrkRaw: Comprehensive tool to handle Bruker PV dataset
+# BrkRaw: Comprehensive tool to access Bruker PV dataset
 ## Version: 0.3
 
 ### Description
 
-The **BrkRaw** module designed to cover the needs from various type of user as much as possible, 
+The 'BrkRaw' python module is designed to be a more comprehensive tool for the preclinical MRI community for accessing and 
+utilizing raw data. And since the converter is front-line tools for medical imaging, the functionality is developed to cover 
+the requirements from the various user, including MRI system operator, maintainer, MR sequence developer, imaging researcher, 
+and data scientist. In addition to these, we had put extra efforts to preserve the metadata as well as provide tools to help 
+organize the data structure into a shareable format that suggested from the open science community for pursuing 
+reproducible science [BIDS](https://bids.neuroimaging.io). Therefore, the module designed not only can be used for the NifTi converter, 
+but also provides command-line tools and python API for previewing, organizing and archiving data, and parsing metadata, 
+accessing the data as users convenient object type ([nibabel](https://nipy.org/nibabel/) or 
+[SimpleITK](https://simpleitk.readthedocs.io/en/master/gettingStarted.html#python-binary-files)) 
+without the conversion step. The module is compatible with the ZIP file format, so no need to uncompress the file to access data.
 including MRI system operator, maintainer, MR sequence developer, imaging researcher, and data scientist.
 This module provides easy-to-access of the Bruker's PVdataset from PV 5 to PV 6.0.1 (it has not been tested for above versions)
+The major features of this module as follows.
 
-- preserving the subject position and orientation to converted the NifTi1 file.
-- correction of animal orientation based on the species and position. (Anterior of subject is Anterior)
-- providing the GUI tool for preview the dataset and NifTi1 format conversion.
-- the command-line tool for converting to NifTi1 format, previewing metadata of the dataset, checking backup status.
-- providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
-- BIDS(v1.2.2) support: parameter file generation with custom syntax, automatic generation of the folder structure.
-- Object-oriented robust dataset parser.
-- compressed data readability (compatible with .zip and .PVdatasets format).
-- providing robust and easy-to-use python API for developers, including JCAMP-DX parser.
-- the python API also providing data handler object through either nibabel and simpleITK to make convenient to the researcher can implement their own code.  
+- Reliable converting function with
+    - preserving the subject position and orientation to converted the NifTi1 file.
+    - correction of animal orientation based on the species and position. (Anterior of subject is Anterior)
+    - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
+    - BIDS(v1.2.2) support: parameter file generation with custom syntax, automatic generation of the folder structure.
+- Capability of quick image validation by
+    - providing the GUI tool for preview the dataset without conversion.
+    - the command-line tool function for previewing metadata of the dataset for each scan.
+- Data management tool 'brk-backup'
+    - Data management tool 'brk-backup' for archiving and performing inspection the backup status.
+- Robust and easy-to-use python API for developers, including JCAMP-DX parser.
+    - Object-oriented robust dataset parser.
+    - compressed data readability (compatible with .zip and .PVdatasets format).
+    - the python API also providing data handler object through either nibabel and simpleITK to make convenient to the researcher can implement their own code.  
 
 
 ![example_alignment](imgs/brkraw_alignment.png)
@@ -55,16 +69,21 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 #### Known issues
 - In most case, the issue will related to the pyenv build, please refer the above links to solve the issue.
 - If you experience any other issue, please use 'issue' tab in Github to report.
+- If the dataset contains MR Spectroscopy, some method not work properly (such as summary to print out meta data)
+- The legacy module 'pyBruker' had issues at orientation in the data has oblique FOV. This module resolved most of the issue, but if you experiencing
+that any modality image is incorrectly positioned compared with any other modality, please report use. (except the image required custom reconstruction) 
 
-### Usage
-#### Linux/Unix
+## Usage
+### Command-line tool (brkraw)
+#### Quick access of metadata
 - Printing out dataset information
 ```angular2html
 $ brkraw summary <session path or compressed dataset>
 ```
 ![brkraw summary](imgs/brkraw_print_summary.png)
-**Fig2.** Example of printed out dataset information
+**Example of printed out dataset information**
 
+#### Legacy converting to NifTi1 format
 - Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
 ```angular2html
 $ brkraw tonii <session path or compressed dataset>
@@ -75,36 +94,53 @@ $ brkraw tonii <session path or compressed dataset>
 $ brkraw tonii <session path or compressed dataset> -s <scan id> -r <reco id>
 ```
 
-- Build BIDS dataset with multiple Bruker raw datasets. 
+- Build BIDS dataset with multiple Bruker raw datasets.
+- Required to copy the datasets into the parent folder.
 - All dataset under parent folder will be converted into ./Data folder with BIDS
 ```angular2html
 $ brkraw tonii_all <parent folder>
 ```
 
-- Create BIDS file table with excel format to rename the file accordingly for BIDS standard
+#### Automatic BIDS organizer with template files
+![brkraw bids](imgs/brkraw_bids_conv.png)
+**The usage of the command-line tool 'brkraw' for BIDS data organization.**
+
+- Upgraded feature to reduce burden on renaming according to BIDS standard.
+- Create BIDS file table with excel format to rename the file accordingly for BIDS standard.
+- If you need to crop data, you can also specify its range on excel file for each scan.
+- This will return also the BIDS_META_REF.json which allows you to input the template of BIDS json parser syntax
+- To learn more detail, please check our example Jupyter Notebook.
 ```angular2html
 $ brkraw bids_list <parent folder> <filname>.xlsx
 ```
 
 - Build BIDS dataset according to the excel file generated with 'bids_list' command above.
 ```angular2html
-$ brkraw bids_converter <parent folder> <BIDS table file>
+$ brkraw bids_converter <parent folder> <BIDS table file.xlsx>
+
+$ brkraw bids_converter <parent folder> <BIDS table file.xlsx> -r <BIDS meta reference file.json>
 ```
 
 ![brkraw summary](imgs/brkraw_bids.png)
-**Fig3.** Example of automatically generated BIDS dataset
+**Example of automatically generated BIDS dataset**
 
 - Run GUI with input and output path
 ```angular2html
 $ brkraw gui -i <session path> -o <output path>
 ```
 ![brkraw GUI](imgs/brkraw_gui.png)
-**Fig4.** brkraw gui interface.
+**brkraw gui interface.**
 
-- Run GUI without path
+- Run GUI without path, make sure you select correct button based on the dataset type (file or folder)
+- In case of loading folder, you need to enter to the folder instead of just selecting it.
 ```angular2html
 $ brkraw gui
 ```
+
+### Data management tool
+![brk-backup](imgs/brk_backup.png)
+**brk-backup script utilizing the Python API to immediately access both raw data and archived data 
+to parse the metadata for data management.**
 
 - Print out archived dataset and condition
 ```angular2html
@@ -136,6 +172,8 @@ $ brk-backup clean <rawdata path> <backup path> -l
 - If this command is not working, please check the version of your Anaconda and Python.
 
 #### Python API
+- To learn more detail, please check the Jupyter notebook in 'examples' folder
+
 - import module
 ```angular2html
 >>> import brkraw
@@ -150,18 +188,14 @@ $ brk-backup clean <rawdata path> <backup path> -l
 
 ### Contributing
 - Please contact shlee@unc.edu if you interest to contribute for following items.
-1. improve compatibility with other python versions.
-2. integration of reconstruction tool with Python API (such as BART tool).
-3. develop online analysis tools for fMRI study.
-4. Documentation
+1. integration of reconstruction tool with Python API (such as BART tool).
+2. develop online analysis tools for fMRI or DTI study.
+3. Documentation or develop tutorials for various use.
 - Also if you experience any bug or have any suggestion to improve this tool, please let us know.
 
 ### Credits:
 - SungHo Lee (shlee@unc.edu)
-- Woomi Ban (banwoomi@unc.edu) 
-
-### Citation
-- 
+- Woomi Ban (banwoomi@unc.edu)
 
 ### License:
 GNU General Public License v3.0

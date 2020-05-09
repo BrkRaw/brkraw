@@ -328,10 +328,15 @@ def meta_get_value(value, acqp, method, visu_pars):
             return parser
     elif isinstance(value, list):
         parser = []
-        for vi in value:
+        max_index = len(value) - 1
+        for i, vi in enumerate(value):
             val = meta_get_value(vi, acqp, method, visu_pars)
             if val is not None:
-                parser.append(val)
+                if val == vi:
+                    if i == max_index:
+                        parser.append(val)
+                else:
+                    parser.append(val)
         if len(parser) > 0:
             return parser[0]
         else:
