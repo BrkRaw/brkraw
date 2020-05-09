@@ -475,8 +475,8 @@ class BackupCacheHandler:
         print(summary, file=fobj)
 
     def clean(self):
-        print('\n[Warning] This command will remove backup data that classified as garbage and cannot be revert.')
-        print('          Prior to run this process, please review your garbage dataset using "-g" option.\n')
+        print('\n[Warning] This command will remove backup data that classified as issued and cannot be revert.')
+        print('          Prior to run this process, please update your backup status using "review" function.\n')
         ans = yes_or_no('Are you sure to continue?')
 
         if ans:
