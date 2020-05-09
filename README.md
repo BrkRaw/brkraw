@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/245546149.svg)](https://zenodo.org/badge/latestdoi/245546149)
+
 # BrkRaw: Comprehensive tool to access Bruker PV dataset
 ## Version: 0.3
 
@@ -198,8 +200,27 @@ $ brk-backup clean <rawdata path> <backup path> -l
 - SungHo Lee (shlee@unc.edu)
 - Woomi Ban (banwoomi@unc.edu)
 
-### Citation
-[![DOI](https://zenodo.org/badge/245546149.svg)](https://zenodo.org/badge/latestdoi/245546149)
+### How to Cite
+
+BibTeX Export
+```
+@software{sungho_lee_2020_3818615,
+  author       = {SungHo Lee},
+  title        = {dvm-shlee/bruker: BrkRaw v0.3.0},
+  month        = may,
+  year         = 2020,
+  publisher    = {Zenodo},
+  version      = {0.3.0},
+  doi          = {10.5281/zenodo.3818615},
+  url          = {https://doi.org/10.5281/zenodo.3818615}
+}
+```
+
+### Acknowledgements
+We thank to the staff and colleagues in the Center for Animal MRI (CAMRI) 
+at the University of North Carolina at Chapel Hill for the testing and providing helpful 
+feedback. Especially thanks to Ms. Tzu-Wen Wang for the test the data management tools. 
+This work was supported by NIH (Grant No: RF1MH117053, R01MH111429, and R01NS091236).
 
 ### License:
 GNU General Public License v3.0

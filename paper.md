@@ -94,6 +94,10 @@ to parse the metadata for data management. This is one of the good application e
 
 # Acknowledgements
 
-Funding support?
+We thank to the staff and colleagues in the Center for Animal MRI (CAMRI) 
+at the University of North Carolina at Chapel Hill for the testing and providing helpful 
+feedback. Especially thanks to Ms. Tzu-Wen Wang for the test the data management tools and 
+Ms. Alicia M. Stevans for the help of critical reading of the manuscript.
+This work was supported by NIH (Grant No: RF1MH117053, R01MH111429, and R01NS091236).
 
 # References
