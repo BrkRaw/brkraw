@@ -68,8 +68,8 @@ and realtime fMRI data analysis tools.
 # Figures
 ![Python API](imgs/brkraw_python.png)
 **Figure 1.** The example usage of python API.
-The module provides print function to check the data, and the data can be loaded directly with convenient datatype.
-Please check example folder in the module for additional features.
+The module provides print function to check the data (A), and the data can be loaded directly 
+with convenient datatype (B) or numpy array (C).
 
 
 ![BIDS conversion](imgs/brkraw_bids_conv.png)
@@ -89,6 +89,6 @@ and the slice axis also can be changed to look at the image with different view 
 
 # Acknowledgements
 
-Fund info?
+Funding support?
 
 # References
