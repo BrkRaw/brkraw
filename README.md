@@ -116,7 +116,8 @@ $ brkraw tonii_all <parent folder>
 - Create BIDS file table with excel format to rename the file accordingly for BIDS standard.
 - If you need to crop data, you can also specify its range on excel file for each scan.
 - This will return also the BIDS_META_REF.json which allows you to input the template of BIDS json parser syntax
-- To learn more detail, please check our example Jupyter Notebook.
+- To learn more detail, please check our example 
+[Jupyter Notebooks](https://github.com/dvm-shlee/bruker/blob/master/examples/BrkRaw_PythonAPI.ipynb).
 ```angular2html
 $ brkraw bids_list <parent folder> <filname>.xlsx
 ```
