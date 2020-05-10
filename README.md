@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/245546149.svg)](https://zenodo.org/badge/latestdoi/245546149)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3818615.svg)](https://doi.org/10.5281/zenodo.3818615)
 
 # BrkRaw: Comprehensive tool to access Bruker PV dataset
 ## Version: 0.3
@@ -210,11 +210,13 @@ in the example directory.
 ### Credits:
 - SungHo Lee (shlee@unc.edu)
 - Woomi Ban (banwoomi@unc.edu)
-- Yen-Yu Ian Shih (shihy@unc.edu)
+- Yen-Yu Ian Shih (shihy@neurology.unc.edu)
 
 ### How to Cite
 
-BibTeX Export
+SungHo Lee. (2020, May 9). dvm-shlee/bruker: BrkRaw v0.3.0 (Version 0.3.0). Zenodo. http://doi.org/10.5281/zenodo.3818615
+
+**BibTeX**
 ```
 @software{sungho_lee_2020_3818615,
   author       = {SungHo Lee and Woomi Ban and Yen-Yu Ian Shih},
