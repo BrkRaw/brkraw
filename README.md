@@ -85,7 +85,8 @@ $ brkraw summary <session path or compressed dataset>
 ![brkraw summary](imgs/brkraw_print_summary.png)
 **Example of printed out dataset information**
 
-#### Legacy converting to NifTi1 format
+#### The Legacy version of NifTi1 conversion
+- This method has been inherited from old [PyBruker](https://pypi.org/project/pyBruker) which is removed from my github
 - Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
 ```angular2html
 $ brkraw tonii <session path or compressed dataset>
