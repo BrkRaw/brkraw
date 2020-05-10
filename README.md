@@ -91,9 +91,10 @@ $ brkraw summary <session path or compressed dataset>
 
 #### The Legacy version of NifTi1 conversion
 - This method has been inherited from old brk2nii and [PyBruker](https://pypi.org/project/pyBruker) which 
-has been removed from this repository so does not exist. But this is useful if you want to convert 
+has been removed from repository and is not existing anymore. This function is useful if you want to convert 
 whole dataset without need to considering data structure, or only needs to convert specific scan and reco.
-- Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
+- Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters 
+based-on BIDS standard)
 ```angular2html
 $ brkraw tonii <session path or compressed dataset>
 ```
