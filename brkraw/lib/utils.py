@@ -6,7 +6,7 @@ import numpy as np
 from collections import OrderedDict
 from functools import partial, reduce
 from copy import copy as cp
-from slfmri.lib.volume.orient import to_matvec, from_matvec
+from nibabel.affines import to_matvec, from_matvec
 
 
 def apply_affine(matrix, affine):

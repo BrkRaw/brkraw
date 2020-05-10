@@ -15,8 +15,7 @@ but also provides command-line tools and python API for previewing, organizing a
 accessing the data as users convenient object type ([nibabel](https://nipy.org/nibabel/) or 
 [SimpleITK](https://simpleitk.readthedocs.io/en/master/gettingStarted.html#python-binary-files)) 
 without the conversion step. The module is compatible with the ZIP file format, so no need to uncompress the file to access data.
-including MRI system operator, maintainer, MR sequence developer, imaging researcher, and data scientist.
-This module provides easy-to-access of the Bruker's PVdataset from PV 5 to PV 6.0.1 (it has not been tested for above versions)
+The goal of this project is providing easy-to-access of the Bruker's PVdatasets. 
 The major features of this module as follows.
 
 - Reliable converting function with
@@ -41,13 +40,16 @@ The major features of this module as follows.
 ### Compatibility
 - Cross-platform compatibility (OSX, Linux, Windows 10)
 - Best work on Python 3.7.6, does not support Python 2.
-- Dependency: numpy, pillow, nibabel, tqdm, simpleITK, pandas, openpyxl, xlrd, shleeh
+- Dependency: shleeh>=0.0.4, nibabel>=3.0.2, SimpleITK>=1.2.4,
+              numpy>=1.18.0, pandas>=1.0.0, pillow>=7.1.1, 
+              tqdm>=4.45.0, openpyxl>=3.0.3, xlrd>=1.0.0
 
 ### Installation
 - We are highly suggesting to use **Python 3.7**
 
 #### Requirement
-- The installed Python must be compiled properly, If you use pyenv and are having any issue with python please refer following link: 
+- The installed Python must be compiled properly, 
+If you use pyenv and are having any issue with python please refer following link: 
 [Common Build Problems in PyENV](https://github.com/pyenv/pyenv/wiki/common-build-problems)
 - To use gui feature, the installed python should compiled with tkinter module.
 - You can test the tkinter installation with below command on your shell.
@@ -69,11 +71,13 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 ```
 
 #### Known issues
-- In most case, the issue will related to the pyenv build, please refer the above links to solve the issue.
+- The module have been tested for PV 5 to PV 6.0.1 datasets. but it may have issue with higher version.
+- The GUI may not work if the python does not be built with tkinter, please check above instruction.
+- If GUI popped up but not working after selecting the dir, make sure you entered to dataset dir.
+- If GUI cannot load zipped file, please check our example file located at 'examples' folder.
 - If you experience any other issue, please use 'issue' tab in Github to report.
-- If the dataset contains MR Spectroscopy, some method not work properly (such as summary to print out meta data)
-- The legacy module 'pyBruker' had issues at orientation in the data has oblique FOV. This module resolved most of the issue, but if you experiencing
-that any modality image is incorrectly positioned compared with any other modality, please report use. (except the image required custom reconstruction) 
+- If the dataset contains MR Spectroscopy, some method not work properly 
+(such as the function to printing out dataset summary)
 
 ## Usage
 ### Command-line tool (brkraw)
@@ -86,7 +90,9 @@ $ brkraw summary <session path or compressed dataset>
 **Example of printed out dataset information**
 
 #### The Legacy version of NifTi1 conversion
-- This method has been inherited from old [PyBruker](https://pypi.org/project/pyBruker) which is removed from my github
+- This method has been inherited from old brk2nii and [PyBruker](https://pypi.org/project/pyBruker) which 
+has been removed from this repository so does not exist. But this is useful if you want to convert 
+whole dataset without need to considering data structure, or only needs to convert specific scan and reco.
 - Convert a whole session, (adding option '-b' or '--bids' will generate JSON file that contains MR parameters based-on BIDS standard)
 ```angular2html
 $ brkraw tonii <session path or compressed dataset>
@@ -98,8 +104,9 @@ $ brkraw tonii <session path or compressed dataset> -s <scan id> -r <reco id>
 ```
 
 - Build BIDS dataset with multiple Bruker raw datasets.
-- Required to copy the datasets into the parent folder.
-- All dataset under parent folder will be converted into ./Data folder with BIDS
+- You need to copy all data into one parent folder, compressed zip file will also work (we recommend to use zip file)
+- All dataset under parent folder will be converted into ./Data folder with BIDS structure, but filename will not follow
+the BIDS standard. If you need to share your data, we recommend to use bids_converter function instead.
 
 ![brkraw summary](imgs/brkraw_bids.png)
 **Example of automatically generated BIDS dataset**
@@ -114,7 +121,7 @@ $ brkraw tonii_all <parent folder>
 
 - Upgraded feature to reduce burden on renaming according to BIDS standard.
 - Create BIDS file table with excel format to rename the file accordingly for BIDS standard.
-- If you need to crop data, you can also specify its range on excel file for each scan.
+- You can also crop the data automatically if you set the range on BIDS table excel file.
 - This will return also the BIDS_META_REF.json which allows you to input the template of BIDS json parser syntax
 - To learn more detail, please check our example 
 [Jupyter Notebooks](https://github.com/dvm-shlee/bruker/blob/master/examples/BrkRaw_PythonAPI.ipynb).
@@ -136,8 +143,10 @@ $ brkraw gui -i <session path> -o <output path>
 ![brkraw GUI](imgs/brkraw_gui.png)
 **brkraw gui interface.**
 
-- Run GUI without path, make sure you select correct button based on the dataset type (file or folder)
-- In case of loading folder, you need to enter to the folder instead of just selecting it.
+- Run GUI without path. Without path, two buttons (load file / load dir) will shows up.
+Make sure you select correct button based on the dataset type (zip file or dir). 
+In case of dir, please enter into the folder contains 'subject' file using dialog instead of 
+just highlighting it (common mistake). 
 ```angular2html
 $ brkraw gui
 ```
@@ -147,29 +156,29 @@ $ brkraw gui
 **brk-backup script utilizing the Python API to immediately access both raw data and archived data 
 to parse the metadata for data management.**
 
-- Print out archived dataset and condition
+- Print out archived dataset and its condition
 ```angular2html
 $ brk-backup archived <rawdata path> <backup path>
-```
 
-- Generate log file of review archived dataset and condition
-```angular2html
-$ brk-backup archived <rawdata path> <backup path> -l
+$ brk-backup archived <rawdata path> <backup path> -l  // generate log file instead of printing
 ```
 
 - Print out review backup status
 ```angular2html
 $ brk-backup review <rawdata path> <backup path>
+
+$ brk-backup review <rawdata path> <backup path> -l  // generate log file instead of printing
 ```
 
-- Generate log file of review backup status
+- Archive data from rawdata path to backup path, if the dataset has been archived and identical, then skip
 ```angular2html
-$ brk-backup review <rawdata path> <backup path> -l
+$ brk-backup backup <rawdata path> <backup path>
 ```
 
-- Run interactive archived dataset cleaning helper tool
+- Remove files classified as unnecessary via review process among backed up data. The interactive UI will ask you
+to confirm each step to prevent erase important data
 ```angular2html
-$ brk-backup clean <rawdata path> <backup path> -l
+$ brk-backup clean <rawdata path> <backup path>
 ```
 
 #### Windows 10
@@ -177,8 +186,6 @@ $ brk-backup clean <rawdata path> <backup path> -l
 - If this command is not working, please check the version of your Anaconda and Python.
 
 #### Python API
-- To learn more detail, please check the Jupyter notebook in 'examples' folder
-
 - import module
 ```angular2html
 >>> import brkraw
@@ -189,7 +196,7 @@ $ brk-backup clean <rawdata path> <backup path> -l
 >>> rawdata = brkraw.load(<PATH>)
 ```
 
-- For more detail, Please check out my 
+- For more detail, Please check out our 
 [Jupyter Notebooks](https://github.com/dvm-shlee/bruker/blob/master/examples/BrkRaw_PythonAPI.ipynb) 
 in the example directory.
 
@@ -203,13 +210,14 @@ in the example directory.
 ### Credits:
 - SungHo Lee (shlee@unc.edu)
 - Woomi Ban (banwoomi@unc.edu)
+- Yen-Yu Ian Shih (shihy@unc.edu)
 
 ### How to Cite
 
 BibTeX Export
 ```
 @software{sungho_lee_2020_3818615,
-  author       = {SungHo Lee},
+  author       = {SungHo Lee and Woomi Ban and Yen-Yu Ian Shih},
   title        = {dvm-shlee/bruker: BrkRaw v0.3.0},
   month        = may,
   year         = 2020,
