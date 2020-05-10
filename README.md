@@ -188,7 +188,9 @@ $ brk-backup clean <rawdata path> <backup path> -l
 >>> rawdata = brkraw.load(<PATH>)
 ```
 
-- For more detail, Please check Jupyter Notebooks in the example directory.
+- For more detail, Please check out my 
+[Jupyter Notebooks](https://github.com/dvm-shlee/bruker/blob/master/examples/BrkRaw_PythonAPI.ipynb) 
+in the example directory.
 
 ### Contributing
 - Please contact shlee@unc.edu if you interest to contribute for following items.
