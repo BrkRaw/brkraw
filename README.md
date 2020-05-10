@@ -16,7 +16,7 @@ accessing the data as users convenient object type ([nibabel](https://nipy.org/n
 [SimpleITK](https://simpleitk.readthedocs.io/en/master/gettingStarted.html#python-binary-files)) 
 without the conversion step. The module is compatible with the ZIP file format, so no need to uncompress the file to access data.
 The goal of this project is providing easy-to-access of the Bruker's PVdatasets. 
-The major features of this module as follows.
+The major features of this module are as follows.
 
 - Reliable converting function with
     - preserving the subject position and orientation to converted the NifTi1 file.
