@@ -119,10 +119,12 @@ $ brkraw tonii_all <parent folder>
 ![brkraw bids](imgs/brkraw_bids_conv.png)
 **The usage of the command-line tool 'brkraw' for BIDS data organization.**
 
-- Upgraded feature to reduce burden on renaming according to BIDS standard.
-- Create BIDS file table with excel format to rename the file accordingly for BIDS standard.
-- You can also crop the data automatically if you set the range on BIDS table excel file.
-- This will return also the BIDS_META_REF.json which allows you to input the template of BIDS json parser syntax
+- Upgraded feature to reduce the burden on renaming according to BIDS standard.
+- Create a BIDS file table with excel format to use as a template for updating metadata 
+that required to use for file naming.
+- This command will also generate the BIDS_META_REF.json which allows you to set 
+custom syntax to parse the metadata from the rawdata. The default reference of 
+the current version is based on BIDS 1.2.2.
 - To learn more detail, please check our example 
 [Jupyter Notebooks](https://github.com/dvm-shlee/bruker/blob/master/examples/BrkRaw_PythonAPI.ipynb).
 ```angular2html
