@@ -492,49 +492,53 @@ class BrukerLoader():
                     lines.append('Position:\t{}\t\tEntry:\t{}'.format(subj_pose, subj_entry))
 
                     lines.append('\n[ScanID]\tSequence::Protocol::[Parameters]')
-                tr = get_value(visu_pars, 'VisuAcqRepetitionTime')
-                tr = ','.join(map(str, tr)) if isinstance(tr, list) else tr
-                te = get_value(visu_pars, 'VisuAcqEchoTime')
-                te = 0 if te is None else te
-                te = ','.join(map(str, te)) if isinstance(te, list) else te
-                pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
-                flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
-                param_values = [tr, te, pixel_bw, flip_angle]
-                for k, v in enumerate(param_values):
-                    if v is None:
-                        param_values[k] = ''
-                    if isinstance(k, float):
-                        param_values[k] = '{0:.2f}'.format(k)
-                if j == 0:
-                    params = "[ TR: {0} ms, TE: {1} ms, pixelBW: {2} Hz, FlipAngle: {3} degree]".format(
-                        *param_values)
-                    protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
-                    sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
-                    lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
-                                                               sequence_name,
-                                                               protocol_name,
-                                                               params))
+                try:
+                    tr = get_value(visu_pars, 'VisuAcqRepetitionTime')
+                    tr = ','.join(map(str, tr)) if isinstance(tr, list) else tr
+                    te = get_value(visu_pars, 'VisuAcqEchoTime')
+                    te = 0 if te is None else te
+                    te = ','.join(map(str, te)) if isinstance(te, list) else te
+                    pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
+                    flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
+                    param_values = [tr, te, pixel_bw, flip_angle]
+                    for k, v in enumerate(param_values):
+                        if v is None:
+                            param_values[k] = ''
+                        if isinstance(k, float):
+                            param_values[k] = '{0:.2f}'.format(k)
+                    if j == 0:
+                        params = "[ TR: {0} ms, TE: {1} ms, pixelBW: {2} Hz, FlipAngle: {3} degree]".format(
+                            *param_values)
+                        protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
+                        sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
+                        lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
+                                                                   sequence_name,
+                                                                   protocol_name,
+                                                                   params))
 
-                dim = self._get_dim_info(visu_pars)[0]
-                size = self._get_matrix_size(visu_pars)
-                size = ' x '.join(map(str, size))
-                spatial_info = self._get_spatial_info(visu_pars)
-                temp_info = self._get_temp_info(visu_pars)
-                s_resol = spatial_info['spatial_resol']
-                fov_size = spatial_info['fov_size']
-                fov_size = ' x '.join(map(str, fov_size))
-                s_unit = spatial_info['unit']
-                t_resol = '{0:.3f}'.format(temp_info['temporal_resol'])
-                t_unit = temp_info['unit']
-                s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
-                s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
+                    dim = self._get_dim_info(visu_pars)[0]
+                    size = self._get_matrix_size(visu_pars)
+                    size = ' x '.join(map(str, size))
+                    spatial_info = self._get_spatial_info(visu_pars)
+                    temp_info = self._get_temp_info(visu_pars)
+                    s_resol = spatial_info['spatial_resol']
+                    fov_size = spatial_info['fov_size']
+                    fov_size = ' x '.join(map(str, fov_size))
+                    s_unit = spatial_info['unit']
+                    t_resol = '{0:.3f}'.format(temp_info['temporal_resol'])
+                    t_unit = temp_info['unit']
+                    s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
+                    s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
 
-                lines.append('    [{}] dim: {}D, matrix_size: {}, fov_size: {} (unit:mm)\n'
-                             '         spatial_resol: {} (unit:{}), temporal_resol: {} (unit:{})'.format(
-                    str(reco_id).zfill(2), dim, size,
-                    fov_size,
-                    s_resol, s_unit,
-                    t_resol, t_unit))
+                    lines.append('    [{}] dim: {}D, matrix_size: {}, fov_size: {} (unit:mm)\n'
+                                 '         spatial_resol: {} (unit:{}), temporal_resol: {} (unit:{})'.format(
+                        str(reco_id).zfill(2), dim, size,
+                        fov_size,
+                        s_resol, s_unit,
+                        t_resol, t_unit))
+                except Exception as e:
+                    print(e)
+                    print(f'Issue found at {scan_id}')
         lines.append('\n')
         print('\n'.join(lines), file=fobj)
 
@@ -770,15 +774,53 @@ class BrukerLoader():
         subj_position = get_value(visu_pars, 'VisuSubjectPosition')
         gradient_orient = get_value(method, 'PVM_SPackArrGradOrient')
 
+        # if slice_info['num_slice_packs'] > 1:
+        #     if len(orient_matrix) != slice_info['num_slice_packs']:
+        #         raise Exception(ERROR_MESSAGES['NumOrientMatrix'])
+        #     else:
+        #         for id, _om in enumerate(orient_matrix):
+        #             om = np.asarray(_om).reshape([3, 3])
+        #             omatrix_parser.append(om)
+        #             oorder_parser.append(get_axis_orient(om))
+        #             vposition_parser.append(slice_position[id])
+
         if slice_info['num_slice_packs'] > 1:
-            if len(orient_matrix) != slice_info['num_slice_packs']:
-                raise Exception(ERROR_MESSAGES['NumOrientMatrix'])
+            num_ori_mat = len(orient_matrix)
+            num_slice_packs = slice_info['num_slice_packs']
+            if num_ori_mat != num_slice_packs:
+                mpms = True
+                if not num_slice_packs % num_ori_mat:
+                    raise Exception(ERROR_MESSAGES['NumOrientMatrix'])
+                else:
+                    # multi slice packs and multi slices, each slice packs must be identical on element.
+                    # TODO: If error occurred it means the existing of exception for this.
+                    cut_idx = 0
+                    num_slices = int(num_ori_mat / num_slice_packs)
+                    _orient_matrix = []
+                    _slice_position = []
+                    for ci in range(num_slice_packs):
+                        om_set = orient_matrix[cut_idx:cut_idx + num_slices]
+                        sp_set = slice_position[cut_idx:cut_idx + num_slices]
+                        if is_all_element_same(om_set):
+                            _orient_matrix.append(om_set[0])
+                            _slice_position.append(sp_set)
+                        else:
+                            raise Exception(ERROR_MESSAGES['NumOrientMatrix'])
+                        cut_idx += num_slices
+                orient_matrix = _orient_matrix
+                slice_position = _slice_position
             else:
-                for id, _om in enumerate(orient_matrix):
-                    om = np.asarray(_om).reshape([3, 3])
-                    omatrix_parser.append(om)
-                    oorder_parser.append(get_axis_orient(om))
+                mpms = False
+
+            for id, _om in enumerate(orient_matrix):
+                om = np.asarray(_om).reshape([3, 3])
+                omatrix_parser.append(om)
+                oorder_parser.append(get_axis_orient(om))
+                if mpms:
+                    vposition_parser.append(get_origin(slice_position[id], gradient_orient))
+                else:
                     vposition_parser.append(slice_position[id])
+
         else:
             # check num_slices of first slice_pack
             if is_all_element_same(orient_matrix):

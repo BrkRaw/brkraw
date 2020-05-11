@@ -263,6 +263,14 @@ def swap_orient_matrix(orient_matrix, axis_orient):
 
 
 def get_origin(slice_position, gradient_orient):
+    """ TODO: the case was not fully tested, if any coordinate mismatch happened, this function will be the issue.
+    Args:
+        slice_position:  visu_pars.parameters['VisuCorePosition']
+        gradient_orient: method.parameters['PVM_SPackArrGradOrient']
+
+    Returns:
+        x, y, z coordinate for origin of image matrix
+    """
     slice_position = cp(slice_position)
     dx, dy, dz = map(lambda x: x.max() - x.min(), slice_position.T)
     max_delta_axis = np.argmax([dx, dy, dz])
@@ -283,7 +291,10 @@ def get_origin(slice_position, gradient_orient):
     elif max_delta_axis == 1:   # coronal
         if rx != None:
             if rx == -90:    # FOV flipped
-                idx = slice_position.T[max_delta_axis].argmin()
+                if ry == -90:   # Cyceron cases # 5 and 9
+                    idx = slice_position.T[max_delta_axis].argmax()
+                else:
+                    idx = slice_position.T[max_delta_axis].argmin()
             else: # rx == -90 are the typical case
                 idx = slice_position.T[max_delta_axis].argmax()
         else:
