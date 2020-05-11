@@ -79,7 +79,7 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 ```
 
 #### Conversion test result using Bruker2nii_QA
-[Known issues](imgs/bruker2nii_qa_dataset.png)
+![Known issues](imgs/bruker2nii_qa_dataset.png)
 
 #### Known issues
 - The module have been tested for PV 5 to PV 6.0.1 datasets. but it may have issue with higher version.
