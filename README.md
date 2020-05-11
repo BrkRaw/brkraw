@@ -78,7 +78,7 @@ $ pip install bruker
 $ pip install git+https://github.com/dvm-shlee/bruker
 ```
 
-#### Conversion test result using Bruker2nii_QA
+#### Conversion test result using [Bruker2Nifti_QA](https://gitlab.com/naveau/bruker2nifti_qa)
 ![Known issues](imgs/bruker2nii_qa_dataset.png)
 
 #### Known issues
