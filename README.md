@@ -78,6 +78,8 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 - If you experience any other issue, please use 'issue' tab in Github to report.
 (such as the function to printing out dataset summary)
 - The issues with higher priority which planned to be patched near future.
+    - Multi-slices Localizer is currently not supported.
+    - Multi-echos MSME and RARE were not compatible at current version. 
     - If the dataset contains MR Spectroscopy, some method does not work correctly 
     (such as the function of printing out dataset summary)
     - In bids_converter, it does not create a modality-specific JSON file
@@ -229,7 +231,8 @@ in the example directory.
 - Drs. Chris Rorden and Sebastiano Ferraris: The pioneers related this project who had been inspired the developer
  through their great tools including [dcm2niix](https://github.com/rordenlab/dcm2niix) and 
  [bruker2nii](https://github.com/SebastianoF/bruker2nifti), as well as their comments to improve this project. 
-- Dr. Mikael Naveau: The publisher of bruker2nifti_qa, the set of data to help benchmark testing of Bruker converter.
+- Drs. Mikael Naveau and Gabriel A. Devenyi: The publisher of bruker2nifti_qa, the set of data 
+to help benchmark testing of Bruker converter.
 
 ### How to Cite
 
@@ -250,10 +253,11 @@ SungHo Lee. (2020, May 9). dvm-shlee/bruker: BrkRaw v0.3.0 (Version 0.3.0). Zeno
 ```
 
 ### Acknowledgements
-We thank to the researchers in the Rorden lab at the University of South Carolina, 
+We thank to the researchers of the Rorden lab at the University of South Carolina, 
 regarding their pioneer works and sharing excellent tools for raw data conversion 
 to the community that inspired the first author of this project, as well as their sharing know-how. 
-We also thank Dr. Mikael Naveau who shares the dataset for benchmarking converter.
+We also thank Dr. Mikael Naveau at Cyceron and Gabriel A. Devenyi at Douglas Mental Health University Institute 
+who shared the dataset for benchmarking converter.
 Lastly, We thank to the staff and colleagues in the Center for Animal MRI (CAMRI) 
 at the University of North Carolina at Chapel Hill for the testing and providing helpful feedback. 
 Especially thanks to Ms. Tzu-Wen Wang for the test the tool at the front-line. 
