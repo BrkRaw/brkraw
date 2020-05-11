@@ -89,9 +89,10 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 - If you experience any other issue, please use 'issue' tab in Github to report.
 (such as the function to printing out dataset summary)
 - The issues with higher priority which planned to be patched near future.
-    - Multi-slices Localizer is currently not supported.
-    - Multi-echos MSME and RARE were not compatible at current version. 
-    - Some image scanned at PV5 may have offset.
+    - Multi-slices Localizer is currently not supported (Cycelon dataset, not shown in the above figure).
+    - Multi-echos MSME and RARE were not compatible at current version (Cycelon dataset, not shown in the above figure). 
+    - Some image scanned at PV5 may have offset (as shown in the 2nd row image, scan#5 and 9 of McGill_Orientation 
+    dataset, scanned at 2013-04-12)
     - If the dataset contains MR Spectroscopy, some method does not work correctly 
     (such as the function of printing out dataset summary)
     - In bids_converter, it does not create a modality-specific JSON file
