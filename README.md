@@ -21,7 +21,7 @@ The major features of this module are as follows.
 
 - Reliable converting function with
     - preserving the subject position and orientation to converted the NifTi1 file. 
-    **we found some issues on above regarding multi-echo cases and localizer with multi-slices using multi-slice packs. 
+    **we found some issues regarding multi-echo cases and localizer with multi-slices using multi-slice packs. 
     Will update here once we fix it. And please let us know if you experiencing 
     any other issue, which we haven't tested yet.**
     - correction of animal orientation based on the species and position. (Anterior of subject is Anterior) 
