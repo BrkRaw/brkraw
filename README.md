@@ -220,10 +220,16 @@ in the example directory.
 3. Documentation or develop tutorials for various use.
 - Also if you experience any bug or have any suggestion to improve this tool, please let us know.
 
-### Credits:
-- SungHo Lee (shlee@unc.edu)
-- Woomi Ban (banwoomi@unc.edu)
-- Yen-Yu Ian Shih (shihy@neurology.unc.edu)
+### Credits and roles:
+#### Main contributors
+- SungHo Lee (shlee@unc.edu): main developer
+- Woomi Ban (banwoomi@unc.edu): sub-developer who tested and refined the module structure
+- Yen-Yu Ian Shih (shihy@neurology.unc.edu): technical and academical advisory on this project (as well as funding)
+#### Collaborators
+- Drs. Chris Rorden, Sebastiano Ferraris: The pioneers related this project who had been inspired the developer
+ through their great [dcm2niix](https://github.com/rordenlab/dcm2niix) and 
+ [bruker2nii](https://github.com/SebastianoF/bruker2nifti), as well as their comments to improve this project. 
+- Dr. Mikael Naveau: The publisher of bruker2nifti_qa, the set of data to help benchmark testing of Bruker converter.
 
 ### How to Cite
 
@@ -244,9 +250,13 @@ SungHo Lee. (2020, May 9). dvm-shlee/bruker: BrkRaw v0.3.0 (Version 0.3.0). Zeno
 ```
 
 ### Acknowledgements
-We thank to the staff and colleagues in the Center for Animal MRI (CAMRI) 
-at the University of North Carolina at Chapel Hill for the testing and providing helpful 
-feedback. Especially thanks to Ms. Tzu-Wen Wang for the test the data management tools. 
+We thank to the researchers in the Rorden lab at the University of South Carolina, 
+regarding their pioneer works and sharing excellent tools for raw data conversion 
+to the community that inspired the first author of this project, as well as their sharing know-how. 
+We also thank Dr. Mikael Naveau who shares the dataset for benchmarking converter.
+Lastly, We thank to the staff and colleagues in the Center for Animal MRI (CAMRI) 
+at the University of North Carolina at Chapel Hill for the testing and providing helpful feedback. 
+Especially thanks to Ms. Tzu-Wen Wang for the test the tool at the front-line. 
 This work was supported by NIH (Grant No: RF1MH117053, R01MH111429, and R01NS091236).
 
 ### License:
