@@ -226,8 +226,8 @@ in the example directory.
 - Woomi Ban (banwoomi@unc.edu): sub-developer who tested and refined the module structure
 - Yen-Yu Ian Shih (shihy@neurology.unc.edu): technical and academical advisory on this project (as well as funding)
 #### Collaborators
-- Drs. Chris Rorden, Sebastiano Ferraris: The pioneers related this project who had been inspired the developer
- through their great [dcm2niix](https://github.com/rordenlab/dcm2niix) and 
+- Drs. Chris Rorden and Sebastiano Ferraris: The pioneers related this project who had been inspired the developer
+ through their great tools including [dcm2niix](https://github.com/rordenlab/dcm2niix) and 
  [bruker2nii](https://github.com/SebastianoF/bruker2nifti), as well as their comments to improve this project. 
 - Dr. Mikael Naveau: The publisher of bruker2nifti_qa, the set of data to help benchmark testing of Bruker converter.
 
