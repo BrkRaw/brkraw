@@ -18,12 +18,14 @@ without the conversion step. The module is compatible with the ZIP file format, 
 The goal of this project is providing easy-to-access of the Bruker's PVdatasets. 
 The major features of this module are as follows.
 
+
 - Reliable converting function with
-    - preserving the subject position and orientation to converted the NifTi1 file. ** we found some issues on multi-echo
-    cases and localizer with multi-slices using multi-slice packs. Will update here once we fix it. And please let us know
-    if you experiencing any other issue, which we haven't tested yet.**
+    - preserving the subject position and orientation to converted the NifTi1 file. 
+    **we found some issues on above regarding multi-echo cases and localizer with multi-slices using multi-slice packs. 
+    Will update here once we fix it. And please let us know if you experiencing 
+    any other issue, which we haven't tested yet.**
     - correction of animal orientation based on the species and position. (Anterior of subject is Anterior) 
-    ** The test has not been performed for all available condition, will be tested with phantom after COVID-19 pandemic**
+    **The test has not been performed for all available condition, will be tested with phantom after COVID-19 pandemic**
     - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
     - BIDS(v1.2.2) support: parameter file generation with custom syntax, automatic generation of the folder structure.
 - Capability of quick image validation by
