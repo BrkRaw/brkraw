@@ -19,8 +19,11 @@ The goal of this project is providing easy-to-access of the Bruker's PVdatasets.
 The major features of this module are as follows.
 
 - Reliable converting function with
-    - preserving the subject position and orientation to converted the NifTi1 file.
-    - correction of animal orientation based on the species and position. (Anterior of subject is Anterior)
+    - preserving the subject position and orientation to converted the NifTi1 file. ** we found some issues on multi-echo
+    cases and localizer with multi-slices using multi-slice packs. Will update here once we fix it. And please let us know
+    if you experiencing any other issue, which we haven't tested yet.**
+    - correction of animal orientation based on the species and position. (Anterior of subject is Anterior) 
+    ** The test has not been performed for all available condition, will be tested with phantom after COVID-19 pandemic**
     - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
     - BIDS(v1.2.2) support: parameter file generation with custom syntax, automatic generation of the folder structure.
 - Capability of quick image validation by
@@ -70,6 +73,9 @@ $ pip install bruker
 $ pip install git+https://github.com/dvm-shlee/bruker
 ```
 
+#### Conversion test result using Bruker2nii_QA
+[Known issues](imgs/bruker2nii_qa_dataset.png)
+
 #### Known issues
 - The module have been tested for PV 5 to PV 6.0.1 datasets. but it may have issue with higher version.
 - The GUI may not work if the python does not be built with tkinter, please check above instruction.
@@ -80,6 +86,7 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 - The issues with higher priority which planned to be patched near future.
     - Multi-slices Localizer is currently not supported.
     - Multi-echos MSME and RARE were not compatible at current version. 
+    - Some image scanned at PV5 may have offset.
     - If the dataset contains MR Spectroscopy, some method does not work correctly 
     (such as the function of printing out dataset summary)
     - In bids_converter, it does not create a modality-specific JSON file
@@ -230,8 +237,9 @@ in the example directory.
 #### Collaborators
 - Drs. Chris Rorden and Sebastiano Ferraris: The pioneers related this project who had been inspired the developer
  through their great tools including [dcm2niix](https://github.com/rordenlab/dcm2niix) and 
- [bruker2nii](https://github.com/SebastianoF/bruker2nifti), as well as their comments to improve this project. 
-- Drs. Mikael Naveau and Gabriel A. Devenyi: The publisher of bruker2nifti_qa, the set of data 
+ [bruker2nifti](https://github.com/SebastianoF/bruker2nifti), as well as their comments to improve this project. 
+- Drs. Mikael Naveau and Gabriel A. Devenyi: The publisher of 
+[bruker2nifti_qa](https://gitlab.com/naveau/bruker2nifti_qa), the set of data 
 to help benchmark testing of Bruker converter.
 
 ### How to Cite
