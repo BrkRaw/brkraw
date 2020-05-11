@@ -265,7 +265,7 @@ def main():
         pd.options.mode.chained_assignment = None
         path = args.input_raw
         input_xlsx = args.input_xlsx
-        df = pd.read_excel(input_xlsx, dtype={'run': str})
+        df = pd.read_excel(input_xlsx, dtype={'SubjID': str, 'SessID': str, 'run': str})
         ref_path = args.meta_ref
 
         # check if the project is multi-session
