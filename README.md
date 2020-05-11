@@ -152,10 +152,11 @@ $ brkraw gui -i <session path> -o <output path>
 ![brkraw GUI](imgs/brkraw_gui.png)
 **brkraw gui interface.**
 
-- Run GUI without path. Without path, two buttons (load file / load dir) will shows up.
-Make sure you select correct button based on the dataset type (zip file or dir). 
-In case of dir, please enter into the folder contains 'subject' file using dialog instead of 
-just highlighting it (common mistake). 
+- You can run GUI without any path option. It will show you only two buttons (Open File / Open Directory). 
+In case you are opening zipped PVdataset, please use 'Open File' button. For later case, 
+Make sure you are entered to the PVdataset root folder where the subject file located.
+If you does not enter to the dataset folder, the GUI will freeze. This case, just force quit the GUI.
+
 ```angular2html
 $ brkraw gui
 ```
