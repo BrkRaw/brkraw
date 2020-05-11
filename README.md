@@ -25,7 +25,10 @@ The major features of this module are as follows.
     Will update here once we fix it. And please let us know if you experiencing 
     any other issue, which we haven't tested yet.**
     - correction of animal orientation based on the species and position. (Anterior of subject is Anterior) 
-    **The test has not been performed for all available condition, will be tested with phantom after COVID-19 pandemic**
+    **The test has not been performed yet for all available conditions, 
+    but it will be tested with the phantom in the PV6.0.1 system near the future. 
+    If you have any data available to share with us we will greatly appreciate regarding 
+    your contribution and support on this project.**
     - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
     - BIDS(v1.2.2) support: parameter file generation with custom syntax, automatic generation of the folder structure.
 - Capability of quick image validation by
@@ -226,9 +229,10 @@ in the example directory.
 
 ### Contributing
 - Please contact shlee@unc.edu if you interest to contribute for following items.
-1. integration of reconstruction tool with Python API (such as BART tool).
-2. develop online analysis tools for fMRI or DTI study.
-3. Documentation or develop tutorials for various use.
+1. Share the dataset that showing any issues or incorrect orientation with this module.
+2. integration of reconstruction tool with Python API (such as BART tool).
+3. develop online analysis tools for fMRI or DTI study.
+4. Documentation or develop tutorials for various use.
 - Also if you experience any bug or have any suggestion to improve this tool, please let us know.
 
 ### Credits and roles:
