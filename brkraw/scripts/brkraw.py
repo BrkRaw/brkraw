@@ -343,7 +343,7 @@ def main():
                                 modality = '{}'.format(method.split(':')[-1])
                             filtered_dset.loc[i, 'modality'] = modality
                         else:
-                            validation(df, i, 'modality', row.modality, 5, dtype=str)
+                            validation(df, i, 'modality', row.modality, 8, dtype=str)
 
                     list_tested_fn = []
                     # Converting data according to the updated sheet

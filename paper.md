@@ -14,6 +14,7 @@ authors:
   - name: Woomi Ban
     affiliation: "1, 3"
   - name: Yen-Yu Ian Shih
+    orcid: 0000-0001-6529-911X
     affiliation: "1, 2, 3"
 affiliations:
  - name: Center for Animal MRI, University of North Carolina at Chapel Hill
@@ -38,7 +39,7 @@ the new standard of choice in many imaging research studies. An efficient, user 
 to covert animal MRI raw data into NifTi or Analyze is needed. 
 
 To address this, researchers had developed raw data converters for Bruker Biospin – the vendor 
-currently leading the animal MRI market [@Brett:2002; @Ferraris:2017; @Rorden:2018; @Chavarrias:2017]. 
+currently leading the animal MRI market [@Brett:2002; @Ferraris:2017; @Chavarrias:2017; @Rorden:2018]. 
 These converters allow bypassing the intermediate DICOM conversion step and can convert 
 Bruker ParaVision MRI raw data into NifTi or Analyze. While these converters significantly 
 improve analysis workflow, they do not provide the features needed to enhance direct data accessibility 
