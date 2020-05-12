@@ -73,7 +73,9 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 
 #### Conversion test result using [Bruker2Nifti_QA](https://gitlab.com/naveau/bruker2nifti_qa)
 ![Robust Orientation](imgs/Bruker2Nifti_QA_challenge.png)
-**All dataset in Bruker2Nifti_QA shows correct orientation after conversion.**
+**Overlapped images of all converted datasets of Bruker2Nifti_QA. Both within-session and between-session 
+are showing correct orientation. This image 
+represents that the orientation information is well-preserved in this tool.**
 
 #### Known issues
 - The module have been tested for PV 5 to PV 6.0.1 datasets. but it may have issue with higher version.
