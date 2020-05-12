@@ -492,53 +492,53 @@ class BrukerLoader():
                     lines.append('Position:\t{}\t\tEntry:\t{}'.format(subj_pose, subj_entry))
 
                     lines.append('\n[ScanID]\tSequence::Protocol::[Parameters]')
-                try:
-                    tr = get_value(visu_pars, 'VisuAcqRepetitionTime')
-                    tr = ','.join(map(str, tr)) if isinstance(tr, list) else tr
-                    te = get_value(visu_pars, 'VisuAcqEchoTime')
-                    te = 0 if te is None else te
-                    te = ','.join(map(str, te)) if isinstance(te, list) else te
-                    pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
-                    flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
-                    param_values = [tr, te, pixel_bw, flip_angle]
-                    for k, v in enumerate(param_values):
-                        if v is None:
-                            param_values[k] = ''
-                        if isinstance(k, float):
-                            param_values[k] = '{0:.2f}'.format(k)
-                    if j == 0:
-                        params = "[ TR: {0} ms, TE: {1} ms, pixelBW: {2} Hz, FlipAngle: {3} degree]".format(
-                            *param_values)
-                        protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
-                        sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
-                        lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
-                                                                   sequence_name,
-                                                                   protocol_name,
-                                                                   params))
+                # try:
+                tr = get_value(visu_pars, 'VisuAcqRepetitionTime')
+                tr = ','.join(map(str, tr)) if isinstance(tr, list) else tr
+                te = get_value(visu_pars, 'VisuAcqEchoTime')
+                te = 0 if te is None else te
+                te = ','.join(map(str, te)) if isinstance(te, list) else te
+                pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
+                flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
+                param_values = [tr, te, pixel_bw, flip_angle]
+                for k, v in enumerate(param_values):
+                    if v is None:
+                        param_values[k] = ''
+                    if isinstance(k, float):
+                        param_values[k] = '{0:.2f}'.format(k)
+                if j == 0:
+                    params = "[ TR: {0} ms, TE: {1} ms, pixelBW: {2} Hz, FlipAngle: {3} degree]".format(
+                        *param_values)
+                    protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
+                    sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
+                    lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
+                                                               sequence_name,
+                                                               protocol_name,
+                                                               params))
 
-                    dim = self._get_dim_info(visu_pars)[0]
-                    size = self._get_matrix_size(visu_pars)
-                    size = ' x '.join(map(str, size))
-                    spatial_info = self._get_spatial_info(visu_pars)
-                    temp_info = self._get_temp_info(visu_pars)
-                    s_resol = spatial_info['spatial_resol']
-                    fov_size = spatial_info['fov_size']
-                    fov_size = ' x '.join(map(str, fov_size))
-                    s_unit = spatial_info['unit']
-                    t_resol = '{0:.3f}'.format(temp_info['temporal_resol'])
-                    t_unit = temp_info['unit']
-                    s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
-                    s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
+                dim = self._get_dim_info(visu_pars)[0]
+                size = self._get_matrix_size(visu_pars)
+                size = ' x '.join(map(str, size))
+                spatial_info = self._get_spatial_info(visu_pars)
+                temp_info = self._get_temp_info(visu_pars)
+                s_resol = spatial_info['spatial_resol']
+                fov_size = spatial_info['fov_size']
+                fov_size = ' x '.join(map(str, fov_size))
+                s_unit = spatial_info['unit']
+                t_resol = '{0:.3f}'.format(temp_info['temporal_resol'])
+                t_unit = temp_info['unit']
+                s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
+                s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
 
-                    lines.append('    [{}] dim: {}D, matrix_size: {}, fov_size: {} (unit:mm)\n'
-                                 '         spatial_resol: {} (unit:{}), temporal_resol: {} (unit:{})'.format(
-                        str(reco_id).zfill(2), dim, size,
-                        fov_size,
-                        s_resol, s_unit,
-                        t_resol, t_unit))
-                except Exception as e:
-                    print(e)
-                    print(f'Issue found at {scan_id}')
+                lines.append('    [{}] dim: {}D, matrix_size: {}, fov_size: {} (unit:mm)\n'
+                             '         spatial_resol: {} (unit:{}), temporal_resol: {} (unit:{})'.format(
+                    str(reco_id).zfill(2), dim, size,
+                    fov_size,
+                    s_resol, s_unit,
+                    t_resol, t_unit))
+                # except Exception as e:
+                #     print(e)
+                #     print(f'Issue found at {scan_id}')
         lines.append('\n')
         print('\n'.join(lines), file=fobj)
 
@@ -559,6 +559,10 @@ class BrukerLoader():
         data_off = get_value(visu_pars, 'VisuCoreDataOffs')
         if isinstance(data_off, list):
             data_off = data_off[0] if is_all_element_same(data_off) else data_off
+        if isinstance(data_slp, list):
+            invalid_slope = True
+        else:
+            invalid_slope = False
 
         if re.search('epi', acq_method, re.IGNORECASE) and not \
                 re.search('dti', acq_method, re.IGNORECASE):
@@ -589,8 +593,12 @@ class BrukerLoader():
             niiobj.header.set_xyzt_units('mm', 'unknown')
         niiobj.header['qform_code'] = 1
         niiobj.header['sform_code'] = 0
-        niiobj.header['scl_slope'] = data_slp
-        niiobj.header['scl_inter'] = data_off
+        if invalid_slope:
+            # TODO: need help on applying intensity slope and offset for reconstructed DTI
+            pass
+        else:
+            niiobj.header['scl_slope'] = data_slp
+            niiobj.header['scl_inter'] = data_off
         return niiobj
 
     # EPI
@@ -603,8 +611,9 @@ class BrukerLoader():
             for id, fg in enumerate(frame_group_info['group_id']):
                 if not re.search('slice', fg, re.IGNORECASE):
                     parser.append(frame_group_info['matrix_shape'][id])
-
         frame_size = multiply_all(parser) if len(parser) > 0 else 1
+        if total_time is None:  # derived reco data
+            total_time = 0
         return dict(temporal_resol=(total_time / frame_size),
                     num_frames=frame_size,
                     unit='msec')
@@ -708,16 +717,19 @@ class BrukerLoader():
                 matrix_shape = frame_group_info['matrix_shape']
                 frame_thickness = get_value(visu_pars, 'VisuCoreFrameThickness')
                 num_slice_frames = 0
-                for id, fg in enumerate(frame_groups):
+                # for id, fg in enumerate(frame_groups):
+                for _, fg in enumerate(frame_groups):
                     if re.search('slice', fg, re.IGNORECASE):
                         num_slice_frames += 1
                         if num_slice_frames > 2:
                             raise Exception(ERROR_MESSAGES['SlicePacksSlices'])
                         if num_slice_packs > 1:
                             for s in range(num_slice_packs):
-                                num_slices_each_pack.append(int(matrix_shape[id]/num_slice_packs))
+                                # num_slices_each_pack.append(int(matrix_shape[id]/num_slice_packs))
+                                num_slices_each_pack.append(int(matrix_shape[0]/num_slice_packs))
                         else:
-                            num_slices_each_pack.append(matrix_shape[id])
+                            # num_slices_each_pack.append(matrix_shape[id])
+                            num_slices_each_pack.append(matrix_shape[0])
                 slice_distances_each_pack = [frame_thickness for _ in range(num_slice_packs)]
             elif version == 3:
                 num_slice_packs = get_value(visu_pars, 'VisuCoreSlicePacksDef')
@@ -730,23 +742,30 @@ class BrukerLoader():
                 slices_info_in_pack = get_value(visu_pars, 'VisuCoreSlicePacksSlices')
                 slice_distance = get_value(visu_pars, 'VisuCoreSlicePacksSliceDist')
                 num_slice_frames = 0
-                for id, fg in enumerate(frame_groups):
+                # for id, fg in enumerate(frame_groups):
+                for _, fg in enumerate(frame_groups):
                     if re.search('slice', fg, re.IGNORECASE):
                         num_slice_frames += 1
                         if num_slice_frames > 2:
                             raise Exception(ERROR_MESSAGES['SlicePacksSlices'])
                         try:
-                            num_slices_each_pack = [slices_info_in_pack[id][1] for _ in range(num_slice_packs)]
+                            # num_slices_each_pack = [slices_info_in_pack[id][1] for _ in range(num_slice_packs)]
+                            num_slices_each_pack = [slices_info_in_pack[0][1] for _ in range(num_slice_packs)]
                         except:
                             raise Exception(ERROR_MESSAGES['SlicePacksSlices'])
                         if isinstance(slice_distance, list):
-                            slice_distances_each_pack = [slice_distance[id] for _ in range(num_slice_packs)]
+                            # slice_distances_each_pack = [slice_distance[id] for _ in range(num_slice_packs)]
+                            slice_distances_each_pack = [slice_distance[0] for _ in range(num_slice_packs)]
                         elif isinstance(slice_distance, float) or isinstance(slice_distance, int):
                             slice_distances_each_pack = [slice_distance for _ in range(num_slice_packs)]
                         else:
                             raise Exception(ERROR_MESSAGES['SliceDistDatatype'])
             if len(slice_distances_each_pack) == 0:
                 slice_distances_each_pack = [get_value(visu_pars, 'VisuCoreFrameThickness')]
+            else:
+                for i, d in enumerate(slice_distances_each_pack):
+                    if d == 0:
+                        slice_distances_each_pack[i] = get_value(visu_pars, 'VisuCoreFrameThickness')
             if len(num_slices_each_pack) == 0:
                 num_slices_each_pack = [1]
 

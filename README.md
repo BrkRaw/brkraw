@@ -20,15 +20,8 @@ The major features of this module are as follows.
 
 
 - Reliable converting function with
-    - preserving the subject position and orientation to converted the NifTi1 file. 
-    **we found some issues regarding multi-echo cases and localizer with multi-slices using multi-slice packs. 
-    Will update here once we fix it. And please let us know if you experiencing 
-    any other issue, which we haven't tested yet.**
-    - correction of animal orientation based on the species and position. (Anterior of subject is Anterior) 
-    **The test has not been performed yet for all available conditions, 
-    but it will be tested with the phantom in the PV6.0.1 system near the future. 
-    If you have any data available to share with us we will greatly appreciate regarding 
-    your contribution and support on this project.**
+    - preserving the subject position and orientation to converted the NifTi1 file.
+    - correction of animal orientation based on the species and position. (Anterior of subject is Anterior).
     - providing fMRI and DTI study friendly features: slice-order update on the header, Diffusion parameter file generation.
     - BIDS(v1.2.2) support: parameter file generation with custom syntax, automatic generation of the folder structure.
 - Capability of quick image validation by
@@ -79,7 +72,8 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 ```
 
 #### Conversion test result using [Bruker2Nifti_QA](https://gitlab.com/naveau/bruker2nifti_qa)
-![Known issues](imgs/bruker2nii_qa_dataset.png)
+![Robust Orientation](imgs/Bruker2Nifti_QA_challenge.png)
+**All dataset in Bruker2Nifti_QA shows correct orientation after conversion.**
 
 #### Known issues
 - The module have been tested for PV 5 to PV 6.0.1 datasets. but it may have issue with higher version.
@@ -89,10 +83,6 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 - If you experience any other issue, please use 'issue' tab in Github to report.
 (such as the function to printing out dataset summary)
 - The issues with higher priority which planned to be patched near future.
-    - Multi-slices Localizer is currently not supported (Cycelon dataset, not shown in the above figure).
-    - Multi-echos MSME and RARE were not compatible at current version (Cycelon dataset, not shown in the above figure). 
-    - Some image scanned at PV5 may have offset (as shown in the 2nd row image, scan#5 and 9 of McGill_Orientation 
-    dataset, scanned at 2013-04-12)
     - If the dataset contains MR Spectroscopy, some method does not work correctly 
     (such as the function of printing out dataset summary)
     - In bids_converter, it does not create a modality-specific JSON file
