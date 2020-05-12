@@ -113,7 +113,7 @@ COMMON_METADATA_FIELD = \
 #   If 'Equation' in key: each key assigned as local variable and test in Equation will be executed to return the value
 #   Else, new key - value dictionary will be return (for the cases with sub-keys)
 # If string is entered as value, The value of given parameter will be parsed from parameter files
-METADATA_FILED_INFO = \
+COMMON_META_REF = \
     dict(Manufacturer                   = 'VisuManufacturer',
          ManufacturersModelName         = 'VisuStation',
          DeviceSerialNumber             = 'VisuSystemOrderNumber',
@@ -173,7 +173,8 @@ METADATA_FILED_INFO = \
                                                Equation     = '(1 / BWhzPixel) / ACCfactor'),
 
          # TIMING_PARAMETERS
-         EchoTime                       = 'VisuAcqEchoTime',
+         EchoTime                       = dict(TE           = 'VisuAcqEchoTime',
+                                               Equation     = 'TE/1000'),
          InversionTime                  = 'VisuAcqInversionTime',
          SliceTiming                    = dict(TR           = 'VisuAcqRepetitionTime',
                                                Num_of_Slice = 'VisuCoreFrameCount',
@@ -196,6 +197,46 @@ METADATA_FILED_INFO = \
          InstitutionAddress             = None,
          InstitutionalDepartmentName    = None)
 
+
+FMRI_META_REF = \
+    dict(RepetitionTime                 = dict(TR           = 'VisuAcqRepetitionTime',
+                                               Equation     = 'TR/1000'),
+         VolumeTiming                   = dict(TR           = 'VisuAcqRepetitionTime',
+                                               NR           = 'PVM_NRepetitions',
+                                               Equation     = '(np.arange(NR)*(TR/1000)).tolist()'),
+         TaskName                       = None,
+
+         # RECOMMENDED
+         # - timing parameters
+         NumberOfVolumesDiscardedByScanner  = 'PVM_DummyScans',
+         NumberOfVolumesDiscardedByUser     = None,
+         DelayTime                      = None,
+         AcquisitionDuration            = None,
+         DelayAfterTrigger              = None,
+
+         # - fMRI task information
+         Instructions                   = None,
+         TaskDescription                = None,
+         CogAtlasID                     = None,
+         CogPOID                        = None
+         )
+
+
+FIELDMAP_META_REF = \
+    dict(IntendedFor                    = '',
+         )
+
+DATASET_DESC_REF = \
+    dict(Name='',
+         BIDSVersion='1.2.2',
+         License='',
+         Authors=[''],
+         Acknowledgements='',
+         HowToAsknowledge='',
+         Funding=[''],
+         EthicApprovals='',
+         ReferenceAndLinks='',
+         DatasetDOI='')
 
 XYZT_UNITS = \
     dict(EPI=('mm', 'sec'))

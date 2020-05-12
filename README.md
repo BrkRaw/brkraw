@@ -75,7 +75,7 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 ![Robust Orientation](imgs/Bruker2Nifti_QA_challenge.png)
 **Overlapped images of all converted datasets of Bruker2Nifti_QA. Both within-session and between-session 
 are showing correct orientation. This image 
-represents that the orientation information is well-preserved in this tool.**
+represents that the orientation information is well-preserved in this tool. (from BrkRaw >= 0.3.1)**
 
 #### Known issues
 - The module have been tested for PV 5 to PV 6.0.1 datasets. but it may have issue with higher version.
@@ -142,6 +142,7 @@ that required to use for file naming.
 - This command will also generate the BIDS_META_REF.json which allows you to set 
 custom syntax to parse the metadata from the rawdata. The default reference of 
 the current version is based on BIDS 1.2.2.
+- The bids_converter command will also generate empty template of `dataset_description.json` and `README`
 - To learn more detail, please check our example 
 [Jupyter Notebooks](https://github.com/dvm-shlee/bruker/blob/master/examples/BrkRaw_PythonAPI.ipynb).
 ```angular2html
@@ -261,10 +262,10 @@ SungHo Lee. (2020, May 9). dvm-shlee/bruker: BrkRaw v0.3.0 (Version 0.3.0). Zeno
 
 ### Acknowledgements
 We thank to the researchers of the Rorden lab at the University of South Carolina, 
-regarding their pioneer works and sharing excellent tools for raw data conversion 
-to the community that inspired the first author of this project, as well as their sharing know-how. 
-We also thank Dr. Mikael Naveau at Cyceron and Gabriel A. Devenyi at Douglas Mental Health University Institute 
-who shared the dataset for benchmarking converter.
+especially Drs. Chris Rorden and Sebastiano Ferraris, regarding their pioneer works and sharing excellent tools 
+for raw data conversion to the community that inspired the first author of this project, 
+as well as their sharing know-how.  We also thank Dr. Mikael Naveau at Cyceron and Gabriel A. Devenyi 
+at Douglas Mental Health University Institute who shared the dataset for benchmarking converter.
 Lastly, We thank to the staff and colleagues in the Center for Animal MRI (CAMRI) 
 at the University of North Carolina at Chapel Hill for the testing and providing helpful feedback. 
 Especially thanks to Ms. Tzu-Wen Wang for the test the tool at the front-line. 

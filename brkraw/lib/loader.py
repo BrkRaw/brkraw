@@ -203,10 +203,11 @@ class BrukerLoader():
                 start = int(spack_idx * num_slices_each_pack[spack_idx])
                 end = start + num_slices_each_pack[spack_idx]
                 seg_imgobj = imgobj[..., start:end]
-                niiobj = Nifti1Image(seg_imgobj, affine[spack_idx])
+                niiobj = Nifti1Image(seg_imgobj, np.round(affine[spack_idx], decimals=3))
                 niiobj = self._set_default_header(niiobj, visu_pars, method)
                 parser.append(niiobj)
             return parser
+        affine = np.round(affine, decimals=3)
         if crop is not None:
             if crop[0] is None:
                 niiobj = Nifti1Image(imgobj[..., :crop[1]], affine)
@@ -318,17 +319,17 @@ class BrukerLoader():
         encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
 
         if metadata is None:
-            metadata = METADATA_FILED_INFO.copy()
+            metadata = COMMON_META_REF.copy()
         for k, v in metadata.items():
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
                 if val is not None:
                     val = encdir_dic[val]
-
             if isinstance(val, np.ndarray):
                 val = val.tolist()
-            if isinstance(val, list):
-                val = ','.join(map(str, val))
+            # if isinstance(val, list):
+            #     val = ','.join(map(str, val))
+            #     val = f'[{val}]'
             json_obj[k] = val
         return json_obj
 

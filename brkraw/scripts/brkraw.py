@@ -186,7 +186,7 @@ def main():
             output = f'{output}.xlsx'
 
         Headers = ['RawData', 'SubjID', 'SessID', 'ScanID', 'RecoID', 'DataType',
-                   'task', 'acq', 'ce', 'rec', 'run', 'modality', 'Start', 'End']
+                   'task', 'acq', 'ce', 'rec', 'dir', 'run', 'modality', 'Start', 'End']
         df = pd.DataFrame(columns=Headers)
 
         for dname in sorted(os.listdir(path)):
@@ -229,14 +229,19 @@ def main():
         ref_path = os.path.join(os.path.dirname(output), 'BIDS_META_REF.json')
         with open(ref_path, 'w') as f:
             import json
-            from ..lib.reference import METADATA_FILED_INFO
-            json.dump(METADATA_FILED_INFO, f, indent=4)
+            from ..lib.reference import COMMON_META_REF, FMRI_META_REF, FIELDMAP_META_REF
+            ref_dict = dict(common=COMMON_META_REF,
+                            func=FMRI_META_REF,
+                            fmap=FIELDMAP_META_REF)
+            json.dump(ref_dict, f, indent=4)
         print('Please complete the exported BIDS datasheet [{}] '
               'according to BIDS standard guide.'.format(os.path.basename(output)))
 
     elif args.function == 'bids_converter':
         import pandas as pd
         import numpy as np
+        import json
+        import datetime
 
         def validation(df, idx, key, val, num_char_allowed, dtype=None):
             import string
@@ -281,6 +286,11 @@ def main():
 
         root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
         mkdir(root_path)
+        with open(os.path.join(root_path, 'dataset_description.json'), 'w') as f:
+            from ..lib.reference import DATASET_DESC_REF
+            json.dump(DATASET_DESC_REF, f, indent=4)
+        with open(os.path.join(root_path, 'README'), 'w') as f:
+            f.write(f'This dataset has converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.\n')
 
         print('Inspect input BIDS datasheet...')
         for dname in sorted(os.listdir(path)):
@@ -325,6 +335,9 @@ def main():
                         if pd.notnull(row.ce):
                             if validation(df, i, 'ce', row.ce, 5):
                                 fname = '{}_ce-{}'.format(fname, row.ce)
+                        if pd.notnull(row.dir):
+                            if validation(df, i, 'dir', row.dir, 2):
+                                fname = '{}_dir-{}'.format(fname, row.dir)
                         if pd.notnull(row.rec):
                             if validation(df, i, 'rec', row.rec, 2):
                                 fname = '{}_rec-{}'.format(fname, row.rec)
@@ -390,7 +403,24 @@ def main():
                                 if ref_path:
                                     import json
                                     if os.path.exists(ref_path) and ref_path.lower().endswith('.json'):
-                                        ref = json.load(open(ref_path))
+                                        ref_data = json.load(open(ref_path))
+                                        ref = ref_data['common']
+                                        if row.modality in ['bold', 'cbv', 'epi']:
+                                            if 'func' in ref_data.keys():
+                                                for k, v in ref_data['func'].items():
+                                                    if k in ref.keys():
+                                                        raise InvalidApproach(f'Duplicated key is found at func: {k}')
+                                                    else:
+                                                        ref[k] = v
+                                        if row.modality in ['fieldmap', 'phase1', 'phase2',
+                                                            'phasediff', 'magnitude',
+                                                            'magnitude1', 'magnitude2']:
+                                            if 'fmap' in ref_data.keys():
+                                                for k, v in ref_data['fmap'].items():
+                                                    if k in ref.keys():
+                                                        raise InvalidApproach(f'Duplicated key is found at fmap: {k}')
+                                                    else:
+                                                        ref[k] = v
                                     else:
                                         ref = None
                                     dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir, metadata=ref)
