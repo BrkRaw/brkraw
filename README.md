@@ -227,11 +227,11 @@ in the example directory.
 - Also if you experience any bug or have any suggestion to improve this tool, please let us know.
 
 ### Credits and roles:
-#### Main contributors
+#### Authors
 - SungHo Lee (shlee@unc.edu): main developer
 - Woomi Ban (banwoomi@unc.edu): sub-developer who tested and refined the module structure
 - Yen-Yu Ian Shih (shihy@neurology.unc.edu): technical and academical advisory on this project (as well as funding)
-#### Collaborators
+#### Contributors
 - Drs. Chris Rorden and Sebastiano Ferraris: The pioneers related this project who had been inspired the developer
  through their great tools including [dcm2niix](https://github.com/rordenlab/dcm2niix) and 
  [bruker2nifti](https://github.com/SebastianoF/bruker2nifti), as well as their comments to improve this project. 
