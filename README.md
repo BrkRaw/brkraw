@@ -78,6 +78,7 @@ are showing correct orientation. This image
 represents that the orientation information is well-preserved in this tool. (from BrkRaw >= 0.3.1)**
 
 #### Known issues
+- the last released version 0.3.1 does not convert DTI image correctly, please use 0.3.2 via github installation method.
 - The module have been tested for PV 5 to PV 6.0.1 datasets. but it may have issue with higher version.
 - The GUI may not work if the python does not be built with tkinter, please check above instruction.
 - If GUI popped up but not working after selecting the dir, make sure you entered to dataset dir.
