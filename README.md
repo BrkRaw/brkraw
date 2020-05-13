@@ -75,7 +75,7 @@ $ pip install git+https://github.com/dvm-shlee/bruker
 ![Robust Orientation](imgs/Bruker2Nifti_QA_challenge.png)
 **Overlapped images of all converted datasets of Bruker2Nifti_QA. Both within-session and between-session 
 are showing correct orientation. This image 
-represents that the orientation information is well-preserved in this tool. (from BrkRaw >= 0.3.1)**
+represents that the orientation information is well-preserved in this tool. (from BrkRaw >= 0.3.2)**
 
 #### Known issues
 - the last released version 0.3.1 does not convert DTI image correctly, please use 0.3.2 via github installation method.
