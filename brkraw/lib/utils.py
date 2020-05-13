@@ -584,5 +584,7 @@ def encdir_code_converter(enc_param):
         return ['phase_enc', 'read_enc']
     elif enc_param == 'col_slice_dir':
         return ['read_enc', 'phase_enc', 'slice_enc']
+    elif enc_param == 'row_slice_dir':
+        return ['phase_enc', 'read_enc', 'slice_enc']
     else:
         raise Exception(ERROR_MESSAGES['PhaseEncDir'])

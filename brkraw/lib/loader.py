@@ -441,11 +441,23 @@ class BrukerLoader():
                     if isinstance(val, int):
                         val = encdir_dic[val]
                     else:
-                        if is_all_element_same(val):
-                            val = val[0]
+                        if isinstance(val, list):
+                            if is_all_element_same(val):
+                                val = val[0]
+                            else:
+                                raise UnexpectedError('Unexpected phase encoding direction in PV5.1.')
+                        elif isinstance(val, str):
+                            pass
                         else:
                             raise UnexpectedError('Unexpected phase encoding direction in PV5.1.')
-                        val = encdir_dic[encdir_code_converter(val).index('phase_enc')]
+
+                        encdirs = encdir_code_converter(val)
+                        if 'phase_enc' in encdirs:
+                            pe_idx = encdirs.index('phase_enc')
+                            val = encdir_dic[pe_idx]
+                        else:
+                            val = None
+
             if isinstance(val, np.ndarray):
                 val = val.tolist()
             # if isinstance(val, list):
