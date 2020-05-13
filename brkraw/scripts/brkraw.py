@@ -51,11 +51,12 @@ def main():
     bids_list = subparsers.add_parser("bids_list", help="Generate BIDS datasheets (xlsx format)")
     bids_list.add_argument("input", help="The source path that contains multiple Bruker raw data", type=str)
     bids_list.add_argument("output", help='The destination path for BIDS datasheet', type=str)
+    bids_list.add_argument("-r", "--meta_ref", help="the path for BIDS Metadata reference", type=str, default=False)
 
     bids_converter = subparsers.add_parser("bids_converter", help="Convert ALL Bruker raw data "
                                                                   "according to the BIDS datasheet")
     bids_converter.add_argument("input_raw", help="The source path that contains multiple Bruker raw data", type=str)
-    bids_converter.add_argument("input_xlsx", help="The BIDS datasheet", type=str)
+    bids_converter.add_argument("input_xlsx", help="The BIDS datasheet file", type=str)
     bids_converter.add_argument("-r", "--meta_ref", help="BIDS Metadata reference", type=str, default=False)
 
     args = parser.parse_args()
@@ -181,6 +182,7 @@ def main():
         import pandas as pd
         path = os.path.abspath(args.input)
         output = os.path.abspath(args.output)
+        ref_path = args.meta_ref
         if not output.endswith('.xlsx'):
             # to prevent pandas ValueError in case user does not provide valid file extension.
             output = f'{output}.xlsx'
@@ -233,16 +235,22 @@ def main():
                                     else:
                                         df = df.append(item, ignore_index=True)
         df.to_excel(output, index=None)
-        ref_path = os.path.join(os.path.dirname(output), 'BIDS_META_REF.json')
-        with open(ref_path, 'w') as f:
-            import json
-            from ..lib.reference import COMMON_META_REF, FMRI_META_REF, FIELDMAP_META_REF
-            ref_dict = dict(common=COMMON_META_REF,
-                            func=FMRI_META_REF,
-                            fmap=FIELDMAP_META_REF)
-            json.dump(ref_dict, f, indent=4)
+        if ref_path:
+        # ref_path = os.path.join(os.path.dirname(output), 'BIDS_META_REF.json')
+            if not ref_path.endswith('json'):
+                ref_path = f'{ref_path}.json'
+            print(f'Creating BIDS metadata reference file (BIDS v1.2.2): {ref_path}')
+            with open(ref_path, 'w') as f:
+                import json
+                from ..lib.reference import COMMON_META_REF, FMRI_META_REF, FIELDMAP_META_REF
+                ref_dict = dict(common=COMMON_META_REF,
+                                func=FMRI_META_REF,
+                                fmap=FIELDMAP_META_REF)
+                json.dump(ref_dict, f, indent=4)
         print('Please complete the exported BIDS datasheet [{}] '
               'according to BIDS standard guide.'.format(os.path.basename(output)))
+        print('**This tool is just a utility to help minimize the effort for data organization, '
+              'so it will not guarantee that the dataset can meet the requirement of the official BIDS validator.**')
 
     elif args.function == 'bids_converter':
         import pandas as pd
