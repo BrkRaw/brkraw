@@ -159,14 +159,12 @@ COMMON_META_REF = \
          PartialFourierDirection        = None,
          PhaseEncodingDirection         = [dict(key         = 'VisuAcqGradEncoding',
                                                 where       = 'phase_enc'),
-                                           dict(key         = 'VisuAcqImagePhaseEncDir',
-                                                where       = 'col_dir')],  # Deprecated
+                                           'VisuAcqImagePhaseEncDir'],  # Deprecated
          EffectiveEchoSpacing           = dict(BWhzPixel    = 'VisuAcqPixelBandwidth',
-                                               MatSizePE    = dict(key='VisuCoreSize',
+                                               MatSizePE    = dict(key='PVM_EncMatrix',
                                                                    idx=[dict(key    = 'VisuAcqGradEncoding',
                                                                              where  = 'phase_enc'),
-                                                                        dict(key    = 'VisuAcqImagePhaseEncDir',
-                                                                             where  = 'col_dir')]),
+                                                                        1]),  # PV5.1
                                                ACCfactor    = 'ACQ_phase_factor',
                                                Equation     = '(1 / (MatSizePE * BWhzPixel)) / ACCfactor'),  # in second
          TotalReadoutTime               = dict(ETL          = 'VisuAcqEchoTrainLength',

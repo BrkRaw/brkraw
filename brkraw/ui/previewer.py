@@ -72,11 +72,21 @@ class Previewer(tk.Frame):
                                   image=self.tkimg)
 
     def _load_image(self, brkraw_obj, scan_id, reco_id):
+        from ..lib.utils import multiply_all
         # update image when scan_id and reco_id is changed
         visu_pars = brkraw_obj._get_visu_pars(scan_id, reco_id)
-        dataobj = brkraw_obj._get_dataobj(scan_id, reco_id)
-        shape = brkraw_obj._get_matrix_size(visu_pars, dataobj)
-        self._dataobj = dataobj.reshape(shape[::-1]).T[:,:,::-1, ...]
+        dataobj = brkraw_obj.get_dataobj(scan_id, reco_id, slope=False)
+
+        if len(dataobj.shape) > 3:
+            x, y, z = dataobj.shape[:3]
+            f = multiply_all(dataobj.shape[3:])
+            # all converted nifti must be 4D
+            self._dataobj = dataobj.reshape([x, y, z, f])[:,:,::-1, ...]
+        self._dataobj = dataobj
+
+        # shape = brkraw_obj._get_matrix_size(visu_pars, dataobj)
+        # self._dataobj = dataobj.reshape(shape[::-1]).T[:,:,::-1, ...]
+
         n_slicepacks = brkraw_obj._get_slice_info(visu_pars)['num_slice_packs']
         spatial_info = brkraw_obj._get_spatial_info(visu_pars)
 

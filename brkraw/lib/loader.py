@@ -438,7 +438,14 @@ class BrukerLoader():
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
                 if val is not None:
-                    val = encdir_dic[val]
+                    if isinstance(val, int):
+                        val = encdir_dic[val]
+                    else:
+                        if is_all_element_same(val):
+                            val = val[0]
+                        else:
+                            raise UnexpectedError('Unexpected phase encoding direction in PV5.1.')
+                        val = encdir_dic[encdir_code_converter(val).index('phase_enc')]
             if isinstance(val, np.ndarray):
                 val = val.tolist()
             # if isinstance(val, list):
@@ -454,7 +461,6 @@ class BrukerLoader():
             if code == 'me':    # multi-echo
                 if 'EchoTime' in json_obj.keys():
                     te = json_obj['EchoTime']
-                    print(te)
                     if isinstance(te, list):
                         json_obj['EchoTime'] = te[idx]
                     else:
@@ -474,7 +480,7 @@ class BrukerLoader():
         import datetime as dt
         subject_date = get_value(self._subject, 'SUBJECT_date')
         subject_date = subject_date[0] if isinstance(subject_date, list) else subject_date
-        pattern_1 = r'(\d{2}:\d{2}:\d{2})\s(\d{2}\s\w+\s\d{4})'
+        pattern_1 = r'(\d{2}:\d{2}:\d{2})\s+(\d+\s\w+\s\d{4})'
         pattern_2 = r'(\d{4}-\d{2}-\d{2})[T](\d{2}:\d{2}:\d{2})'
         if re.match(pattern_1, subject_date):
             # start time
@@ -648,7 +654,7 @@ class BrukerLoader():
         if re.search('epi', acq_method, re.IGNORECASE) and not \
                 re.search('dti', acq_method, re.IGNORECASE):
 
-            niiobj.header.set_xyzt_units('mm', 'sec')
+            niiobj.header.set_xyzt_units(xyz=2, t=8)
             niiobj.header['pixdim'][4] = temporal_resol
             niiobj.header.set_dim_info(slice=2)
             num_slices = slice_info['num_slices_each_pack'][0]
@@ -712,17 +718,6 @@ class BrukerLoader():
     @staticmethod
     def _get_gradient_encoding_info(visu_pars):
         version = get_value(visu_pars, 'VisuVersion')
-
-        def encdir_code_converter(enc_param):
-            # for PV 5.1, #TODO: incompleted code.
-            if enc_param == 'col_dir':
-                return ['read_enc', 'phase_enc']
-            elif enc_param == 'row_dir':
-                return ['phase_enc', 'read_enc']
-            elif enc_param == 'col_slice_dir':
-                return ['read_enc', 'phase_enc', 'slice_enc']
-            else:
-                raise Exception(ERROR_MESSAGES['PhaseEncDir'])
 
         if version == 1:  # case PV 5.1, prepare compatible form of variable
             phase_enc = get_value(visu_pars, 'VisuAcqImagePhaseEncDir')

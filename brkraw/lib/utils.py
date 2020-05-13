@@ -378,7 +378,7 @@ def is_express(value):
 
 
 def meta_check_where(value, acqp, method, visu_pars):
-    val = get_value(visu_pars, value['key'])
+    val = meta_get_value(value['key'], acqp, method, visu_pars)
     if val is not None:
         if isinstance(value['where'], str):
             if value['where'] not in val:
@@ -393,7 +393,7 @@ def meta_check_where(value, acqp, method, visu_pars):
 
 
 def meta_check_index(value, acqp, method, visu_pars):
-    val = get_value(visu_pars, value['key'])
+    val = meta_get_value(value['key'], acqp, method, visu_pars)
     if val is not None:
         if isinstance(value['idx'], int):
             return val[value['idx']]
@@ -574,3 +574,15 @@ def build_bids_json(dset, row, fname, ref_path):
             else:
                 dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir,
                                metadata=ref, condition=condition)
+
+
+def encdir_code_converter(enc_param):
+    # for PV 5.1, #TODO: incompleted code.
+    if enc_param == 'col_dir':
+        return ['read_enc', 'phase_enc']
+    elif enc_param == 'row_dir':
+        return ['phase_enc', 'read_enc']
+    elif enc_param == 'col_slice_dir':
+        return ['read_enc', 'phase_enc', 'slice_enc']
+    else:
+        raise Exception(ERROR_MESSAGES['PhaseEncDir'])

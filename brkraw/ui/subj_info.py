@@ -108,7 +108,10 @@ class SubjInfo(tk.Frame):
         self._entry         = self._set_labelitem(self._c3, 'Entry')
 
     def load_data(self, brkraw_obj):
-        datetime = brkraw_obj.get_scan_time()
+        try:
+            datetime = brkraw_obj.get_scan_time()
+        except Exception:
+            datetime = dict(date='N/A', start_time='N/A')
         pvobj = brkraw_obj._pvobj
         self._account.set_entry(pvobj.user_account)
         self._researcher.set_entry(pvobj.user_name)
