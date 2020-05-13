@@ -2,7 +2,7 @@ from shleeh import *
 from shleeh.errors import *
 from .pvobj import PvDatasetDir, PvDatasetZip
 from .utils import *
-from .reference import ERROR_MESSAGES
+from .reference import ERROR_MESSAGES, ISSUE_REPORT
 import numpy as np
 import zipfile
 import pathlib
@@ -54,7 +54,7 @@ class BrukerLoader():
             return visu_pars parameter object
 
         - get method for image parameters
-        get_matrixsize(scan_id, reco_id)
+        get_matrix_size(scan_id, reco_id)
             return matrix shape to reshape dataobj
         get_affine(scan_id, reco_id)
             return affine transform matrix
@@ -138,27 +138,82 @@ class BrukerLoader():
             data_off = data_off[0] if is_all_element_same(data_off) else data_off
         return data_slp, data_off
 
-    def get_dataobj(self, scan_id, reco_id, slp_correct=True):
-        """
+    def get_dataobj(self, scan_id, reco_id, slope=True):
+        """ Return dataobj that has 3D(spatial) + extra frame
         Args:
-            scan_id:
-            reco_id:
-            slope_correct:
-
+            scan_id: scan id
+            reco_id: reco id
+            slope: if True correct slope
         Returns:
+            dataobj
         """
-        visu_pars = self._get_visu_pars(scan_id, reco_id)
-        matrix_size = self.get_matrixsize(scan_id, reco_id)
-        dataobj = self._pvobj.get_dataobj(scan_id, reco_id).reshape(matrix_size[::-1]).T
-        data_slp, data_off = self._get_dataslp(visu_pars)
-        if slp_correct:
-            try:
-                corrected_dataobj = dataobj * data_slp + data_off
-            except:
-                raise Exception('size mismatch between data with slope or offset parameter.')
-            return corrected_dataobj
-        else:
-            return dataobj
+        visu_pars   = self._get_visu_pars(scan_id, reco_id)
+        dim         = self._get_dim_info(visu_pars)[0]
+        fg_info     = self._get_frame_group_info(visu_pars)
+        matrix_size = self.get_matrix_size(scan_id, reco_id)
+        dataobj = self._get_dataobj(scan_id, reco_id)
+        group_id    = fg_info['group_id']
+
+        if slope:
+            data_slp, data_off = self._get_dataslp(visu_pars)
+            f = fg_info['frame_size']
+            if isinstance(data_slp, list):
+                if f != len(data_slp):
+                    raise UnexpectedError(message='data_slp mismatch;'
+                                                  f'{ISSUE_REPORT}')
+                else:
+                    if dim == 2:
+                        x, y = matrix_size[:2]
+                        _dataobj = dataobj.reshape([f, x * y]).T
+                    elif dim == 3:
+                        x, y, z = matrix_size[:3]
+                        _dataobj = dataobj.reshape([f, x * y * z]).T
+                    else:
+                        raise UnexpectedError(message='Unexpected frame shape on DTI image;'
+                                                      f'{ISSUE_REPORT}')
+                dataobj = (_dataobj * data_slp + data_off).T
+            else:
+                dataobj = dataobj * data_slp + data_off
+
+        dataobj = dataobj.reshape(matrix_size[::-1]).T
+
+        def swap_slice_axis(group_id_, dataobj_):
+            """ swap slice axis to third axis """
+            slice_code = 'FG_SLICE'
+            if slice_code not in group_id_:
+                pass
+            else:
+                slice_axis_ = group_id_.index(slice_code) + 2
+                dataobj_ = np.swapaxes(dataobj_, 2, slice_axis_)
+            return dataobj_
+
+        if fg_info['frame_type'] is not None:
+            if group_id[0] == 'FG_SLICE':
+                pass
+
+            elif group_id[0] == 'FG_ECHO':  # multi-echo
+                if self.is_multi_echo(scan_id, reco_id):
+                    # push echo to last axis for BIDS
+                    if 'FG_SLICE' not in group_id:
+                        dataobj = np.swapaxes(dataobj, dim, -1)
+                    else:
+                        slice_axis = group_id.index('FG_SLICE') + 2
+                        dataobj = np.swapaxes(dataobj, slice_axis, -1)
+                        dataobj = np.swapaxes(dataobj, 2, -1)
+
+            elif group_id[0] == 'FG_DIFFUSION':
+                dataobj = swap_slice_axis(group_id, dataobj)
+
+            elif group_id[0] == 'FG_DTI':   # reconstructed
+                dataobj = swap_slice_axis(group_id, dataobj)
+
+            elif group_id[0] == 'FG_MOVIE':
+                dataobj = swap_slice_axis(group_id, dataobj)
+
+            else:
+                raise UnexpectedError(message='Unexpected frame group combination;'
+                                              f'{ISSUE_REPORT}')
+        return dataobj
 
     def get_fid(self, scan_id):
         return self._pvobj.get_fid(scan_id)
@@ -177,21 +232,44 @@ class BrukerLoader():
         method = self.get_method(scan_id)
         return self._get_bdata(method)
 
-    def get_matrixsize(self, scan_id, reco_id):
-        visu_pars = self.get_visu_pars(scan_id, reco_id)
+    def get_matrix_size(self, scan_id, reco_id):
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
         dataobj = self._get_dataobj(scan_id, reco_id)
         return self._get_matrix_size(visu_pars, dataobj)
 
+    def is_multi_echo(self, scan_id, reco_id):
+        visu_pars = self._get_visu_pars(scan_id, reco_id)
+        fg_info = self._get_frame_group_info(visu_pars)
+        group_id = fg_info['group_id']
+        if 'FG_ECHO' in group_id and 'FieldMap' not in fg_info['group_comment']:  #FieldMap will be treated different
+            return fg_info['matrix_shape'][group_id.index('FG_ECHO')]  # return number of echos
+        else:
+            return False
+
     # methods to dump data into file object
     ## - NifTi1
-    def get_niftiobj(self, scan_id, reco_id, crop=None):
+    def get_niftiobj(self, scan_id, reco_id, crop=None, slope=False):
+        """ return nibabel nifti object
+        Args:
+            scan_id:
+            reco_id:
+            crop:   frame crop range
+            slope:  if True, slope correction, else, header update
+        Returns:
+            nibabel.Nifti1Image
+        """
         from nibabel import Nifti1Image
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         method = self._method[scan_id]
         affine = self._get_affine(visu_pars, method)
-        dataobj = self._get_dataobj(scan_id, reco_id)
-        shape = self._get_matrix_size(visu_pars, dataobj)
-        imgobj = dataobj.reshape(shape[::-1]).T
+        group_id = self._get_frame_group_info(visu_pars)['group_id']
+        if 'FG_DTI' in group_id:
+            # DTI dataset has vector slope
+            slope = True
+        imgobj = self.get_dataobj(scan_id, reco_id, slope=slope)
+        # dataobj = self._get_dataobj(scan_id, reco_id)
+        # shape = self._get_matrix_size(visu_pars, dataobj)
+        # imgobj = dataobj.reshape(shape[::-1]).T
 
         if isinstance(affine, list):
             parser = []
@@ -204,10 +282,36 @@ class BrukerLoader():
                 end = start + num_slices_each_pack[spack_idx]
                 seg_imgobj = imgobj[..., start:end]
                 niiobj = Nifti1Image(seg_imgobj, np.round(affine[spack_idx], decimals=3))
-                niiobj = self._set_default_header(niiobj, visu_pars, method)
+                niiobj = self._set_nifti_header(niiobj, visu_pars, method, slope=slope)
                 parser.append(niiobj)
             return parser
         affine = np.round(affine, decimals=3)
+        if self.is_multi_echo(scan_id, reco_id):
+            # multi-echo image must be splitted
+            parser = []
+            for e in range(imgobj.shape[-1]):
+                imgobj_ = imgobj[..., e]
+                if len(imgobj_.shape) > 4:
+                    x, y, z = imgobj_.shape[:3]
+                    f = multiply_all(imgobj_.shape[3:])
+                    # all converted nifti must be 4D
+                    imgobj_ = imgobj_.reshape([x, y, z, f])
+                if crop is not None:
+                    if crop[0] is None:
+                        niiobj_ = Nifti1Image(imgobj_[..., :crop[1]], affine)
+                    elif crop[1] is None:
+                        niiobj_ = Nifti1Image(imgobj_[..., crop[0]:], affine)
+                    else:
+                        niiobj_ = Nifti1Image(imgobj_[..., crop[0]:crop[1]], affine)
+                    niiobj_ = self._set_nifti_header(niiobj_, visu_pars, method, slope=slope)
+                    parser.append(niiobj_)
+            return parser
+        else:
+            if len(imgobj.shape) > 4:
+                x, y, z = imgobj.shape[:3]
+                f = multiply_all(imgobj.shape[3:])
+                # all converted nifti must be 4D
+                imgobj = imgobj.reshape([x, y, z, f])
         if crop is not None:
             if crop[0] is None:
                 niiobj = Nifti1Image(imgobj[..., :crop[1]], affine)
@@ -217,17 +321,17 @@ class BrukerLoader():
                 niiobj = Nifti1Image(imgobj[..., crop[0]:crop[1]], affine)
         else:
             niiobj = Nifti1Image(imgobj, affine)
-        niiobj = self._set_default_header(niiobj, visu_pars, method)
+        niiobj = self._set_nifti_header(niiobj, visu_pars, method, slope=slope)
         return niiobj
 
-    def get_sitkimg(self, scan_id, reco_id, slp_correct=True, is_vector=False):
+    def get_sitkimg(self, scan_id, reco_id, slope=True, is_vector=False):
         """ return SimpleITK image obejct instead Nibabel NIFTI obj"""
         import SimpleITK as sitk
 
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         method = self._method[scan_id]
         res = self._get_spatial_info(visu_pars)['spatial_resol']
-        dataobj = self.get_dataobj(scan_id, reco_id, slp_correct=slp_correct)
+        dataobj = self.get_dataobj(scan_id, reco_id, slope=slope)
         affine = self._get_affine(visu_pars, method)
 
         if isinstance(affine, list):
@@ -267,13 +371,23 @@ class BrukerLoader():
         imgobj.SetDirection(direction.flatten().tolist())
         imgobj.SetOrigin(origin)
         imgobj.SetSpacing(res[0])
+        # header update
+        imgobj = self._set_dicom_header(imgobj, visu_pars, method, slope)
         return imgobj
 
-    @property
-    def save_nifti(self):
-        return self.save_as
+    def _set_dicom_header(self, sitk_img, visu_pars, method, slope):
+        """ TODO: need to update sitk header (DICOM format) """
+        return sitk_img
 
-    def save_as(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
+    def save_sitk(self, io_type=None):
+        """ TODO: mha, nrrd format with header """
+        pass
+
+    @property
+    def save_as(self):
+        return self.save_nifti
+
+    def save_nifti(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
                 crop=None):
         niiobj = self.get_niftiobj(scan_id, reco_id, crop=crop)
         if isinstance(niiobj, list):
@@ -333,28 +447,24 @@ class BrukerLoader():
             json_obj[k] = val
         return json_obj
 
-    def save_json(self, scan_id, reco_id, filename, dir='./', metadata=None):
-        # acqp        = self._acqp[scan_id]
-        # method      = self._method[scan_id]
-        # visu_pars   = self._get_visu_pars(scan_id, reco_id)
-        #
-        # json_obj = dict()
-        # encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
-        #
-        # if metadata is None:
-        #     metadata = METADATA_FILED_INFO.copy()
-        # for k, v in metadata.items():
-        #     val = meta_get_value(v, acqp, method, visu_pars)
-        #     if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-        #         if val != None:
-        #             val = encdir_dic[val]
-        #
-        #     if isinstance(val, np.ndarray):
-        #         val = val.tolist()
-        #     if isinstance(val, list):
-        #         val = ','.join(map(str, val))
-        #     json_obj[k] = val
+    def save_json(self, scan_id, reco_id, filename, dir='./', metadata=None, condition=None):
         json_obj = self._parse_json(scan_id, reco_id, metadata)
+        if condition is not None:
+            code, idx = condition
+            if code == 'me':    # multi-echo
+                if 'EchoTime' in json_obj.keys():
+                    te = json_obj['EchoTime']
+                    print(te)
+                    if isinstance(te, list):
+                        json_obj['EchoTime'] = te[idx]
+                    else:
+                        raise InvalidApproach('SingleTE data')
+            elif code == 'fm':
+                visu_pars = self._get_visu_pars(scan_id, reco_id)
+                json_obj['Units'] = get_value(visu_pars, 'VisuCoreDataUnits')[0]
+                json_obj['IntendFor'] = ["func/*_bold.nii.gz"]
+            else:
+                raise InvalidApproach('')
 
         with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
             import json
@@ -406,30 +516,6 @@ class BrukerLoader():
         if fobj == None:
             import sys
             fobj = sys.stdout
-
-        # acqp = self._acqp[scan_id]
-        # method = self._method[scan_id]
-        # visu_pars = self._get_visu_pars(scan_id, reco_id)
-        #
-        # encdir_dic = {0: 'i', 1: 'j', 2: 'k'}
-        # if metadata is None:
-        #     metadata = METADATA_FILED_INFO.copy()
-        # for k, v in metadata.items():
-        #     n_tap = int(5 - int(len(k) / 8))
-        #     if len(k) % 8 >= 7:
-        #         n_tap -= 1
-        #
-        #     tap = ''.join(['\t'] * n_tap)
-        #     val = meta_get_value(v, acqp, method, visu_pars)
-        #     if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
-        #         if val != None:
-        #             val = encdir_dic[val]
-        #
-        #     if isinstance(val, np.ndarray):
-        #         val = val.tolist()
-        #     if isinstance(val, list):
-        #         val = ', '.join(map(str, val))
-
         json_obj = self._parse_json(scan_id, reco_id, metadata)
         for k, val in json_obj.items():
             n_tap = int(5 - int(len(k) / 8))
@@ -505,8 +591,8 @@ class BrukerLoader():
                 for k, v in enumerate(param_values):
                     if v is None:
                         param_values[k] = ''
-                    if isinstance(k, float):
-                        param_values[k] = '{0:.2f}'.format(k)
+                    if isinstance(v, float):
+                        param_values[k] = '{0:.2f}'.format(v)
                 if j == 0:
                     params = "[ TR: {0} ms, TE: {1} ms, pixelBW: {2} Hz, FlipAngle: {3} degree]".format(
                         *param_values)
@@ -517,26 +603,29 @@ class BrukerLoader():
                                                                protocol_name,
                                                                params))
 
-                dim = self._get_dim_info(visu_pars)[0]
-                size = self._get_matrix_size(visu_pars)
-                size = ' x '.join(map(str, size))
-                spatial_info = self._get_spatial_info(visu_pars)
-                temp_info = self._get_temp_info(visu_pars)
-                s_resol = spatial_info['spatial_resol']
-                fov_size = spatial_info['fov_size']
-                fov_size = ' x '.join(map(str, fov_size))
-                s_unit = spatial_info['unit']
-                t_resol = '{0:.3f}'.format(temp_info['temporal_resol'])
-                t_unit = temp_info['unit']
-                s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
-                s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
+                dim, cls = self._get_dim_info(visu_pars)
+                if cls == 'spatial_only':
+                    size = self._get_matrix_size(visu_pars)
+                    size = ' x '.join(map(str, size))
+                    spatial_info = self._get_spatial_info(visu_pars)
+                    temp_info = self._get_temp_info(visu_pars)
+                    s_resol = spatial_info['spatial_resol']
+                    fov_size = spatial_info['fov_size']
+                    fov_size = ' x '.join(map(str, fov_size))
+                    s_unit = spatial_info['unit']
+                    t_resol = '{0:.3f}'.format(temp_info['temporal_resol'])
+                    t_unit = temp_info['unit']
+                    s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
+                    s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
 
-                lines.append('    [{}] dim: {}D, matrix_size: {}, fov_size: {} (unit:mm)\n'
-                             '         spatial_resol: {} (unit:{}), temporal_resol: {} (unit:{})'.format(
-                    str(reco_id).zfill(2), dim, size,
-                    fov_size,
-                    s_resol, s_unit,
-                    t_resol, t_unit))
+                    lines.append('    [{}] dim: {}D, matrix_size: {}, fov_size: {} (unit:mm)\n'
+                                 '         spatial_resol: {} (unit:{}), temporal_resol: {} (unit:{})'.format(
+                        str(reco_id).zfill(2), dim, size,
+                        fov_size,
+                        s_resol, s_unit,
+                        t_resol, t_unit))
+                else:
+                    lines.append(f'    [{str(reco_id).zfill(2)}] dim: {dim}, {cls}')
                 # except Exception as e:
                 #     print(e)
                 #     print(f'Issue found at {scan_id}')
@@ -546,7 +635,7 @@ class BrukerLoader():
     # method to parse information of each scan
     # methods of protocol specific
 
-    def _set_default_header(self, niiobj, visu_pars, method):
+    def _set_nifti_header(self, niiobj, visu_pars, method, slope):
         slice_info = self._get_slice_info(visu_pars)
         niiobj.header.default_x_flip = False
         temporal_resol = self._get_temp_info(visu_pars)['temporal_resol']
@@ -554,16 +643,7 @@ class BrukerLoader():
         slice_order = get_value(method, 'PVM_ObjOrderScheme')
         acq_method = get_value(method, 'Method')
 
-        data_slp = get_value(visu_pars, 'VisuCoreDataSlope')
-        if isinstance(data_slp, list):
-            data_slp = data_slp[0] if is_all_element_same(data_slp) else data_slp
-        data_off = get_value(visu_pars, 'VisuCoreDataOffs')
-        if isinstance(data_off, list):
-            data_off = data_off[0] if is_all_element_same(data_off) else data_off
-        if isinstance(data_slp, list):
-            invalid_slope = True
-        else:
-            invalid_slope = False
+        data_slp, data_off = self._get_dataslp(visu_pars)
 
         if re.search('epi', acq_method, re.IGNORECASE) and not \
                 re.search('dti', acq_method, re.IGNORECASE):
@@ -591,27 +671,28 @@ class BrukerLoader():
             niiobj.header['slice_start'] = 0
             niiobj.header['slice_end'] = num_slices - 1
         else:
-            niiobj.header.set_xyzt_units('mm', 'unknown')
+            niiobj.header.set_xyzt_units('mm')
         niiobj.header['qform_code'] = 1
         niiobj.header['sform_code'] = 0
-        if invalid_slope:
-            # TODO: need help on applying intensity slope and offset for reconstructed DTI
-            pass
-        else:
-            niiobj.header['scl_slope'] = data_slp
-            niiobj.header['scl_inter'] = data_off
+        if not slope:
+            if isinstance(data_slp, list):
+                raise InvalidApproach('Invalid slope size;'
+                                      'The vector type scl_slope cannot be set in nifti header.')
+            else:
+                niiobj.header['scl_slope'] = data_slp
+                niiobj.header['scl_inter'] = data_off
         return niiobj
 
     # EPI
     def _get_temp_info(self, visu_pars):
         """return temporal resolution for each volume of image"""
         total_time = get_value(visu_pars, 'VisuAcqScanTime')
-        frame_group_info = self._get_frame_group_info(visu_pars)
+        fg_info = self._get_frame_group_info(visu_pars)
         parser = []
-        if frame_group_info is not None:
-            for id, fg in enumerate(frame_group_info['group_id']):
+        if fg_info['frame_type'] is not None:
+            for id, fg in enumerate(fg_info['group_id']):
                 if not re.search('slice', fg, re.IGNORECASE):
-                    parser.append(frame_group_info['matrix_shape'][id])
+                    parser.append(fg_info['matrix_shape'][id])
         frame_size = multiply_all(parser) if len(parser) > 0 else 1
         if total_time is None:  # derived reco data
             total_time = 0
@@ -620,14 +701,16 @@ class BrukerLoader():
                     unit='msec')
 
     # DTI
-    def _get_bdata(self, method):
+    @staticmethod
+    def _get_bdata(method):
         bval = get_value(method, 'PVM_DwEffBval')
         bvec = get_value(method, 'PVM_DwGradVec')
         bmat = get_value(method, 'PVM_DwBMat')
         return bval, bvec, bmat
 
     # Generals
-    def _get_gradient_encoding_info(self, visu_pars):
+    @staticmethod
+    def _get_gradient_encoding_info(visu_pars):
         version = get_value(visu_pars, 'VisuVersion')
 
         def encdir_code_converter(enc_param):
@@ -670,7 +753,18 @@ class BrukerLoader():
     def _get_spatial_info(self, visu_pars):
         dim, dim_type = self._get_dim_info(visu_pars)
         if dim_type != 'spatial_only':
-            raise Exception(ERROR_MESSAGES['DimType'])
+            if dim != 1:
+                raise Exception(ERROR_MESSAGES['DimType'])
+            else:
+                # experimental approaches
+                matrix_size = get_value(visu_pars, 'VisuCoreSize')
+                fov_size    = get_value(visu_pars, 'VisuCoreExtent')
+                voxel_resol = np.divide(fov_size, matrix_size).tolist()
+            return dict(spatial_resol = [voxel_resol],
+                        matrix_size = [matrix_size],
+                        fov_size    = fov_size,
+                        unit        = 'mm',
+                        )
         else:
             matrix_size = get_value(visu_pars, 'VisuCoreSize')
             fov_size    = get_value(visu_pars, 'VisuCoreExtent')
@@ -695,19 +789,19 @@ class BrukerLoader():
 
     def _get_slice_info(self, visu_pars):
         version = get_value(visu_pars, 'VisuVersion')
-        frame_group_info = self._get_frame_group_info(visu_pars)
+        fg_info = self._get_frame_group_info(visu_pars)
         num_slice_packs = None
         num_slices_each_pack = []
         slice_distances_each_pack = []
 
-        if frame_group_info is None:
+        if fg_info['frame_type'] is None:
             num_slice_packs = 1
             # below will be 1 in 3D protocol
             num_slices_each_pack = [get_value(visu_pars, 'VisuCoreFrameCount')]
             # below will be size of slice_enc axis in 3D protocol
             slice_distances_each_pack = [get_value(visu_pars, 'VisuCoreFrameThickness')]
         else:
-            frame_groups = frame_group_info['group_id']
+            frame_groups = fg_info['group_id']
             if version == 1: # PV 5.1 support
                 try:
                     phase_enc_dir = get_value(visu_pars, 'VisuAcqImagePhaseEncDir')
@@ -715,7 +809,7 @@ class BrukerLoader():
                     num_slice_packs = len(phase_enc_dir)
                 except:
                     num_slice_packs = 1
-                matrix_shape = frame_group_info['matrix_shape']
+                matrix_shape = fg_info['matrix_shape']
                 frame_thickness = get_value(visu_pars, 'VisuCoreFrameThickness')
                 num_slice_frames = 0
                 # for id, fg in enumerate(frame_groups):
@@ -793,16 +887,6 @@ class BrukerLoader():
         slice_position = get_value(visu_pars, 'VisuCorePosition')
         subj_position = get_value(visu_pars, 'VisuSubjectPosition')
         gradient_orient = get_value(method, 'PVM_SPackArrGradOrient')
-
-        # if slice_info['num_slice_packs'] > 1:
-        #     if len(orient_matrix) != slice_info['num_slice_packs']:
-        #         raise Exception(ERROR_MESSAGES['NumOrientMatrix'])
-        #     else:
-        #         for id, _om in enumerate(orient_matrix):
-        #             om = np.asarray(_om).reshape([3, 3])
-        #             omatrix_parser.append(om)
-        #             oorder_parser.append(get_axis_orient(om))
-        #             vposition_parser.append(slice_position[id])
 
         if slice_info['num_slice_packs'] > 1:
             num_ori_mat = len(orient_matrix)
@@ -883,8 +967,9 @@ class BrukerLoader():
                 rmat = orient_info['orient_matrix'][slice_idx]
                 pose = orient_info['volume_position'][slice_idx]
                 if is_reversed:
-                    raise Exception(ERROR_MESSAGES['NotIntegrated'])
-                    # TODO: The reversed disk does not integrated for the multiple slicepack data
+                    raise UnexpectedError('Invalid VisuCoreDiskSliceOrder;'
+                                          'The multi-slice-packs dataset reversed is not tested data.'
+                                          f'{ISSUE_REPORT}')
                 affine.append(build_affine_from_orient_info(resol, rmat, pose,
                                                             subj_pose, subj_type,
                                                             slice_orient))
@@ -904,33 +989,49 @@ class BrukerLoader():
 
     def _get_matrix_size(self, visu_pars, dataobj=None):
 
-        spatial_info = self._get_spatial_info(visu_pars)
-        slice_info = self._get_slice_info(visu_pars)
-        temporal_info = self._get_temp_info(visu_pars)
+        spatial_info        = self._get_spatial_info(visu_pars)
+        slice_info          = self._get_slice_info(visu_pars)
+        temporal_info       = self._get_temp_info(visu_pars)
+        # patch the case of multi-echo
+        fg_info             = self._get_frame_group_info(visu_pars)
 
-        matrix_size = spatial_info['matrix_size']
-        num_temporal_frame = temporal_info['num_frames']
-        num_slice_packs = slice_info['num_slice_packs']
+        matrix_size         = spatial_info['matrix_size']
+        num_temporal_frame  = temporal_info['num_frames']
+        num_slice_packs     = slice_info['num_slice_packs']
 
         if num_slice_packs > 1:
             if is_all_element_same(matrix_size):
-                matrix_size = list(matrix_size[0])
-                total_num_slices = sum(slice_info['num_slices_each_pack'])
-                matrix_size[-1] = total_num_slices
+                matrix_size         = list(matrix_size[0])
+                total_num_slices    = sum(slice_info['num_slices_each_pack'])
+                matrix_size[-1]     = total_num_slices
             else:
-                raise Exception(ERROR_MESSAGES['DimSize'])
+                raise UnexpectedError('Matrix size mismatch with multi-slice-packs dataobj;'
+                                      f'{matrix_size}'
+                                      f'{ISSUE_REPORT}')
         else:
-            matrix_size =  list(matrix_size[0])
-            if num_temporal_frame > 1:
-                matrix_size.append(num_temporal_frame)
+            matrix_size = list(matrix_size[0])
+            if 'FG_SLICE' in fg_info['group_id']:
+                if fg_info['group_id'].index('FG_SLICE'):  # in the case the slicing frame group happen later
+                    matrix_size     = matrix_size[:2]
+                    matrix_size.extend(fg_info['matrix_shape'])
+                else:
+                    if num_temporal_frame > 1:
+                        matrix_size.append(num_temporal_frame)
+            else:
+                if num_temporal_frame > 1:
+                    matrix_size.append(num_temporal_frame)
+
         if dataobj is not None:
+            # matrix size inspection
             dataobj_shape = dataobj.shape[0]
             if multiply_all(matrix_size) != dataobj_shape:
-                print(matrix_size, dataobj_shape)
-                raise Exception(ERROR_MESSAGES['DimSize'])
+                raise UnexpectedError('Matrix size mismatch with dataobj;'
+                                      f'{multiply_all(matrix_size)} != {dataobj_shape}'
+                                      f'{ISSUE_REPORT}')
         return matrix_size
 
-    def _get_disk_slice_order(self, visu_pars):
+    @staticmethod
+    def _get_disk_slice_order(visu_pars):
         # check disk_slice_order #
         _fo = get_value(visu_pars, 'VisuCoreDiskSliceOrder')
         if _fo in [None, 'disk_normal_slice_order']:
@@ -938,22 +1039,25 @@ class BrukerLoader():
         elif _fo == 'disk_reverse_slice_order':
             disk_slice_order = 'reverse'
         else:
-            raise Exception(ERROR_MESSAGES['NotIntegrated'])
+            raise UnexpectedError(f'Invalid VisuCoreDiskSliceOrder:{_fo};'
+                                  f'{ISSUE_REPORT}')
         return disk_slice_order
 
     def _get_visu_pars(self, scan_id, reco_id):
         return self._pvobj.get_visu_pars(scan_id, reco_id)
 
-    def _get_frame_group_info(self, visu_pars):
+    @staticmethod
+    def _get_frame_group_info(visu_pars):
         frame_group = get_value(visu_pars, 'VisuFGOrderDescDim')
-        if frame_group == None:
-            return None  # there are no frame group exist
+        parser = dict(frame_type=None,
+                      frame_size=0, matrix_shape=[],
+                      group_id=[], group_comment=[],
+                      dependent_vals=[])
+        if frame_group is None:
+            # there are no frame group exist
+            return parser
         else:
-            parser = dict(frame_type = get_value(visu_pars, 'VisuCoreFrameType'),
-                          frame_size=0, matrix_shape=[],
-                          group_id=[], group_comment=[],
-                          dependent_vals=[])
-
+            parser['frame_type'] = get_value(visu_pars, 'VisuCoreFrameType')
             for idx, d in enumerate(get_value(visu_pars, 'VisuFGOrderDesc')):
                 (num_fg_elements, fg_id, fg_commt,
                  valsStart, valsCnt) = d

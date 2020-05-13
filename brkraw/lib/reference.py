@@ -31,6 +31,8 @@ SLICE_ORIENT = {0: {1: 'L->R', 3: 'R->L'},
                 2: {1: 'F->H', 3: 'F->H'},
                 }
 
+ISSUE_REPORT = 'Please report the issue at (https://github.com/dvm-shlee/bruker/issues) with the error message.'
+
 ERROR_MESSAGES = {'ImportError'         : '[{}] is not recognized as ParavisionDataset.',
                   'NoSlicePacksDef'     : 'NoneType VisuCoreSlicePacksDef.',
                   'SliceDistDatatype'   : 'unexpected datatype of VisuCoreSliceDist.',
@@ -174,7 +176,7 @@ COMMON_META_REF = \
 
          # TIMING_PARAMETERS
          EchoTime                       = dict(TE           = 'VisuAcqEchoTime',
-                                               Equation     = 'TE/1000'),
+                                               Equation     = 'np.array(TE)/1000'),
          InversionTime                  = 'VisuAcqInversionTime',
          SliceTiming                    = dict(TR           = 'VisuAcqRepetitionTime',
                                                Num_of_Slice = 'VisuCoreFrameCount',

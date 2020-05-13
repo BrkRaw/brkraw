@@ -173,9 +173,9 @@ def main():
                                 study.save_bdata(scan_id, reco_id, output_fname)
                         except Exception as e:
                             print(e)
-                print('{} is converted...'.format(raw))
+                print(f'{raw} is converted...')
             else:
-                print('{} is empty...'.format(raw))
+                print(f'{raw} is empty...')
 
     elif args.function == 'bids_list':
         import pandas as pd
@@ -191,7 +191,6 @@ def main():
 
         for dname in sorted(os.listdir(path)):
             dpath = os.path.join(path, dname)
-            condition = True
             try:
                 dset = BrukerLoader(dpath)
             except:
@@ -208,23 +207,31 @@ def main():
                     for scan_id, recos in pvobj.avail_reco_id.items():
                         for reco_id in recos:
                             visu_pars = dset.get_visu_pars(scan_id, reco_id)
-                            num_spack = dset._get_slice_info(visu_pars)['num_slice_packs']
+                            if dset._get_dim_info(visu_pars)[1] == 'spatial_only':
+                                num_spack = dset._get_slice_info(visu_pars)['num_slice_packs']
 
-                            if num_spack != 3:  # excluding localizer
-                                method = dset.get_method(scan_id).parameters['Method']
-                                if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
-                                    datatype = 'func'
-                                elif re.search('dti', method, re.IGNORECASE):
-                                    datatype = 'dwi'
-                                elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
-                                    datatype = 'anat'
-                                elif re.search('fieldmap', method, re.IGNORECASE):
-                                    datatype = 'fmap'
-                                else:
-                                    datatype = 'etc'
+                                if num_spack != 3:  # excluding localizer
+                                    method = dset.get_method(scan_id).parameters['Method']
+                                    if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+                                        datatype = 'func'
+                                    elif re.search('dti', method, re.IGNORECASE):
+                                        datatype = 'dwi'
+                                    elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
+                                        datatype = 'anat'
+                                    elif re.search('fieldmap', method, re.IGNORECASE):
+                                        datatype = 'fmap'
+                                    else:
+                                        datatype = 'etc'
 
-                                item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
-                                df = df.append(item, ignore_index=True)
+                                    item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
+                                    if datatype == 'fmap':
+                                        for m, s, e in [['fieldmap', 0, 1], ['magnitude', 1, 2]]:
+                                            item['modality'] = m
+                                            item['Start'] = s
+                                            item['End'] = e
+                                            df = df.append(item, ignore_index=True)
+                                    else:
+                                        df = df.append(item, ignore_index=True)
         df.to_excel(output, index=None)
         ref_path = os.path.join(os.path.dirname(output), 'BIDS_META_REF.json')
         with open(ref_path, 'w') as f:
@@ -242,30 +249,7 @@ def main():
         import numpy as np
         import json
         import datetime
-
-        def validation(df, idx, key, val, num_char_allowed, dtype=None):
-            import string
-            col = string.ascii_uppercase[df.columns.tolist().index(key)]
-            special_char = re.compile(r'[^0-9a-zA-Z]')
-            str_val = str(val)
-            loc = 'col,row:[{},{}]'.format(col, idx+2)
-            if len(str_val) > num_char_allowed:
-                message = "{} You can't use more than {} characters.".format(loc, num_char_allowed)
-                raise InvalidValueInField(message)
-            matched = special_char.search(str_val)
-            if matched is not None:
-                if ' ' in matched.group():
-                    message = "{} Empty string is not allowed.".format(loc)
-                else:
-                    message = "{} Special characters are not allowed.".format(loc)
-                raise InvalidValueInField(message)
-            if dtype is not None:
-                try:
-                    dtype(val)
-                except:
-                    message = "{} Invalid data type. Value must be {}.".format(loc, dtype.__name__)
-                    raise InvalidValueInField(message)
-            return True
+        from ..lib.utils import build_bids_json, bids_validation
 
         pd.options.mode.chained_assignment = None
         path = args.input_raw
@@ -290,142 +274,112 @@ def main():
             from ..lib.reference import DATASET_DESC_REF
             json.dump(DATASET_DESC_REF, f, indent=4)
         with open(os.path.join(root_path, 'README'), 'w') as f:
-            f.write(f'This dataset has converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.\n')
+            f.write(f'This dataset has converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.')
+            f.write('How to cite? = https://doi.org/10.5281/zenodo.3818615\n')
 
         print('Inspect input BIDS datasheet...')
         for dname in sorted(os.listdir(path)):
             dpath = os.path.join(path, dname)
-            dset = BrukerLoader(dpath)
-            if dset.is_pvdataset:
-                pvobj = dset.pvobj
-                rawdata = pvobj.path
-                filtered_dset = df[df['RawData'].isin([rawdata])].reset_index()
-                filtered_dset.loc[:, 'FileName'] = [np.nan] * len(filtered_dset)
-                filtered_dset.loc[:, 'Dir'] = [np.nan] * len(filtered_dset)
+            try:
+                dset = BrukerLoader(dpath)
+                if dset.is_pvdataset:
+                    pvobj = dset.pvobj
+                    rawdata = pvobj.path
+                    filtered_dset = df[df['RawData'].isin([rawdata])].reset_index()
+                    filtered_dset.loc[:, 'FileName'] = [np.nan] * len(filtered_dset)
+                    filtered_dset.loc[:, 'Dir'] = [np.nan] * len(filtered_dset)
 
-                if len(filtered_dset):
-                    subj_id = list(set(filtered_dset['SubjID']))[0]
-                    subj_code = 'sub-{}'.format(subj_id)
+                    if len(filtered_dset):
+                        subj_id = list(set(filtered_dset['SubjID']))[0]
+                        subj_code = f'sub-{subj_id}'
 
-                    for i, row in filtered_dset.iterrows():
-                        if multi_session:
-                            # If multi-session, make session dir
-                            sess_code = 'ses-{}'.format(row.SessID)
-                            subj_path = os.path.join(root_path, subj_code)
-                            mkdir(subj_path)
-                            subj_path = os.path.join(subj_path, sess_code)
-                            mkdir(subj_path)
-                            # add session info to filename as well
-                            fname = '{}_{}'.format(subj_code, sess_code)
-                        else:
-                            subj_path = os.path.join(root_path, subj_code)
-                            mkdir(subj_path)
-                            fname = '{}'.format(subj_code)
+                        for i, row in filtered_dset.iterrows():
+                            if multi_session:
+                                # If multi-session, make session dir
+                                sess_code = f'ses-{row.SessID}'
+                                subj_path = os.path.join(root_path, subj_code)
+                                mkdir(subj_path)
+                                subj_path = os.path.join(subj_path, sess_code)
+                                mkdir(subj_path)
+                                # add session info to filename as well
+                                fname = f'{subj_code}_{sess_code}'
+                            else:
+                                subj_path = os.path.join(root_path, subj_code)
+                                mkdir(subj_path)
+                                fname = f'{subj_code}'
 
-                        datatype = row.DataType
-                        dtype_path = os.path.join(subj_path, datatype)
-                        mkdir(dtype_path)
+                            datatype = row.DataType
+                            dtype_path = os.path.join(subj_path, datatype)
+                            mkdir(dtype_path)
 
-                        if pd.notnull(row.task):
-                            if validation(df, i, 'task', row.task, 10):
-                                fname = '{}_task-{}'.format(fname, row.task)
-                        if pd.notnull(row.acq):
-                            if validation(df, i, 'acq', row.acq, 5):
-                                fname = '{}_acq-{}'.format(fname, row.acq)
-                        if pd.notnull(row.ce):
-                            if validation(df, i, 'ce', row.ce, 5):
-                                fname = '{}_ce-{}'.format(fname, row.ce)
-                        if pd.notnull(row.dir):
-                            if validation(df, i, 'dir', row.dir, 2):
-                                fname = '{}_dir-{}'.format(fname, row.dir)
-                        if pd.notnull(row.rec):
-                            if validation(df, i, 'rec', row.rec, 2):
-                                fname = '{}_rec-{}'.format(fname, row.rec)
-                        filtered_dset.loc[i, 'FileName'] = fname
-                        filtered_dset.loc[i, 'Dir'] = dtype_path
-                        if pd.isnull(row.modality):
-                            method = dset.get_method(row.ScanID).parameters['Method']
-                            if row.DataType == 'anat':
-                                if re.search('flash', method, re.IGNORECASE):
-                                    modality = 'FLASH'
-                                elif re.search('rare', method, re.IGNORECASE):
-                                    modality = 'T2w'
+                            if pd.notnull(row.task):
+                                if bids_validation(df, i, 'task', row.task, 10):
+                                    fname = f'{fname}_task-{row.task}'
+                            if pd.notnull(row.acq):
+                                if bids_validation(df, i, 'acq', row.acq, 5):
+                                    fname = f'{fname}_acq-{row.acq}'
+                            if pd.notnull(row.ce):
+                                if bids_validation(df, i, 'ce', row.ce, 5):
+                                    fname = f'{fname}_ce-{row.ce}'
+                            if pd.notnull(row.dir):
+                                if bids_validation(df, i, 'dir', row.dir, 2):
+                                    fname = f'{fname}_dir-{row.dir}'
+                            if pd.notnull(row.rec):
+                                if bids_validation(df, i, 'rec', row.rec, 2):
+                                    fname = f'{fname}_rec-{row.rec}'
+                            filtered_dset.loc[i, 'FileName'] = fname
+                            filtered_dset.loc[i, 'Dir'] = dtype_path
+                            if pd.isnull(row.modality):
+                                method = dset.get_method(row.ScanID).parameters['Method']
+                                if row.DataType == 'anat':
+                                    if re.search('flash', method, re.IGNORECASE):
+                                        modality = 'FLASH'
+                                    elif re.search('rare', method, re.IGNORECASE):
+                                        modality = 'T2w'
+                                    else:
+                                        modality = '{}'.format(method.split(':')[-1])
                                 else:
                                     modality = '{}'.format(method.split(':')[-1])
+                                filtered_dset.loc[i, 'modality'] = modality
                             else:
-                                modality = '{}'.format(method.split(':')[-1])
-                            filtered_dset.loc[i, 'modality'] = modality
-                        else:
-                            validation(df, i, 'modality', row.modality, 8, dtype=str)
+                                bids_validation(df, i, 'modality', row.modality, 10, dtype=str)
 
-                    list_tested_fn = []
-                    # Converting data according to the updated sheet
-                    print('Converting {}...'.format(dname))
-                    for i, row in filtered_dset.iterrows():
-                        temp_fname = '{}_{}'.format(row.FileName, row.modality)
-                        if temp_fname not in list_tested_fn:
-                            # filter the DataFrame that has same filename (updated without run)
-                            fn_filter = filtered_dset.loc[:, 'FileName'].isin([row.FileName])
-                            fn_df = filtered_dset[fn_filter].reset_index(drop=True)
+                        list_tested_fn = []
+                        # Converting data according to the updated sheet
+                        print(f'Converting {dname}...')
+                        for i, row in filtered_dset.iterrows():
+                            temp_fname = f'{row.FileName}_{row.modality}'
+                            if temp_fname not in list_tested_fn:
+                                # filter the DataFrame that has same filename (updated without run)
+                                fn_filter = filtered_dset.loc[:, 'FileName'].isin([row.FileName])
+                                fn_df = filtered_dset[fn_filter].reset_index(drop=True)
 
-                            # filter specific modality from above DataFrame
-                            md_filter = fn_df.loc[:, 'modality'].isin([row.modality])
-                            md_df = fn_df[md_filter].reset_index(drop=True)
+                                # filter specific modality from above DataFrame
+                                md_filter = fn_df.loc[:, 'modality'].isin([row.modality])
+                                md_df = fn_df[md_filter].reset_index(drop=True)
 
-                            if len(md_df) > 1:
-                                conflict_tested = []
-                                for j, sub_row in md_df.iterrows():
-                                    if pd.isnull(sub_row.run):
-                                        fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
-                                    else:
-                                        _ = validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                        fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
-                                    if fname in conflict_tested:
-                                        raise ValueConflictInField('ScanID:[{}] Conflict error. '
-                                                                   'The [run] index value must be unique '
-                                                                   'among the scans with the same modality.'.format(sub_row.ScanID))
-                                    else:
-                                        conflict_tested.append(fname)
-                                    fname = '{}_{}'.format(fname, sub_row.modality)
-                                    if pd.notnull(sub_row.Start) or pd.notnull(sub_row.End):
-                                        crop = [sub_row.Start, sub_row.End]
-                                    else:
-                                        crop = None
-                                    dset.save_as(sub_row.ScanID, sub_row.RecoID, fname, dir=sub_row.Dir, crop=crop)
-                            else:
-                                fname = '{}'.format(row.FileName)
-                                fname = '{}_{}'.format(fname, row.modality)
-                                if pd.notnull(row.Start) or pd.notnull(row.End):
-                                    crop = [row.Start, row.End]
+                                if len(md_df) > 1:
+                                    conflict_tested = []
+                                    for j, sub_row in md_df.iterrows():
+                                        if pd.isnull(sub_row.run):
+                                            fname = f'{sub_row.FileName}_run-{str(j+1).zfill(2)}'
+                                        else:
+                                            _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
+                                            fname = f'{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
+                                        if fname in conflict_tested:
+                                            raise ValueConflictInField(f'ScanID:[{sub_row.ScanID}] Conflict error. '
+                                                                       'The [run] index value must be unique '
+                                                                       'among the scans with the same modality.')
+                                        else:
+                                            conflict_tested.append(fname)
+                                        build_bids_json(dset, sub_row, fname, ref_path)
                                 else:
-                                    crop = None
-                                dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir, crop=crop)
-                                if ref_path:
-                                    import json
-                                    if os.path.exists(ref_path) and ref_path.lower().endswith('.json'):
-                                        ref_data = json.load(open(ref_path))
-                                        ref = ref_data['common']
-                                        if row.modality in ['bold', 'cbv', 'epi']:
-                                            if 'func' in ref_data.keys():
-                                                for k, v in ref_data['func'].items():
-                                                    if k in ref.keys():
-                                                        raise InvalidApproach(f'Duplicated key is found at func: {k}')
-                                                    else:
-                                                        ref[k] = v
-                                        if row.modality in ['fieldmap', 'phase1', 'phase2',
-                                                            'phasediff', 'magnitude',
-                                                            'magnitude1', 'magnitude2']:
-                                            if 'fmap' in ref_data.keys():
-                                                for k, v in ref_data['fmap'].items():
-                                                    if k in ref.keys():
-                                                        raise InvalidApproach(f'Duplicated key is found at fmap: {k}')
-                                                    else:
-                                                        ref[k] = v
-                                    else:
-                                        ref = None
-                                    dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir, metadata=ref)
-                            list_tested_fn.append(temp_fname)
-                    print('...Done.')
+                                    fname = f'{row.FileName}'
+                                    build_bids_json(dset, row, fname, ref_path)
+                                list_tested_fn.append(temp_fname)
+                        print('...Done.')
+            except FileNotValidError:
+                pass
     else:
         parser.print_help()
 

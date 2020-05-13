@@ -399,7 +399,10 @@ def meta_check_index(value, acqp, method, visu_pars):
             return val[value['idx']]
         else:
             idx = meta_get_value(value['idx'], acqp, method, visu_pars)
-        return val[idx]
+        if idx is not None:
+            return val[idx]
+        else:
+            return None
     else:
         return None
 
@@ -481,3 +484,93 @@ def get_filesize(file_path):
 
     unit = int(len(str(file_size)) / 3)
     return convert_unit(file_size, unit), unit_dict[unit]
+
+
+def bids_validation(df, idx, key, val, num_char_allowed, dtype=None):
+    import string
+    from shleeh.errors import InvalidValueInField
+    col = string.ascii_uppercase[df.columns.tolist().index(key)]
+    special_char = re.compile(r'[^0-9a-zA-Z]')
+    str_val = str(val)
+    loc = 'col,row:[{},{}]'.format(col, idx + 2)
+    if len(str_val) > num_char_allowed:
+        message = "{} You can't use more than {} characters.".format(loc, num_char_allowed)
+        raise InvalidValueInField(message)
+    matched = special_char.search(str_val)
+    if matched is not None:
+        if ' ' in matched.group():
+            message = "{} Empty string is not allowed.".format(loc)
+        else:
+            message = "{} Special characters are not allowed.".format(loc)
+        raise InvalidValueInField(message)
+    if dtype is not None:
+        try:
+            dtype(val)
+        except:
+            message = "{} Invalid data type. Value must be {}.".format(loc, dtype.__name__)
+            raise InvalidValueInField(message)
+    return True
+
+
+def get_bids_ref_obj(ref_path, row):
+    import json
+    from shleeh.errors import InvalidApproach
+    if os.path.exists(ref_path) and ref_path.lower().endswith('.json'):
+        ref_data = json.load(open(ref_path))
+        ref = ref_data['common']
+        if row.modality in ['bold', 'cbv', 'epi']:
+            if 'func' in ref_data.keys():
+                for k, v in ref_data['func'].items():
+                    if k in ref.keys():
+                        raise InvalidApproach(f'Duplicated key is '
+                                              f'found at func: {k}')
+                    else:
+                        ref[k] = v
+        # the below may not optimal for Bruker system,
+        # only fieldmap and magnitude
+        if row.modality in ['fieldmap', 'phase1', 'phase2',
+                            'phasediff', 'magnitude',
+                            'magnitude1', 'magnitude2']:
+            if 'fmap' in ref_data.keys():
+                for k, v in ref_data['fmap'].items():
+                    if k in ref.keys():
+                        raise InvalidApproach(f'Duplicated key is '
+                                              f'found at fmap: {k}')
+                    else:
+                        ref[k] = v
+    else:
+        ref = None
+    return ref
+
+
+def build_bids_json(dset, row, fname, ref_path):
+    import pandas as pd
+
+    if pd.notnull(row.Start) or pd.notnull(row.End):
+        crop = [int(row.Start), int(row.End)]
+    else:
+        crop = None
+    if dset.is_multi_echo(row.ScanID, row.RecoID):  # multi_echo
+        nii_objs = dset.get_niftiobj(row.ScanID, row.RecoID, crop=crop)
+        for echo, nii in enumerate(nii_objs):
+            fname = f'{fname}_echo-{echo + 1}_{row.modality}'
+            output_path = os.path.join(row.Dir, fname)
+            nii.to_filename(f'{output_path}.nii.gz')
+            if ref_path:
+                ref = get_bids_ref_obj(ref_path, row)
+                dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir,
+                               metadata=ref, condition=['me', echo])
+    else:
+        fname = '{}_{}'.format(fname, row.modality)
+        dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir, crop=crop)
+        if ref_path:
+            ref = get_bids_ref_obj(ref_path, row)
+            if re.search('fieldmap', row.modality, re.IGNORECASE):
+                condition = ['fm', None]
+            else:
+                condition = None
+            if re.search('magnitude', row.modality, re.IGNORECASE):
+                pass  # magnitude data does not require JSON (BIDS)
+            else:
+                dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir,
+                               metadata=ref, condition=condition)

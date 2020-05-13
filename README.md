@@ -83,17 +83,8 @@ represents that the orientation information is well-preserved in this tool. (fro
 - If GUI popped up but not working after selecting the dir, make sure you entered to dataset dir.
 - If GUI cannot load zipped file, please check our example file located at 'examples' folder.
 - If you experience any other issue, please use 'issue' tab in Github to report.
-(such as the function to printing out dataset summary)
-- The issues with higher priority which planned to be patched near future.
-    - If the dataset contains MR Spectroscopy, some method does not work correctly 
-    (such as the function of printing out dataset summary)
-    - In bids_converter, it does not create a modality-specific JSON file
-    - In bids_converter, if any file existing at the parent folder of raw data other than the PVdataset, 
-    it will cause an error. 
 - The issues with lower priority.
-    - If the dataset contains 1D data, such as MR Spectroscopy, some methods will not work properly.
-    - The GUI preview shows a matrix view, not subject view since this is just for quick visual assessment,
-    subject orientation is not accommodated.
+    - The GUI preview will show the image as matrix view not subject view and Magnitude dataset only.
 
 ## Usage
 ### Command-line tool (brkraw)
