@@ -563,6 +563,9 @@ def build_bids_json(dset, row, fname, ref_path):
     else:
         fname = '{}_{}'.format(fname, row.modality)
         dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir, crop=crop)
+        if re.search('dwi', row.modality, re.IGNORECASE):
+            # DTI parameter (FSL style)
+            dset.save_bdata(row.ScanID, fname, dir=row.Dir)
         if ref_path:
             ref = get_bids_ref_obj(ref_path, row)
             if re.search('fieldmap', row.modality, re.IGNORECASE):
