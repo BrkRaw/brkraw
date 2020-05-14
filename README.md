@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3818615.svg)](https://doi.org/10.5281/zenodo.3818615)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3818614.svg)](https://doi.org/10.5281/zenodo.3818614)
 
 # BrkRaw: Comprehensive tool to access Bruker PV dataset
 ## Version: 0.3
@@ -245,19 +245,19 @@ to help benchmark testing of Bruker converter.
 
 ### How to Cite
 
-SungHo Lee. (2020, May 9). dvm-shlee/bruker: BrkRaw v0.3.0 (Version 0.3.0). Zenodo. http://doi.org/10.5281/zenodo.3818615
+SungHo Lee. (2020, May 13). dvm-shlee/bruker: BrkRaw v0.3.2 (Version 0.3.2). Zenodo. http://doi.org/10.5281/zenodo.3818614
 
 **BibTeX**
 ```
-@software{sungho_lee_2020_3818615,
+@software{sungho_lee_2020_3818614,
   author       = {SungHo Lee and Woomi Ban and Yen-Yu Ian Shih},
-  title        = {dvm-shlee/bruker: BrkRaw v0.3.0},
+  title        = {dvm-shlee/bruker: BrkRaw v0.3.2},
   month        = may,
   year         = 2020,
   publisher    = {Zenodo},
-  version      = {0.3.0},
-  doi          = {10.5281/zenodo.3818615},
-  url          = {https://doi.org/10.5281/zenodo.3818615}
+  version      = {0.3.2},
+  doi          = {10.5281/zenodo.3818614},
+  url          = {https://doi.org/10.5281/zenodo.3818614}
 }
 ```
 
