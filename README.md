@@ -35,6 +35,17 @@ The major features of this module are as follows.
     - the python API also providing data handler object through either nibabel and simpleITK to make convenient to the researcher can implement their own code.  
 
 
+### Update notes:
+##### BrkRaw v0.3.2
+
+1. Improved BIDS converter. 
+    - Bruker FieldMap will be accommodated into the BIDS excel sheets. With new feature, bids_converter separates fieldmap and magnitude image.  
+    - Multi-echo sequenced data will be converted as separate format.
+2. Bug patches.
+    - GUI visualization or crash issues related to certain conditions are patched.
+    - Matrix size instability has been patched, except multi-echo, all data will be converted to 3D + frame
+    - DTI slope correction issue is patched.
+
 ![example_alignment](imgs/brkraw_alignment.png)
 **Fig1.** Example subject alignment shown on FSLeyes, the overlayed localizer image for each slice axis(gray) and a EPI image(red) are align in the same space while the preserve subject orientation (correct R-L, I-S, A-P on rodent)
 
@@ -71,21 +82,20 @@ $ pip install bruker
 $ pip install git+https://github.com/dvm-shlee/bruker
 ```
 
-#### Conversion test result using [Bruker2Nifti_QA](https://gitlab.com/naveau/bruker2nifti_qa)
+#### Conversion reliability
 ![Robust Orientation](imgs/Bruker2Nifti_QA_challenge.png)
-**Overlapped images of all converted datasets of Bruker2Nifti_QA. Both within-session and between-session 
-are showing correct orientation. This image 
-represents that the orientation information is well-preserved in this tool. (from BrkRaw >= 0.3.2)**
+**We've tested our converter using the sample dataset from [Bruker2Nifti_QA](https://gitlab.com/naveau/bruker2nifti_qa) 
+and the results showed correct geometry and orientation for all datasets.** 
+- We are still looking for more datasets showing orientation issue, if you have any shareable dataset, please contact
+author. 
 
 #### Known issues
-- the last released version 0.3.1 does not convert DTI image correctly, please use 0.3.2 via github installation method.
-- The module have been tested for PV 5 to PV 6.0.1 datasets. but it may have issue with higher version.
-- The GUI may not work if the python does not be built with tkinter, please check above instruction.
-- If GUI popped up but not working after selecting the dir, make sure you entered to dataset dir.
-- If GUI cannot load zipped file, please check our example file located at 'examples' folder.
-- If you experience any other issue, please use 'issue' tab in Github to report.
-- The issues with lower priority.
-    - The GUI preview will show the image as matrix view not subject view and Magnitude dataset only.
+- The converter has not been tested the Paravision 360
+- Most of the GUI issues could be related to tkinter, please follow the above instruction first before open a issue.
+- Few update committed since the first stable version release, if you have any issue, please try the latest version.
+- For other unexpected issues, please use the issue channel.
+- There will be potential bug that occurred with new version updated, please let developer knows those issue by openning
+issue channel. Thank you for your contribution!
 
 ## Usage
 ### Command-line tool (brkraw)
@@ -214,12 +224,11 @@ $ brk-backup clean <rawdata path> <backup path>
 in the example directory.
 
 ### Contributing
-- Please contact shlee@unc.edu if you interest to contribute for following items.
-1. Share the dataset that showing any issues or incorrect orientation with this module.
-2. integration of reconstruction tool with Python API (such as BART tool).
-3. develop online analysis tools for fMRI or DTI study.
-4. Documentation or develop tutorials for various use.
-- Also if you experience any bug or have any suggestion to improve this tool, please let us know.
+- Please contact shlee@unc.edu if you interest to contributing in this project any direction.
+1. Improve BIDS organization
+2. Develop documentation or tutorials for below items using our Python API.
+    - FieldMap correction, reconstruction (integrate BART tool), acute quality control, fMRI and DTI analysis 
+- **if you experience any bug or have any suggestion to improve this tool, please let us know.**
 
 ### Credits and roles:
 #### Authors

@@ -82,7 +82,8 @@ class Previewer(tk.Frame):
             f = multiply_all(dataobj.shape[3:])
             # all converted nifti must be 4D
             self._dataobj = dataobj.reshape([x, y, z, f])[:,:,::-1, ...]
-        self._dataobj = dataobj
+        else:
+            self._dataobj = dataobj
 
         # shape = brkraw_obj._get_matrix_size(visu_pars, dataobj)
         # self._dataobj = dataobj.reshape(shape[::-1]).T[:,:,::-1, ...]

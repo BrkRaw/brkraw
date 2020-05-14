@@ -303,8 +303,10 @@ class BrukerLoader():
                         niiobj_ = Nifti1Image(imgobj_[..., crop[0]:], affine)
                     else:
                         niiobj_ = Nifti1Image(imgobj_[..., crop[0]:crop[1]], affine)
-                    niiobj_ = self._set_nifti_header(niiobj_, visu_pars, method, slope=slope)
-                    parser.append(niiobj_)
+                else:
+                    niiobj_ = Nifti1Image(imgobj_, affine)
+                niiobj_ = self._set_nifti_header(niiobj_, visu_pars, method, slope=slope)
+                parser.append(niiobj_)
             return parser
         else:
             if len(imgobj.shape) > 4:

@@ -56,7 +56,10 @@ class ScanInfo(tk.Frame):
         self.textbox.insert(tk.END, 'RepetitionTime:\n - {} msec\n'.format(tr))
         self.textbox.insert(tk.END, 'EchoTime:\n - {} msec\n'.format(te))
         self.textbox.insert(tk.END, 'FlipAngle:\n - {} degree\n\n'.format(flip_angle))
-        self.textbox.insert(tk.END, 'PixelBandwidth:\n - {0:.3f} Hz\n'.format(pixel_bw))
+        if isinstance(pixel_bw, float):
+            self.textbox.insert(tk.END, 'PixelBandwidth:\n - {0:.3f} Hz\n'.format(pixel_bw))
+        else:
+            self.textbox.insert(tk.END, 'PixelBandwidth:\n - {} Hz\n'.format(pixel_bw))
         self.textbox.insert(tk.END, 'Dimension:\n - {}D\n'.format(dim))
         self.textbox.insert(tk.END, 'Matrix size:\n - {}\n'.format(size))
         self.textbox.insert(tk.END, 'Number of SlicePacks:\n - {}\n'.format(n_slicepacks))
