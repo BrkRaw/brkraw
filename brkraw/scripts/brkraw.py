@@ -278,12 +278,16 @@ def main():
 
         root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
         mkdir(root_path)
-        with open(os.path.join(root_path, 'dataset_description.json'), 'w') as f:
-            from ..lib.reference import DATASET_DESC_REF
-            json.dump(DATASET_DESC_REF, f, indent=4)
-        with open(os.path.join(root_path, 'README'), 'w') as f:
-            f.write(f'This dataset has converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.')
-            f.write('How to cite? = https://doi.org/10.5281/zenodo.3818615\n')
+        data_des = 'dataset_description.json'
+        readme = 'README'
+        if not os.path.exists(data_des):
+            with open(os.path.join(root_path, 'dataset_description.json'), 'w') as f:
+                from ..lib.reference import DATASET_DESC_REF
+                json.dump(DATASET_DESC_REF, f, indent=4)
+        if not os.path.exists(readme):
+            with open(os.path.join(root_path, readme), 'w') as f:
+                f.write(f'This dataset has converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.\n')
+                f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
 
         print('Inspect input BIDS datasheet...')
         for dname in sorted(os.listdir(path)):
