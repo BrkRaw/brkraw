@@ -324,7 +324,7 @@ def main():
                                 if bids_validation(df, i, 'task', row.task, 10):
                                     fname = f'{fname}_task-{row.task}'
                             if pd.notnull(row.acq):
-                                if bids_validation(df, i, 'acq', row.acq, 5):
+                                if bids_validation(df, i, 'acq', row.acq, 10):
                                     fname = f'{fname}_acq-{row.acq}'
                             if pd.notnull(row.ce):
                                 if bids_validation(df, i, 'ce', row.ce, 5):
