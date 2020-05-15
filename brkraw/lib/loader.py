@@ -72,7 +72,7 @@ class BrukerLoader():
         save_json(scan_id, reco_id, filename, dir='./')
             generate JSON with given filename for BIDS MRI parameters
 
-        - method to print meta informations
+        - method to print meta information
         print_bids(scan_id, reco_id, fobj=None)
             print out BIDS MRI parameters defined at reference.py
             if fileobject is given, it will be written in file instead of stdout
