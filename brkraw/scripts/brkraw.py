@@ -5,74 +5,85 @@ from .. import BrukerLoader, __version__
 import argparse
 import os, re
 
+_supporting_bids_ver = '1.2.2'
+
 
 def mkdir(path):
     try:
         os.stat(path)
     except FileNotFoundError or OSError:
-        os.mkdir(path)
+        os.makedirs(path)
     except:
         raise UnexpectedError
 
 
 def main():
-    parser = argparse.ArgumentParser(prog='brkraw.py',
-                                     description="Command line tool of Bruker Rawdata Handler")
+    parser = argparse.ArgumentParser(prog='brkraw',
+                                     description="BrkRaw command-line interface")
     parser.add_argument("-v", "--version", action='version', version='%(prog)s v{}'.format(__version__))
 
     subparsers = parser.add_subparsers(title='Sub-commands',
-                                       description='brkraw.py provides two major function reporting '
-                                                   'contents on bruker raw data '
-                                                   'and converting image data into NifTi format.',
+                                       description='To run this command, you must specify one of the functions listed'
+                                                   'below next to the command. For more information on each function, '
+                                                   'use -h next to the function name to call help document.',
                                        help='description',
                                        dest='function',
                                        metavar='command')
 
-    summary = subparsers.add_parser("summary", help='Print out data summary')
-    summary.add_argument("input", help="The source path for single Bruker raw data", type=str)
+    input_str = "input raw Bruker data"
+    input_dir_str = "input directory that contains multiple raw Bruker data"
+    output_dir_str = "output directory name"
+    output_fnm_str = "output filename"
+    bids_opt = "create a JSON file contains metadata according to BIDS recommendation"
 
-    gui = subparsers.add_parser("gui", help='Start GUI')
-    gui.add_argument("-i", "--input", help="The source path for single Bruker raw data", type=str, default=None)
-    gui.add_argument("-o", "--output", help="The destination path for converted NifTi data", type=str, default=None)
+    info = subparsers.add_parser("info", help='Prints out the information of the internal contents in Bruker raw data')
+    info.add_argument("input", help=input_str, type=str)
 
-    nii = subparsers.add_parser("tonii", help='Convert to NifTi format')
-    nii.add_argument("input", help="The source path for single Bruker raw data", type=str)
-    nii.add_argument("-b", "--bids", help="Create JSON file with BIDS "
-                                          "standard MRI acquisition parameter.", action='store_true')
-    nii.add_argument("-o", "--output", help="Filename w/o extension to export NifTi image", type=str, default=False)
-    nii.add_argument("-r", "--recoid", help="RECO ID (if scan_id has multiple reconstruction data)", type=int, default=1)
+    gui = subparsers.add_parser("gui", help='Run GUI mode')
+    nii = subparsers.add_parser("tonii", help='Convert a single raw Bruker data into NifTi file(s)')
+    niiall = subparsers.add_parser("tonii_all", help="Convert All raw Bruker data located in the input directory")
+    bids_helper = subparsers.add_parser("bids_helper", help="Creates a BIDS datasheet "
+                                                            "for guiding BIDS data converting.")
+    bids_convert = subparsers.add_parser("bids_convert", help="Convert ALL raw Bruker data located "
+                                                              "in the input directory based on the BIDS datasheet")
+
+    gui.add_argument("-i", "--input", help=input_str, type=str, default=None)
+    gui.add_argument("-o", "--output", help=output_dir_str, type=str, default=None)
+
+    nii.add_argument("input", help=input_str, type=str)
+    nii.add_argument("-b", "--bids", help=bids_opt, action='store_true')
+    nii.add_argument("-o", "--output", help=output_fnm_str, type=str, default=False)
+    nii.add_argument("-r", "--recoid", help="RECO ID", type=int, default=1)
     nii.add_argument("-s", "--scanid", help="Scan ID", type=str)
 
-    niiall = subparsers.add_parser("tonii_all", help="Convert All Bruker raw data.")
-    niiall.add_argument("input", help="The source path that contains multiple Bruker raw data", type=str)
-    niiall.add_argument("-b", "--bids", help="Create JSON file with BIDS standard MRI acquisition parameter.",
-                        action='store_true')
+    niiall.add_argument("input", help=input_dir_str, type=str)
+    niiall.add_argument("-o", "--output", help=output_dir_str, type=str)
+    niiall.add_argument("-b", "--bids", help=bids_opt, action='store_true')
 
-    bids_list = subparsers.add_parser("bids_list", help="Generate BIDS datasheets (xlsx format)")
-    bids_list.add_argument("input", help="The source path that contains multiple Bruker raw data", type=str)
-    bids_list.add_argument("output", help='The destination path for BIDS datasheet', type=str)
-    bids_list.add_argument("-r", "--meta_ref", help="the path for BIDS Metadata reference", type=str, default=False)
+    bids_helper.add_argument("input", help=input_dir_str, type=str)
+    bids_helper.add_argument("output", help="output BIDS datasheet filename (.xlsx)", type=str)
+    bids_helper.add_argument("-j", "--json", help="create JSON syntax template for "
+                                                  "parsing metadata from the header", action='store_true')
 
-    bids_converter = subparsers.add_parser("bids_converter", help="Convert ALL Bruker raw data "
-                                                                  "according to the BIDS datasheet")
-    bids_converter.add_argument("input_raw", help="The source path that contains multiple Bruker raw data", type=str)
-    bids_converter.add_argument("input_xlsx", help="The BIDS datasheet file", type=str)
-    bids_converter.add_argument("-r", "--meta_ref", help="BIDS Metadata reference", type=str, default=False)
+    bids_convert.add_argument("input", help=input_dir_str, type=str)
+    bids_convert.add_argument("datasheet", help="input BIDS datahseet filename", type=str)
+    bids_convert.add_argument("-j", "--json", help="input JSON syntax template filename", type=str, default=False)
+    bids_convert.add_argument("-o", "--output", help=output_dir_str, type=str, default=False)
 
     args = parser.parse_args()
 
-    if args.function == 'summary':
+    if args.function == 'info':
         path = args.input
         if any([os.path.isdir(path), ('zip' in path), ('PvDataset' in path)]):
             study = BrukerLoader(path)
-            study.summary()
+            study.info()
         else:
             list_path = [d for d in os.listdir('.') if (any([os.path.isdir(d),
                                                              ('zip' in d),
                                                              ('PvDataset' in d)]) and re.search(path, d, re.IGNORECASE))]
             for p in list_path:
                 study = BrukerLoader(p)
-                study.summary()
+                study.info()
 
     elif args.function == 'gui':
         ipath = args.input
@@ -178,14 +189,17 @@ def main():
             else:
                 print(f'{raw} is empty...')
 
-    elif args.function == 'bids_list':
+    elif args.function == 'bids_helper':
         import pandas as pd
         path = os.path.abspath(args.input)
-        output = os.path.abspath(args.output)
-        ref_path = args.meta_ref
-        if not output.endswith('.xlsx'):
+        ds_output = os.path.abspath(args.output)
+
+        make_json = args.json
+        if not ds_output.endswith('.xlsx'):
             # to prevent pandas ValueError in case user does not provide valid file extension.
-            output = f'{output}.xlsx'
+            output = f'{ds_output}.xlsx'
+        else:
+            output = ds_output
 
         Headers = ['RawData', 'SubjID', 'SessID', 'ScanID', 'RecoID', 'DataType',
                    'task', 'acq', 'ce', 'rec', 'dir', 'run', 'modality', 'Start', 'End']
@@ -235,24 +249,26 @@ def main():
                                     else:
                                         df = df.append(item, ignore_index=True)
         df.to_excel(output, index=None)
-        if ref_path:
-        # ref_path = os.path.join(os.path.dirname(output), 'BIDS_META_REF.json')
-            if not ref_path.endswith('json'):
-                ref_path = f'{ref_path}.json'
-            print(f'Creating BIDS metadata reference file (BIDS v1.2.2): {ref_path}')
-            with open(ref_path, 'w') as f:
+
+        if make_json:
+            fname = output[:-5]
+            json_fname = f'{fname}.json'
+            print(f'Creating JSON syntax template for parsing the BIDS required metadata '
+                  f'(BIDS v{_supporting_bids_ver}): {json_fname}')
+            with open(json_fname, 'w') as f:
                 import json
                 from ..lib.reference import COMMON_META_REF, FMRI_META_REF, FIELDMAP_META_REF
                 ref_dict = dict(common=COMMON_META_REF,
                                 func=FMRI_META_REF,
                                 fmap=FIELDMAP_META_REF)
                 json.dump(ref_dict, f, indent=4)
-        print('Please complete the exported BIDS datasheet [{}] '
-              'according to BIDS standard guide.'.format(os.path.basename(output)))
-        print('**This tool is just a utility to help minimize the effort for data organization, '
-              'so it will not guarantee that the dataset can meet the requirement of the official BIDS validator.**')
 
-    elif args.function == 'bids_converter':
+        print('[Important notice] The function helps to minimize the BIDS organization but does not guarantee that '
+              'the dataset always meets the BIDS requirements. '
+              'Therefore, after converting your data, we recommend validating '
+              'your dataset using an official BIDS validator.')
+
+    elif args.function == 'bids_convert':
         import pandas as pd
         import numpy as np
         import json
@@ -260,10 +276,11 @@ def main():
         from ..lib.utils import build_bids_json, bids_validation
 
         pd.options.mode.chained_assignment = None
-        path = args.input_raw
-        input_xlsx = args.input_xlsx
-        df = pd.read_excel(input_xlsx, dtype={'SubjID': str, 'SessID': str, 'run': str})
-        ref_path = args.meta_ref
+        path = args.input
+        datasheet = args.datasheet
+        output = args.output
+        df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str})
+        json_fname = args.json
 
         # check if the project is multi-session
         if all(pd.isnull(df['SessID'])):
@@ -276,8 +293,14 @@ def main():
             else:
                 multi_session = False
 
-        root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
+        if not output:
+            root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
+        else:
+            root_path = output
+
         mkdir(root_path)
+
+        # prepare the required file for converted BIDS dataset
         data_des = 'dataset_description.json'
         readme = 'README'
         if not os.path.exists(data_des):
@@ -286,7 +309,7 @@ def main():
                 json.dump(DATASET_DESC_REF, f, indent=4)
         if not os.path.exists(readme):
             with open(os.path.join(root_path, readme), 'w') as f:
-                f.write(f'This dataset has converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.\n')
+                f.write(f'This dataset has been converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.\n')
                 f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
 
         print('Inspect input BIDS datasheet...')
@@ -359,6 +382,7 @@ def main():
                         list_tested_fn = []
                         # Converting data according to the updated sheet
                         print(f'Converting {dname}...')
+
                         for i, row in filtered_dset.iterrows():
                             temp_fname = f'{row.FileName}_{row.modality}'
                             if temp_fname not in list_tested_fn:
@@ -384,10 +408,10 @@ def main():
                                                                        'among the scans with the same modality.')
                                         else:
                                             conflict_tested.append(fname)
-                                        build_bids_json(dset, sub_row, fname, ref_path)
+                                        build_bids_json(dset, sub_row, fname, json_fname)
                                 else:
                                     fname = f'{row.FileName}'
-                                    build_bids_json(dset, row, fname, ref_path)
+                                    build_bids_json(dset, row, fname, json_fname)
                                 list_tested_fn.append(temp_fname)
                         print('...Done.')
             except FileNotValidError:

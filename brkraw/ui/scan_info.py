@@ -47,7 +47,7 @@ class ScanInfo(tk.Frame):
         t_unit = temp_info['unit']
         s_resol = list(s_resol[0]) if is_all_element_same(s_resol) else s_resol
         s_resol = ' x '.join(['{0:.3f}'.format(r) for r in s_resol])
-        # Num Slicepacks
+        # Number of slice packs
         n_slicepacks = brkraw_obj._get_slice_info(visu_pars)['num_slice_packs']
 
         # Printing out

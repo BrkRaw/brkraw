@@ -543,7 +543,7 @@ def get_bids_ref_obj(ref_path, row):
     return ref
 
 
-def build_bids_json(dset, row, fname, ref_path):
+def build_bids_json(dset, row, fname, json_path):
     import pandas as pd
 
     if pd.notnull(row.Start) or pd.notnull(row.End):
@@ -556,8 +556,8 @@ def build_bids_json(dset, row, fname, ref_path):
             fname = f'{fname}_echo-{echo + 1}_{row.modality}'
             output_path = os.path.join(row.Dir, fname)
             nii.to_filename(f'{output_path}.nii.gz')
-            if ref_path:
-                ref = get_bids_ref_obj(ref_path, row)
+            if json_path:
+                ref = get_bids_ref_obj(json_path, row)
                 dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir,
                                metadata=ref, condition=['me', echo])
     else:
@@ -566,8 +566,8 @@ def build_bids_json(dset, row, fname, ref_path):
         if re.search('dwi', row.modality, re.IGNORECASE):
             # DTI parameter (FSL style)
             dset.save_bdata(row.ScanID, fname, dir=row.Dir)
-        if ref_path:
-            ref = get_bids_ref_obj(ref_path, row)
+        if json_path:
+            ref = get_bids_ref_obj(json_path, row)
             if re.search('fieldmap', row.modality, re.IGNORECASE):
                 condition = ['fm', None]
             else:

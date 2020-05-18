@@ -8,7 +8,7 @@ import zipfile
 import pathlib
 import os
 import re
-
+np.set_printoptions(formatter={'float_kind':'{:f}'.format})
 
 def load(path):
     path = pathlib.Path(path)
@@ -76,7 +76,7 @@ class BrukerLoader():
         print_bids(scan_id, reco_id, fobj=None)
             print out BIDS MRI parameters defined at reference.py
             if fileobject is given, it will be written in file instead of stdout
-        summary(fobj=None)
+        info(fobj=None)
             print out the PvDataset major parameters
             if fileobject is given, it will be written in file instead of stdout
     """
@@ -462,9 +462,6 @@ class BrukerLoader():
 
             if isinstance(val, np.ndarray):
                 val = val.tolist()
-            # if isinstance(val, list):
-            #     val = ','.join(map(str, val))
-            #     val = f'[{val}]'
             json_obj[k] = val
         return json_obj
 
@@ -484,8 +481,12 @@ class BrukerLoader():
                 json_obj['Units'] = get_value(visu_pars, 'VisuCoreDataUnits')[0]
                 json_obj['IntendFor'] = ["func/*_bold.nii.gz"]
             else:
-                raise InvalidApproach('')
+                raise InvalidApproach('Invalid datatype code for json creation')
 
+        # remove all null fields
+        for k, v in json_obj.items():
+            if v is None:
+                json_obj[k] = 'Value was not specified'
         with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
             import json
             json.dump(json_obj, f, indent=4)
@@ -544,18 +545,14 @@ class BrukerLoader():
             tap = ''.join(['\t'] * n_tap)
             print('{}:{}{}'.format(k, tap, val), file=fobj)
 
-    def summary(self, fobj=None):
-        """
-
+    def info(self, io_handler=None):
+        """ Prints out the information of the internal contents in Bruker raw data
         Args:
-            fobj:
-
-        Returns:
-
+            io_handler: IO handler where to print out
         """
-        if fobj == None:
+        if io_handler == None:
             import sys
-            fobj = sys.stdout
+            io_handler = sys.stdout
 
         pvobj = self._pvobj
         user_account = pvobj.user_account
@@ -650,7 +647,7 @@ class BrukerLoader():
                 #     print(e)
                 #     print(f'Issue found at {scan_id}')
         lines.append('\n')
-        print('\n'.join(lines), file=fobj)
+        print('\n'.join(lines), file=io_handler)
 
     # method to parse information of each scan
     # methods of protocol specific

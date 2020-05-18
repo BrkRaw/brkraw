@@ -105,7 +105,7 @@ class BackupCache:
                                         backup=False)
                     self.raw_data.append(rawobj)
                 else:
-                    self.logging('{} is not directory. [raw dataset must be a directory]'.format(dir_path),
+                    self.logging(f'{dir_path} is not a valid directory. [raw dataset must be a directory]',
                                  'set_raw')
         else:
             rawobj = NamedTuple(data_pid=self.num_raw,
@@ -239,7 +239,7 @@ class BackupCacheHandler:
         return self._parse_info
 
     def _parse_info(self):
-        print('\n-- Parsing data information from folders --')
+        print('\n-- Parsing metadata from the raw and archived directories --')
         list_of_raw = sorted([d for d in os.listdir(self._rpath) if
                               os.path.isdir(os.path.join(self._rpath, d))])
         list_of_brk = sorted([d for d in os.listdir(self._apath) if
@@ -247,12 +247,12 @@ class BackupCacheHandler:
                                (d.endswith('zip') or d.endswith('PvDatasets')))])
 
         # parse dataset
-        print('\nScanning raw dataset and update cache...')
+        print('\nScanning raw datasets and update cache...')
         for r in tqdm.tqdm(list_of_raw, bar_format=_bar_fmt):
             self._cache.set_raw(r, raw_dir=self._rpath)
         self._save_pickle()
 
-        print('\nScanning archived dataset and update cache...')
+        print('\nScanning archived datasets and update cache...')
         for b in tqdm.tqdm(list_of_brk, bar_format=_bar_fmt):
             self._cache.set_arc(b, arc_dir=self._apath, raw_dir=self._rpath)
         self._save_pickle()
@@ -266,7 +266,7 @@ class BackupCacheHandler:
                         r.removed = True
         self._save_pickle()
 
-        print('\nReviewing archived dataset cache...')
+        print('\nReviewing the cached information...')
         for b in tqdm.tqdm(self.arc_data[:], bar_format=_bar_fmt):
             arc_path = os.path.join(self._apath, b.path)
             if not os.path.exists(arc_path):  # backup dataset is not existing, remove the cache
@@ -352,12 +352,12 @@ class BackupCacheHandler:
 
     def _get_backup_status(self):
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        lines = self._gen_header('Report of backup status review [{}]'.format(now))
+        lines = self._gen_header('Report of the status of archived data [{}]'.format(now))
         list_need_to_be_backup = self.get_list_for_backup()[:]
         total_list = len(list_need_to_be_backup)
         if len(list_need_to_be_backup):
-            lines.append('>> Raw dataset need to be backup.')
-            lines.append('[Note: The raw dataset does not has any "fid" will not be listed here]')
+            lines.append('>> The list of raw data need to be archived.')
+            lines.append('[Note: The list exclude the raw data does not contain any binary file]')
             lines.append(_line_sep_1)
             lines.append('{}{}'.format('Rawdata Path'.center(_width-10), 'Size'.rjust(10)))
             for r in list_need_to_be_backup:
@@ -378,10 +378,10 @@ class BackupCacheHandler:
         list_issued = self.get_issued()
         total_list += len(list_issued)
         if len(list_issued):
-            lines.append('>> Failed or incompleted archived dataset.')
-            lines.append('[Note: The listed files are either crashed or incompleted]')
+            lines.append('>> Failed or incompleted archived data.')
+            lines.append('[Note: The listed data are either crashed or incompleted]')
             lines.append(_line_sep_1)
-            lines.append('{}{}{}'.format('Backup Path'.center(60),
+            lines.append('{}{}{}'.format('Archived Path'.center(60),
                                          'Condition'.rjust(10),
                                          'Size'.rjust(10)))
             for b in self.get_issued():
@@ -412,8 +412,8 @@ class BackupCacheHandler:
         list_duplicated = self.get_duplicated()
         total_list += len(list_duplicated)
         if len(list_duplicated.keys()):
-            lines.append('>> Duplicated archived dataset.')
-            lines.append('[Note: The listed raw dataset has multiple archived files]')
+            lines.append('>> List of duplicated archived data.')
+            lines.append('[Note: The listed raw data has been archived into multiple files]')
             lines.append(_line_sep_1)
             lines.append('{}  {}'.format('Raw Path'.center(int(_width/2)-1),
                                          'Archived'.center(int(_width/2)-1)))
@@ -436,7 +436,7 @@ class BackupCacheHandler:
 
         if total_list == 0:
             lines.append(_empty_sep)
-            lines.append('Backup status is up-to-date...'.center(80))
+            lines.append('The status of archived data is up-to-date...'.center(80))
             lines.append(_empty_sep)
             lines.append(_line_sep_1)
         return '\n'.join(lines)
@@ -475,8 +475,9 @@ class BackupCacheHandler:
         print(summary, file=fobj)
 
     def clean(self):
-        print('\n[Warning] This command will remove backup data that classified as issued and cannot be revert.')
-        print('          Prior to run this process, please update your backup status using "review" function.\n')
+        print('\n[Warning] The archived data that contains any issue will be deleted by this command '
+              'and it cannot be revert.')
+        print('          Prior to run this, please update the cache for data status using "review" function.\n')
         ans = yes_or_no('Are you sure to continue?')
 
         if ans:
@@ -486,7 +487,7 @@ class BackupCacheHandler:
                              duplicated=self.get_duplicated().copy())
             for label, dset in list_data.items():
                 if label == 'duplicated':
-                    print('\nStart removing {} backup dataset...'.format(label.upper()))
+                    print('\nStart removing {} archived data...'.format(label.upper()))
                     if len(dset.items()):
                         for raw_dname, arcs in dset.items():
                             if raw_dname is not None:
@@ -522,7 +523,7 @@ class BackupCacheHandler:
                                         raise UnexpectedError
                 else:
                     if len(dset):
-                        print('\nStart removing {} backup dataset...'.format(label.upper()))
+                        print('\nStart removing {} archived data...'.format(label.upper()))
 
                         def ask_to_remove():
                             ans_4rm = yes_or_no(' - Are you sure to remove [{}] ?\n  '.format(path_to_clean))
@@ -554,15 +555,15 @@ class BackupCacheHandler:
         list_raws = self.get_list_for_backup()[:]
         list_issued = self.get_issued()[:]
         print('\nStarting backup for raw data not listed in the cache...')
-        self.logging('Backup process start...', 'backup')
+        self.logging('Archiving process starts...', 'backup')
 
         for i, dlist in enumerate([list_raws, list_issued]):
             if i == 0:
-                print('\n[step1] Performing backup for the raw datasets that has not been archived.')
-                self.logging('backup the raw dataset has not been archived...', 'backup')
+                print('\n[step1] Archiving the raw data that has not been archived.')
+                self.logging('Archive the raw data has not been archived...', 'backup')
             elif i == 1:
-                print('\n[step2] Performing backup for the datasets that has issued on archived data.')
-                self.logging('backup the raw dataset contain issues...', 'backup')
+                print('\n[step2] Archiving the data that has issued on archived data.')
+                self.logging('Archive the raw data contains any issue...', 'backup')
 
             for r in tqdm.tqdm(dlist, unit=' dataset(s)', bar_format=_bar_fmt):
                 run_backup = True
@@ -582,12 +583,14 @@ class BackupCacheHandler:
                             raw = BrukerLoader(raw_path)
                             if arc.is_pvdataset:
                                 if arc.num_recos != raw.num_recos:
-                                    print(' - [{}] is mismatching with raw dataset, removing...'.format(arc_path), file=fobj)
+                                    print(' - [{}] is mismatching with the corresponding raw data, '
+                                          'removing...'.format(arc_path), file=fobj)
                                     os.unlink(arc_path)
                                 else:
                                     run_backup = False
                             else:
-                                print(' - [{}] is mismatching with raw dataset, removing...'.format(arc_path), file=fobj)
+                                print(' - [{}] is mismatching with the corresponding raw data, '
+                                      'removing...'.format(arc_path), file=fobj)
                                 os.unlink(arc_path)
                     if run_backup:
                         print('\n :: Compressing [{}]...'.format(raw_path), file=fobj)
@@ -610,7 +613,7 @@ class BackupCacheHandler:
                                     for f in files:
                                         arc_name = os.sep.join(splitted_root[root_idx:] + [f])
                                         zip.write(os.path.join(root, f), arcname=arc_name)
-                            print(' - [{}] is generated'.format(os.path.basename(arc_path)), file=fobj)
+                            print(' - [{}] is created.'.format(os.path.basename(arc_path)), file=fobj)
 
                         except Exception:
                             error = ArchiveFailedError(raw_path)

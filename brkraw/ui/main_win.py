@@ -17,7 +17,7 @@ class MainWindow(tk.Tk):
         self._scan_id = None
         self._reco_id = None
         self._output = None
-        self.title('BrukerRaw GUI - ver {}'.format(__version__))
+        self.title('BrkRaw GUI - v{}'.format(__version__))
 
         # initiated windows size and location
         self.geometry('{}x{}+{}+{}'.format(_width, _height,
@@ -172,7 +172,7 @@ class MainWindow(tk.Tk):
 
     def _set_output(self):
         self._output = filedialog.askdirectory(initialdir=self._output,
-                                               title="Select Output Sirectory")
+                                               title="Select Output Directory")
 
     def _save_as(self):
         date = self._raw.get_scan_time()['date'].strftime("%y%m%d")
@@ -185,7 +185,7 @@ class MainWindow(tk.Tk):
         self._raw.save_as(self._scan_id, self._reco_id, filename, dir=self._output)
         from tkinter import messagebox
         messagebox.showinfo(title='File conversion',
-                            message='{}/{}.nii.gz has converted'.format(self._output,
+                            message='{}/{}.nii.gz has been converted'.format(self._output,
                                                                        filename))
 
 
