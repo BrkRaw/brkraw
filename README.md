@@ -57,18 +57,16 @@ to help benchmark testing of Bruker converter.
 GNU General Public License v3.0
 
 #### Citing BrkRaw
-SungHo Lee. (2020, May 13). dvm-shlee/bruker: BrkRaw v0.3.2 (Version 0.3.2). Zenodo. http://doi.org/10.5281/zenodo.3818614
+SungHo Lee. (2020, May 13). brkraw/bruker: BrkRaw v0.3.2 (Version 0.3.2). Zenodo. http://doi.org/10.5281/zenodo.3818614
 
 **BibTeX**
 ```
-@software{sungho_lee_2020_3818614,
-  author       = {SungHo Lee and Woomi Ban and Yen-Yu Ian Shih},
-  title        = {dvm-shlee/bruker: BrkRaw v0.3.2},
-  month        = may,
-  year         = 2020,
-  publisher    = {Zenodo},
-  version      = {0.3.2},
-  doi          = {10.5281/zenodo.3818614},
-  url          = {https://doi.org/10.5281/zenodo.3818614}
+@misc{https://doi.org/10.5281/zenodo.3818614,
+  doi = {10.5281/ZENODO.3818614},
+  url = {https://zenodo.org/record/3818614},
+  author = {Lee,  SungHo and Ban,  Woomi and Shih,  Yen-Yu Ian},
+  title = {dvm-shlee/bruker: BrkRaw v0.3.2},
+  publisher = {Zenodo},
+  year = {2020}
 }
 ```
