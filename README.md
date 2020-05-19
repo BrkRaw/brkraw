@@ -34,12 +34,11 @@ We are still looking for more datasets showing orientation issue,
 For more detail information including installation, usage and examples, 
 please visit our [GitPage](https://brkraw.github.io).
 
-- [Installation](https://brkraw.github.io)
-- [Command-line tool usage examples](https://brkraw.github.io)
-- [Converting dataset into BIDS](https://brkraw.github.io)
-- [Python API usage examples](https://brkraw.github.io)
-- [GUI](http://brkraw.github.io)
-- [How to contribute BrkRaw](https://brkraw.github.io)
+- [Installation](https://brkraw.github.io/docs/gs_inst.html)
+- [Command-line tool usage examples](https://brkraw.github.io/docs/gs_nii.html)
+- [Converting dataset into BIDS](https://brkraw.github.io/docs/gs_bids.html)
+- [Python API usage examples](https://brkraw.github.io/docs/ap_parent.html)
+- [GUI](https://brkraw.github.io/docs/gs_gui.html)
 
 #### Credits:
 ##### Authors
