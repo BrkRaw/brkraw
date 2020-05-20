@@ -46,10 +46,10 @@ for converting raw data directly into a NIfTI or ANALYZE format
 [@Brett:2002; @Ferraris:2017; @Chavarrias:2017; @Rorden:2018] for improving efficiency for data processing.
 
 Although the converters significantly improve analysis workflow by direct converting into software friendly file format,
-the software introduced so far has not provided the convenience of using the data immediately without conversion.
+the software introduced so far has not provided the feature to access the data immediately without conversion.
 Here we present the 'BrkRaw' python module, a more comprehensive preclinical tool for accessing and utilizing
-raw Bruker Biospin MRI data. The module has built up using robust low-level Python Application Programming Interface 
-(API) allowing direct raw data access without conversion to provide the advanced and easy-to-use features 
+raw Bruker Biospin MRI data. The module has been built up upon robust low-level Python Application Programming Interface 
+(API), allowing direct raw data access without conversion to provide the advanced and easy-to-use features 
 for data analysis. 
 
 The current version of BrkRaw is composed of four components, the low-level Python API, the high-level Python API,
