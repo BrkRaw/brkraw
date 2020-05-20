@@ -91,19 +91,19 @@ and management of raw Bruker MRI data, thereby benefitting other animal imaging 
 In the future we will develop additional Python-based tools for acute quality control and real-time fMRI data analysis.
 
 # Figures
-![Bruker2Nifti_QA](../imgs/bruker2nifti_qa.png)
+![Bruker2Nifti_QA](imgs/bruker2nifti_qa.png)
 **Figure 1. The overlapped converted images that shows successful conversion of Bruker2Nifti_QA dataset**
 
-![Data management](../imgs/brk_backup.png)
+![Data management](imgs/brk_backup.png)
 **Figure 2. The main function of brk-backup command for data management**
 
-![brkraw info](../imgs/brkraw_info.png)
+![brkraw info](imgs/brkraw_info.png)
 **Figure 3. The example of brkraw command usage to print out data information** 
 
-![BIDS convert](../imgs/brkraw_bids.png)
+![BIDS convert](imgs/brkraw_bids.png)
 **Figure 4. The example usage of the command-line tool 'brkraw' for BIDS data organization.**
 
-![brkraw GUI](../imgs/brkraw_gui.png)
+![brkraw GUI](imgs/brkraw_gui.png)
 **Figure 5. The graphical user interface (GUI) for previewing image and parameters**
 
 # Acknowledgements
