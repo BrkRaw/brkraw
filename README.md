@@ -1,6 +1,6 @@
 [![DOI](https://zenodo.org/badge/245546149.svg)](https://zenodo.org/badge/latestdoi/245546149)
 
-## BrkRaw: A comprehensive tool to access raw data of Bruker Biospin Preclinical MRI Systems
+## BrkRaw: A comprehensive tool to access raw Bruker Biospin MRI data
 #### Version: 0.3.3
 
 ### Description
