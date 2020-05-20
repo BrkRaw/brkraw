@@ -23,7 +23,7 @@ without the conversion step.
 parameter and binary files with the python compatible datatype while keeping the sake of simplicity.
 
 ##### Conversion reliability
-![Robust Orientation](imgs/Bruker2Nifti_QA_challenge.png)
+![Robust Orientation](imgs/bruker2nifti_qa.png)
 We've tested our converter using the sample dataset from [Bruker2Nifti_QA](https://gitlab.com/naveau/bruker2nifti_qa) 
 and the results showed correct geometry and orientation for all datasets.
 We are still looking for more datasets showing orientation issue, 
