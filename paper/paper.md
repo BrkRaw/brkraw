@@ -60,7 +60,7 @@ into a Python object and the raw Bruker data loader that converting a whole fold
 binary files of a single imaging study session into a Python object. We also designed the zip file to be loaded 
 without extraction, considering the accessibility of the archived data.
 
-In high-level Python API, we focused on providing useful functions to reduce extra effort on converting data into 
+For the high-level Python API, we focused on providing useful functions to reduce extra effort on converting data into 
 a usable form. It preserves the coordinate system of the image according to the subject position and orientation 
  on the scanner coordinate system (Figure1), which is known to be a challenge in the Bruker Biospin MRI system.
 [@Ferraris:2017, @Naveau:2019].
