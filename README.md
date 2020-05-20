@@ -3,7 +3,7 @@
 ## BrkRaw: A comprehensive tool to access raw data of Bruker Biospin Preclinical MRI Systems
 #### Version: 0.3.3
 
-#### Description
+### Description
 
 The ‘BrkRaw’ is a python module designed to provide a comprehensive tool to access raw data acquired from 
 Bruker Biospin preclinical MRI scanner. This module is also compatible with the zip compressed data 
@@ -22,7 +22,7 @@ without the conversion step.
 - For the low-level python API, we focused on providing a consistent method to access raw Bruker data including 
 parameter and binary files with the python compatible datatype while keeping the sake of simplicity.
 
-##### Conversion reliability
+#### Conversion reliability
 ![Robust Orientation](../brkraw.github.io/imgs/bruker2nifti_qa.png)
 We've tested our converter using the sample dataset from [Bruker2Nifti_QA](https://gitlab.com/naveau/bruker2nifti_qa) 
 and the results showed correct geometry and orientation for all datasets.
@@ -30,7 +30,7 @@ We are still looking for more datasets showing orientation issue,
 **if you have any shareable dataset, please contact the developer.**
 
 
-#### Website
+### Website
 For more detail information including installation, usage and examples, 
 please visit our [GitPage](https://brkraw.github.io).
 
@@ -40,7 +40,8 @@ please visit our [GitPage](https://brkraw.github.io).
 - [Python API usage examples](https://brkraw.github.io/docs/ap_parent.html)
 - [GUI](https://brkraw.github.io/docs/gs_gui.html)
 
-#### Credits:
+
+### Credits:
 ##### Authors
 - SungHo Lee (shlee@unc.edu): main developer
 - Woomi Ban (banwoomi@unc.edu): sub-developer who tested and refined the module structure
@@ -53,20 +54,25 @@ please visit our [GitPage](https://brkraw.github.io).
 [bruker2nifti_qa](https://gitlab.com/naveau/bruker2nifti_qa), the set of data 
 to help benchmark testing of Bruker converter.
 
-#### License:
+### License:
 GNU General Public License v3.0
 
-#### Citing BrkRaw
-SungHo Lee. (2020, May 13). brkraw/bruker: BrkRaw v0.3.2 (Version 0.3.2). Zenodo. http://doi.org/10.5281/zenodo.3818614
+### Citing BrkRaw
+Lee, Sung-Ho, Ban, Woomi, & Shih, Yen-Yu Ian. (2020, May 19). BrkRaw/bruker: BrkRaw v0.3.3rc0 (Version 0.3.3rc0). 
+Zenodo. http://doi.org/10.5281/zenodo.3833397
 
 **BibTeX**
 ```
-@misc{https://doi.org/10.5281/zenodo.3818614,
-  doi = {10.5281/ZENODO.3818614},
-  url = {https://zenodo.org/record/3818614},
-  author = {Lee,  SungHo and Ban,  Woomi and Shih,  Yen-Yu Ian},
-  title = {dvm-shlee/bruker: BrkRaw v0.3.2},
-  publisher = {Zenodo},
-  year = {2020}
+@software{lee_sung_ho_2020_3833397,
+  author       = {Lee, Sung-Ho and
+                  Ban, Woomi and
+                  Shih, Yen-Yu Ian},
+  title        = {BrkRaw/bruker: BrkRaw v0.3.3rc0},
+  month        = may,
+  year         = 2020,
+  publisher    = {Zenodo},
+  version      = {0.3.3rc0},
+  doi          = {10.5281/zenodo.3833397},
+  url          = {https://doi.org/10.5281/zenodo.3833397}
 }
 ```
