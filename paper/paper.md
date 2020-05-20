@@ -1,5 +1,5 @@
 ---
-title: 'BrkRaw: A comprehensive tool for accessing raw Bruker Biospin data'
+title: 'BrkRaw: A comprehensive tool for accessing raw Bruker Biospin MRI data'
 tags:
   - Preclinical MRI converter
   - Bruker
@@ -41,7 +41,7 @@ since it is important to preserve the patient-related metadata coupled with the 
 However, the preclinical MRI research using laboratory animals or objects does not require the DICOM conversion step 
 and is rather inefficient. 
 
-Researchers have developed conversion software for Bruker Biospin (the leading preclinical MRI vendor), 
+Researchers have developed conversion software for Bruker Biospin MRI (the leading preclinical MRI system), 
 for converting raw data directly into a NIfTI or ANALYZE format 
 [@Brett:2002; @Ferraris:2017; @Chavarrias:2017; @Rorden:2018] for improving efficiency for data processing.
 
