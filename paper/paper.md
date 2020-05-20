@@ -64,7 +64,7 @@ For the high-level Python API, we focused on providing useful functions to reduc
 a usable form. It preserves the coordinate system of the image according to the subject position and orientation 
  on the scanner coordinate system (Figure1), which is known to be a challenge in the Bruker Biospin MRI system.
 [@Ferraris:2017, @Naveau:2019].
-The high-level Python API offers to load image data as the two most convenient object types 
+The high-level Python API offers to load image data as the two most popular object types 
 in the Python eco-system for image processing (nibabel[@Brett:2020] and SimpleITK[@Lowekamp:2013]), 
 as well as to convert multiple parameters into a structured JSON-type object using a custom JSON-based syntax.
 
