@@ -102,8 +102,8 @@ def main():
 
     elif args.function == 'tonii':
         path = args.input
-        scan_id = int(args.scanid)
-        reco_id = int(args.recoid)
+        scan_id = args.scanid
+        reco_id = args.recoid
         study = BrukerLoader(path)
         if args.output:
             output = args.output
@@ -112,6 +112,8 @@ def main():
         if scan_id:
             output_fname = '{}-{}-{}'.format(output, scan_id, reco_id)
             try:
+                scan_id = int(scan_id)
+                reco_id = int(reco_id)
                 study.save_as(scan_id, reco_id, output_fname)
                 if args.bids:
                     study.save_json(scan_id, reco_id, output_fname)
