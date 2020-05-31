@@ -96,12 +96,14 @@ def main():
             root._load_dataset()
         if opath != None:
             root._output = opath
+        else:
+            root._output = os.path.curdir
         root.mainloop()
 
     elif args.function == 'tonii':
         path = args.input
-        scan_id = args.scanid
-        reco_id = args.recoid
+        scan_id = int(args.scanid)
+        reco_id = int(args.recoid)
         study = BrukerLoader(path)
         if args.output:
             output = args.output
