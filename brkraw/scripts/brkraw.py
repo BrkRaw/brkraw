@@ -137,7 +137,9 @@ def main():
         from os.path import join as opj, isdir, isfile
         list_of_raw = sorted([d for d in os.listdir(path) if isdir(opj(path, d)) \
                               or (isfile(opj(path, d)) and (('zip' in d) or ('PvDataset' in d)))])
-        base_path = 'Data'
+        base_path = args.output
+        if not base_path:
+            base_path = 'Data'
         try:
             os.mkdir(base_path)
         except:
