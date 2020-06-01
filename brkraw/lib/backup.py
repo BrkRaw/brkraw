@@ -617,6 +617,7 @@ class BackupCacheHandler:
                             print(' - [{}] is created.'.format(os.path.basename(arc_path)), file=fobj)
 
                         except Exception:
+                            print_internal_error(fobj)
                             error = ArchiveFailedError(raw_path)
                             self.logging(error.message, 'backup')
                             raise error
@@ -625,6 +626,7 @@ class BackupCacheHandler:
 
                         # Backup validation
                         if not os.path.exists(tmp_path):  # Check if the file is generated
+                            print_internal_error(fobj)
                             error = ArchiveFailedError(raw_path)
                             self.logging(error.message, 'backup')
                             raise error
@@ -632,11 +634,12 @@ class BackupCacheHandler:
                             try:
                                 os.rename(tmp_path, arc_path)
                             except OSError:
+                                print_internal_error(fobj)
                                 error = RenameFailedError(tmp_path, arc_path)
                                 self.logging(error.message, 'backup')
                                 raise error
                             else:
-                                print_internal_error()
+                                print_internal_error(fobj)
                                 error = UnexpectedError
                                 self.logging(error.message, 'backup')
 
