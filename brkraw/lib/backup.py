@@ -1,4 +1,5 @@
 from shleeh import *
+from shleeh.utils import *
 from shleeh.errors import *
 from .loader import BrukerLoader
 from .utils import get_dirsize, get_filesize, yes_or_no
@@ -635,6 +636,8 @@ class BackupCacheHandler:
                                 self.logging(error.message, 'backup')
                                 raise error
                             else:
+                                print_internal_error()
                                 error = UnexpectedError
                                 self.logging(error.message, 'backup')
+
                                 raise error
