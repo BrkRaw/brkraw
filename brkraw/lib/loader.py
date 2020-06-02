@@ -397,8 +397,8 @@ class BrukerLoader():
                 raise ValueError
 
     def save_nifti(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
-                crop=None):
-        niiobj = self.get_niftiobj(scan_id, reco_id, crop=crop)
+                crop=None, slope=False):
+        niiobj = self.get_niftiobj(scan_id, reco_id, crop=crop, slope=slope)
         if isinstance(niiobj, list):
             for i, nii in enumerate(niiobj):
                 output_path = os.path.join(dir,
@@ -703,8 +703,9 @@ class BrukerLoader():
                 raise InvalidApproach('Invalid slope size;'
                                       'The vector type scl_slope cannot be set in nifti header.')
             else:
-                niiobj.header['scl_slope'] = data_slp
-                niiobj.header['scl_inter'] = data_off
+                if slope is not None:
+                    niiobj.header['scl_slope'] = data_slp
+                    niiobj.header['scl_inter'] = data_off
         return niiobj
 
     # EPI

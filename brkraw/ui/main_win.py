@@ -14,6 +14,7 @@ class MainWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self._raw = None
+        self._ignore_slope = False
         self._scan_id = None
         self._reco_id = None
         self._output = None
@@ -182,7 +183,11 @@ class MainWindow(tk.Tk):
                                               pvobj.session_id,
                                               pvobj.study_id,
                                               self._scan_id, self._reco_id)
-        self._raw.save_as(self._scan_id, self._reco_id, filename, dir=self._output)
+        if self._ignore_slope:
+            slope = None
+        else:
+            slope = False
+        self._raw.save_as(self._scan_id, self._reco_id, filename, dir=self._output, slope=slope)
         from tkinter import messagebox
         messagebox.showinfo(title='File conversion',
                             message='{}/{}.nii.gz has been converted'.format(self._output,
