@@ -388,12 +388,13 @@ class BrukerLoader():
             print(f'Invalid Scan ID.\n'
                   f'Your input: {scan_id}\n'
                   f'Available Scan IDs: {list(self._avail.keys())}')
-            raise KeyError
+            raise ValueError
         else:
             if reco_id not in self._avail[scan_id]:
                 print(f'Invalid Reco ID.\n'
                       f'Your input: {reco_id}\n'
                       f'Available Reco IDs: {self._avail[scan_id]}')
+                raise ValueError
 
     def save_nifti(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
                 crop=None):
