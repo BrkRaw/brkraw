@@ -10,6 +10,7 @@ import os
 import re
 np.set_printoptions(formatter={'float_kind':'{:f}'.format})
 
+
 def load(path):
     path = pathlib.Path(path)
     if os.path.isdir(path):
@@ -201,15 +202,8 @@ class BrukerLoader():
                         dataobj = np.swapaxes(dataobj, slice_axis, -1)
                         dataobj = np.swapaxes(dataobj, 2, -1)
 
-            elif group_id[0] == 'FG_DIFFUSION':
+            elif group_id[0] in ['FG_DIFFUSION', 'FG_DTI', 'FG_MOVIE', 'FG_COIL', 'FG_CYCLE', 'FG_COMPLEX']:
                 dataobj = swap_slice_axis(group_id, dataobj)
-
-            elif group_id[0] == 'FG_DTI':   # reconstructed
-                dataobj = swap_slice_axis(group_id, dataobj)
-
-            elif group_id[0] == 'FG_MOVIE':
-                dataobj = swap_slice_axis(group_id, dataobj)
-
             else:
                 raise UnexpectedError(message='Unexpected frame group combination;'
                                               f'{ISSUE_REPORT}')
@@ -388,6 +382,18 @@ class BrukerLoader():
     @property
     def save_as(self):
         return self.save_nifti
+
+    def _inspect_ids(self, scan_id, reco_id):
+        if scan_id not in self._avail.keys():
+            print(f'Invalid Scan ID.\n'
+                  f'Your input: {scan_id}\n'
+                  f'Available Scan IDs: {list(self._avail.keys())}')
+            raise KeyError
+        else:
+            if reco_id not in self._avail[scan_id]:
+                print(f'Invalid Reco ID.\n'
+                      f'Your input: {reco_id}\n'
+                      f'Available Reco IDs: {self._avail[scan_id]}')
 
     def save_nifti(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
                 crop=None):
@@ -1050,6 +1056,8 @@ class BrukerLoader():
         return disk_slice_order
 
     def _get_visu_pars(self, scan_id, reco_id):
+        # test validation of scan_id and reco_id here
+        self._inspect_ids(scan_id, reco_id)
         return self._pvobj.get_visu_pars(scan_id, reco_id)
 
     @staticmethod

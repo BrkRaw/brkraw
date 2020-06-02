@@ -53,8 +53,9 @@ def main():
     nii.add_argument("input", help=input_str, type=str)
     nii.add_argument("-b", "--bids", help=bids_opt, action='store_true')
     nii.add_argument("-o", "--output", help=output_fnm_str, type=str, default=False)
-    nii.add_argument("-r", "--recoid", help="RECO ID", type=int, default=1)
-    nii.add_argument("-s", "--scanid", help="Scan ID", type=str)
+    nii.add_argument("-r", "--recoid", help="RECO ID (default=1), option to specify a particular reco to convert",
+                     type=int, default=1)
+    nii.add_argument("-s", "--scanid", help="Scan ID, option to specify a particular scan to convert.", type=str)
 
     niiall.add_argument("input", help=input_dir_str, type=str)
     niiall.add_argument("-o", "--output", help=output_dir_str, type=str)
@@ -153,15 +154,11 @@ def main():
                     os.mkdir(subj_path)
                 except OSError:
                     pass
-                else:
-                    raise UnexpectedError
                 sess_path = os.path.join(subj_path, 'ses-{}'.format(study._pvobj.study_id))
                 try:
                     os.mkdir(sess_path)
                 except OSError:
                     pass
-                else:
-                    raise UnexpectedError
                 for scan_id, recos in study._pvobj.avail_reco_id.items():
                     method = study._pvobj._method[scan_id].parameters['Method']
                     if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
@@ -176,8 +173,6 @@ def main():
                         os.mkdir(output_path)
                     except OSError:
                         pass
-                    else:
-                        raise UnexpectedError
                     filename = 'sub-{}_ses-{}_{}'.format(study._pvobj.subj_id, study._pvobj.study_id,
                                                          str(scan_id).zfill(2))
                     for reco_id in recos:
@@ -188,7 +183,7 @@ def main():
                             if args.bids:
                                 study.save_json(scan_id, reco_id, output_fname)
                             if re.search('dti', method, re.IGNORECASE):
-                                study.save_bdata(scan_id, reco_id, output_fname)
+                                study.save_bdata(scan_id, output_fname)
                         except Exception as e:
                             print(e)
                 print(f'{raw} is converted...')
