@@ -188,6 +188,10 @@ class MainWindow(tk.Tk):
         else:
             slope = False
         self._raw.save_as(self._scan_id, self._reco_id, filename, dir=self._output, slope=slope)
+        method = self._raw._pvobj._method[self._scan_id].parameters['Method']
+        import re
+        if re.search('dti', method, re.IGNORECASE):
+            self._raw.save_bdata(self._scan_id, filename)
         from tkinter import messagebox
         messagebox.showinfo(title='File conversion',
                             message='{}/{}.nii.gz has been converted'.format(self._output,

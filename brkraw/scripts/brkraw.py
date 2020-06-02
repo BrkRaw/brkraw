@@ -125,7 +125,10 @@ def main():
             try:
                 scan_id = int(scan_id)
                 reco_id = int(reco_id)
+                method = study._pvobj._method[scan_id].parameters['Method']
                 study.save_as(scan_id, reco_id, output_fname, slope=slope)
+                if re.search('dti', method, re.IGNORECASE):
+                    study.save_bdata(scan_id, output_fname)
                 if args.bids:
                     study.save_json(scan_id, reco_id, output_fname)
                 print('NifTi file is generated... [{}]'.format(output_fname))
