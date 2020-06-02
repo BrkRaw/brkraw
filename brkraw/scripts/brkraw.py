@@ -119,8 +119,8 @@ def main():
                 if args.bids:
                     study.save_json(scan_id, reco_id, output_fname)
                 print('NifTi file is generated... [{}]'.format(output_fname))
-            except Exception as e:
-                print('[Warning]::{}'.format(e))
+            except Exception:
+                print('Failed..')
         else:
             for scan_id, recos in study._pvobj.avail_reco_id.items():
                 for reco_id in recos:
@@ -131,7 +131,7 @@ def main():
                             study.save_json(scan_id, reco_id, output_fname)
                         print('NifTi file is genetared... [{}]'.format(output_fname))
                     except Exception as e:
-                        print('[Warning]::{}'.format(e))
+                        print('Failed..'.format(e))
 
     elif args.function == 'tonii_all':
         path = args.input
