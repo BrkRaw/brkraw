@@ -34,7 +34,7 @@ def main():
     input_dir_str = "input directory that contains multiple raw Bruker data"
     output_dir_str = "output directory name"
     output_fnm_str = "output filename"
-    bids_opt = "create a JSON file contains metadata according to BIDS recommendation"
+    bids_opt = "create a JSON file contains metadata based on BIDS recommendation"
 
     info = subparsers.add_parser("info", help='Prints out the information of the internal contents in Bruker raw data')
     info.add_argument("input", help=input_str, type=str)
