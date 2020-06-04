@@ -49,25 +49,26 @@ def build_affine_from_orient_info(resol, rmat, pose,
 
     # convert space from image to subject
     # below positions are all reflext human-based position
-    if subj_pose == 'Head_Supine':
-        affine = apply_rotate(affine, rad_z=np.pi)
-    elif subj_pose == 'Head_Prone':
-        pass
-    # From here, not urgent, extra work to determine correction matrix needed.
-    elif subj_pose == 'Head_Left':
-        affine = apply_rotate(affine, rad_z=np.pi/2)
-    elif subj_pose == 'Head_Right':
-        affine = apply_rotate(affine, rad_z=-np.pi/2)
-    elif subj_pose in ['Foot_Supine', 'Tail_Supine']:
-        affine = apply_rotate(affine, rad_x=np.pi)
-    elif subj_pose in ['Foot_Prone', 'Tail_Prone']:
-        affine = apply_rotate(affine, rad_y=np.pi)
-    elif subj_pose in ['Foot_Left', 'Tail_Left']:
-        affine = apply_rotate(affine, rad_y=np.pi, rad_z=np.pi/2)
-    elif subj_pose in ['Foot_Right', 'Tail_Right']:
-        affine = apply_rotate(affine, rad_y=np.pi, rad_z=-np.pi/2)
-    else:  # in case Bruker put additional value for this header
-        raise Exception(ERROR_MESSAGES['NotIntegrated'])
+    # if subj_pose == 'Head_Supine':
+    #     affine = apply_rotate(affine, rad_z=np.pi)
+    # elif subj_pose == 'Head_Prone':
+    #     pass
+    # # From here, not urgent, extra work to determine correction matrix needed.
+    # elif subj_pose == 'Head_Left':
+    #     affine = apply_rotate(affine, rad_z=np.pi/2)
+    # elif subj_pose == 'Head_Right':
+    #     affine = apply_rotate(affine, rad_z=-np.pi/2)
+    # elif subj_pose in ['Foot_Supine', 'Tail_Supine']:
+    #     affine = apply_rotate(affine, rad_x=np.pi)
+    # elif subj_pose in ['Foot_Prone', 'Tail_Prone']:
+    #     pass
+    #     # affine = apply_rotate(affine, rad_y=np.pi)
+    # elif subj_pose in ['Foot_Left', 'Tail_Left']:
+    #     affine = apply_rotate(affine, rad_z=np.pi/2)
+    # elif subj_pose in ['Foot_Right', 'Tail_Right']:
+    #     affine = apply_rotate(affine, rad_z=-np.pi/2)
+    # else:  # in case Bruker put additional value for this header
+    #     raise Exception(ERROR_MESSAGES['NotIntegrated'])
 
     if subj_type != 'Biped':
         # correct subject space if not biped (human or non-human primates)
