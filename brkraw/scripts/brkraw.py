@@ -155,8 +155,8 @@ def main():
             try:
                 scan_id = int(scan_id)
                 reco_id = int(reco_id)
-                method = study._pvobj._method[scan_id].parameters['Method']
                 study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                method = study._pvobj._method[scan_id].parameters['Method']
                 if re.search('dti', method, re.IGNORECASE):
                     study.save_bdata(scan_id, output_fname)
                 if args.bids:
