@@ -304,6 +304,8 @@ def main():
                                             item['Start'] = s
                                             item['End'] = e
                                             df = df.append(item, ignore_index=True)
+                                    elif datatype == 'dwi':
+                                        item['modality'] = 'dwi'
                                     else:
                                         df = df.append(item, ignore_index=True)
         df.to_excel(output, index=None)

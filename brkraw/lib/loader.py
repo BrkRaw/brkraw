@@ -758,7 +758,7 @@ class BrukerLoader():
     @staticmethod
     def _get_bdata(method):
         bval = get_value(method, 'PVM_DwEffBval')
-        bvec = get_value(method, 'PVM_DwGradVec')
+        bvec = get_value(method, 'PVM_DwGradVec').T # to have three rows instead of three columns
         bmat = get_value(method, 'PVM_DwBMat')
         return bval, bvec, bmat
 
