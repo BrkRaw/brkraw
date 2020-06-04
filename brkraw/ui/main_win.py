@@ -187,7 +187,12 @@ class MainWindow(tk.Tk):
             slope = None
         else:
             slope = False
-        self._raw.save_as(self._scan_id, self._reco_id, filename, dir=self._output, slope=slope)
+        if self._ignore_offset:
+            offset = None
+        else:
+            offset = False
+        self._raw.save_as(self._scan_id, self._reco_id, filename,
+                          dir=self._output, slope=slope, offset=offset)
         method = self._raw._pvobj._method[self._scan_id].parameters['Method']
         import re
         if re.search('dti', method, re.IGNORECASE):

@@ -543,7 +543,7 @@ def get_bids_ref_obj(ref_path, row):
     return ref
 
 
-def build_bids_json(dset, row, fname, json_path, slope=False):
+def build_bids_json(dset, row, fname, json_path, slope=False, offset=False):
     import pandas as pd
 
     if pd.notnull(row.Start) or pd.notnull(row.End):
@@ -551,7 +551,7 @@ def build_bids_json(dset, row, fname, json_path, slope=False):
     else:
         crop = None
     if dset.is_multi_echo(row.ScanID, row.RecoID):  # multi_echo
-        nii_objs = dset.get_niftiobj(row.ScanID, row.RecoID, crop=crop, slope=slope)
+        nii_objs = dset.get_niftiobj(row.ScanID, row.RecoID, crop=crop, slope=slope, offset=offset)
         for echo, nii in enumerate(nii_objs):
             fname = f'{fname}_echo-{echo + 1}_{row.modality}'
             output_path = os.path.join(row.Dir, fname)
@@ -562,7 +562,7 @@ def build_bids_json(dset, row, fname, json_path, slope=False):
                                metadata=ref, condition=['me', echo])
     else:
         fname = '{}_{}'.format(fname, row.modality)
-        dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir, crop=crop, slope=slope)
+        dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir, crop=crop, slope=slope, offset=offset)
         if re.search('dwi', row.modality, re.IGNORECASE):
             # DTI parameter (FSL style)
             dset.save_bdata(row.ScanID, fname, dir=row.Dir)

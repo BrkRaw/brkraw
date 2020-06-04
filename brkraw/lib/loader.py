@@ -139,7 +139,7 @@ class BrukerLoader():
             data_off = data_off[0] if is_all_element_same(data_off) else data_off
         return data_slp, data_off
 
-    def get_dataobj(self, scan_id, reco_id, slope=True):
+    def get_dataobj(self, scan_id, reco_id, slope=True, offset=True):
         """ Return dataobj that has 3D(spatial) + extra frame
         Args:
             scan_id: scan id
@@ -155,8 +155,10 @@ class BrukerLoader():
         dataobj = self._get_dataobj(scan_id, reco_id)
         group_id    = fg_info['group_id']
 
+        data_slp, data_off = self._get_dataslp(visu_pars)
+
         if slope:
-            data_slp, data_off = self._get_dataslp(visu_pars)
+            # This option apply the slope to data array directly instead of header
             f = fg_info['frame_size']
             if isinstance(data_slp, list):
                 if f != len(data_slp):
@@ -172,9 +174,30 @@ class BrukerLoader():
                     else:
                         raise UnexpectedError(message='Unexpected frame shape on DTI image;'
                                                       f'{ISSUE_REPORT}')
-                dataobj = (_dataobj * data_slp + data_off).T
+                dataobj = (_dataobj * data_slp).T
             else:
-                dataobj = dataobj * data_slp + data_off
+                dataobj = dataobj * data_slp
+
+        if offset:
+            # This option apply the offset to data array directly instead of header
+            f = fg_info['frame_size']
+            if isinstance(data_off, list):
+                if f != len(data_off):
+                    raise UnexpectedError(message='data_off mismatch;'
+                                                  f'{ISSUE_REPORT}')
+                else:
+                    if dim == 2:
+                        x, y = matrix_size[:2]
+                        _dataobj = dataobj.reshape([f, x * y]).T
+                    elif dim == 3:
+                        x, y, z = matrix_size[:3]
+                        _dataobj = dataobj.reshape([f, x * y * z]).T
+                    else:
+                        raise UnexpectedError(message='Unexpected frame shape on DTI image;'
+                                                      f'{ISSUE_REPORT}')
+                dataobj = (_dataobj + data_off).T
+            else:
+                dataobj = dataobj + data_off
 
         dataobj = dataobj.reshape(matrix_size[::-1]).T
 
@@ -242,7 +265,7 @@ class BrukerLoader():
 
     # methods to dump data into file object
     ## - NifTi1
-    def get_niftiobj(self, scan_id, reco_id, crop=None, slope=False):
+    def get_niftiobj(self, scan_id, reco_id, crop=None, slope=False, offset=False):
         """ return nibabel nifti object
         Args:
             scan_id:
@@ -276,7 +299,7 @@ class BrukerLoader():
                 end = start + num_slices_each_pack[spack_idx]
                 seg_imgobj = imgobj[..., start:end]
                 niiobj = Nifti1Image(seg_imgobj, np.round(affine[spack_idx], decimals=3))
-                niiobj = self._set_nifti_header(niiobj, visu_pars, method, slope=slope)
+                niiobj = self._set_nifti_header(niiobj, visu_pars, method, slope=slope, offset=offset)
                 parser.append(niiobj)
             return parser
         affine = np.round(affine, decimals=3)
@@ -299,7 +322,7 @@ class BrukerLoader():
                         niiobj_ = Nifti1Image(imgobj_[..., crop[0]:crop[1]], affine)
                 else:
                     niiobj_ = Nifti1Image(imgobj_, affine)
-                niiobj_ = self._set_nifti_header(niiobj_, visu_pars, method, slope=slope)
+                niiobj_ = self._set_nifti_header(niiobj_, visu_pars, method, slope=slope, offset=offset)
                 parser.append(niiobj_)
             return parser
         else:
@@ -317,17 +340,17 @@ class BrukerLoader():
                 niiobj = Nifti1Image(imgobj[..., crop[0]:crop[1]], affine)
         else:
             niiobj = Nifti1Image(imgobj, affine)
-        niiobj = self._set_nifti_header(niiobj, visu_pars, method, slope=slope)
+        niiobj = self._set_nifti_header(niiobj, visu_pars, method, slope=slope, offset=offset)
         return niiobj
 
-    def get_sitkimg(self, scan_id, reco_id, slope=True, is_vector=False):
+    def get_sitkimg(self, scan_id, reco_id, slope=True, offset=True, is_vector=False):
         """ return SimpleITK image obejct instead Nibabel NIFTI obj"""
         import SimpleITK as sitk
 
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         method = self._method[scan_id]
         res = self._get_spatial_info(visu_pars)['spatial_resol']
-        dataobj = self.get_dataobj(scan_id, reco_id, slope=slope)
+        dataobj = self.get_dataobj(scan_id, reco_id, slope=slope, offset=offset)
         affine = self._get_affine(visu_pars, method)
 
         if isinstance(affine, list):
@@ -368,10 +391,10 @@ class BrukerLoader():
         imgobj.SetOrigin(origin)
         imgobj.SetSpacing(res[0])
         # header update
-        imgobj = self._set_dicom_header(imgobj, visu_pars, method, slope)
+        imgobj = self._set_dicom_header(imgobj, visu_pars, method, slope, offset)
         return imgobj
 
-    def _set_dicom_header(self, sitk_img, visu_pars, method, slope):
+    def _set_dicom_header(self, sitk_img, visu_pars, method, slope, offset):
         """ TODO: need to update sitk header (DICOM format) """
         return sitk_img
 
@@ -397,8 +420,8 @@ class BrukerLoader():
                 raise ValueError
 
     def save_nifti(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
-                crop=None, slope=False):
-        niiobj = self.get_niftiobj(scan_id, reco_id, crop=crop, slope=slope)
+                crop=None, slope=False, offset=False):
+        niiobj = self.get_niftiobj(scan_id, reco_id, crop=crop, slope=slope, offset=offset)
         if isinstance(niiobj, list):
             for i, nii in enumerate(niiobj):
                 output_path = os.path.join(dir,
@@ -659,7 +682,7 @@ class BrukerLoader():
     # method to parse information of each scan
     # methods of protocol specific
 
-    def _set_nifti_header(self, niiobj, visu_pars, method, slope):
+    def _set_nifti_header(self, niiobj, visu_pars, method, slope, offset):
         slice_info = self._get_slice_info(visu_pars)
         niiobj.header.default_x_flip = False
         temporal_resol = self._get_temp_info(visu_pars)['temporal_resol']
@@ -705,6 +728,12 @@ class BrukerLoader():
             else:
                 if slope is not None:
                     niiobj.header['scl_slope'] = data_slp
+        if not offset:
+            if isinstance(data_off, list):
+                raise InvalidApproach('Invalid offset size;'
+                                      'The vector type scl_offset cannot be set in nifti header.')
+            else:
+                if slope is not None:
                     niiobj.header['scl_inter'] = data_off
         return niiobj
 
@@ -801,7 +830,7 @@ class BrukerLoader():
                         unit          = 'mm',
                         )
 
-    def _get_slice_info(self, visu_pars):
+    def _get_slice_info(self, visu_pars, method=None):
         version = get_value(visu_pars, 'VisuVersion')
         fg_info = self._get_frame_group_info(visu_pars)
         num_slice_packs = None

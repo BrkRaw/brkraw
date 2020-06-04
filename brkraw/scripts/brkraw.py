@@ -49,20 +49,27 @@ def main():
 
     gui.add_argument("-i", "--input", help=input_str, type=str, default=None)
     gui.add_argument("-o", "--output", help=output_dir_str, type=str, default=None)
-    gui.add_argument("--ignore_slope", help='remove slope value from header', action='store_true')
+    gui.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
+    gui.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
+    gui.add_argument("--ignore-rescale", help='remove slope and offset value from header', action='store_true')
 
     nii.add_argument("input", help=input_str, type=str)
     nii.add_argument("-b", "--bids", help=bids_opt, action='store_true')
     nii.add_argument("-o", "--output", help=output_fnm_str, type=str, default=False)
-    nii.add_argument("-r", "--recoid", help="RECO ID (default=1), option to specify a particular reco to convert",
+    nii.add_argument("-r", "--recoid", help="RECO ID (default=1), "
+                                            "option to specify a particular reconstruction id to convert",
                      type=int, default=1)
     nii.add_argument("-s", "--scanid", help="Scan ID, option to specify a particular scan to convert.", type=str)
-    nii.add_argument("--ignore_slope", help='remove slope value from header', action='store_true')
+    nii.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
+    nii.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
+    nii.add_argument("--ignore-rescale", help='remove slope and offset value from header', action='store_true')
 
     niiall.add_argument("input", help=input_dir_str, type=str)
     niiall.add_argument("-o", "--output", help=output_dir_str, type=str)
     niiall.add_argument("-b", "--bids", help=bids_opt, action='store_true')
-    niiall.add_argument("--ignore_slope", help='remove slope value from header', action='store_true')
+    niiall.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
+    niiall.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
+    niiall.add_argument("--ignore-rescale", help='remove slope and offset value from header', action='store_true')
 
     bids_helper.add_argument("input", help=input_dir_str, type=str)
     bids_helper.add_argument("output", help="output BIDS datasheet filename (.xlsx)", type=str)
@@ -73,7 +80,9 @@ def main():
     bids_convert.add_argument("datasheet", help="input BIDS datahseet filename", type=str)
     bids_convert.add_argument("-j", "--json", help="input JSON syntax template filename", type=str, default=False)
     bids_convert.add_argument("-o", "--output", help=output_dir_str, type=str, default=False)
-    bids_convert.add_argument("--ignore_slope", help='remove slope value from header', action='store_true')
+    bids_convert.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
+    bids_convert.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
+    bids_convert.add_argument("--ignore-rescale", help='remove slope and offset value from header', action='store_true')
 
     args = parser.parse_args()
 
@@ -97,8 +106,19 @@ def main():
         root = MainWindow()
         if ipath != None:
             root._path = ipath
-            if args.ignore_slope is True:
+            if not args.ignore_rescale:
+                if args.ignore_slope:
+                    root._ignore_slope = True
+                else:
+                    root._ignore_slope = False
+                if args.ignore_offset:
+                    root._ignore_offset = True
+                else:
+                    root._ignore_offset = False
+            else:
                 root._ignore_slope = True
+                root._ignore_offset = True
+
             root._extend_layout()
             root._load_dataset()
         if opath != None:
@@ -112,10 +132,20 @@ def main():
         scan_id = args.scanid
         reco_id = args.recoid
         study = BrukerLoader(path)
-        if args.ignore_slope:
-            slope = None
+
+        if not args.ignore_rescale:
+            if args.ignore_slope:
+                slope = None
+            else:
+                slope = False
+            if args.ignore_offset:
+                offset = None
+            else:
+                offset = False
         else:
-            slope = False
+            slope = None
+            offset = None
+
         if args.output:
             output = args.output
         else:
@@ -126,7 +156,7 @@ def main():
                 scan_id = int(scan_id)
                 reco_id = int(reco_id)
                 method = study._pvobj._method[scan_id].parameters['Method']
-                study.save_as(scan_id, reco_id, output_fname, slope=slope)
+                study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
                 if re.search('dti', method, re.IGNORECASE):
                     study.save_bdata(scan_id, output_fname)
                 if args.bids:
@@ -139,7 +169,7 @@ def main():
                 for reco_id in recos:
                     output_fname = '{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id)
                     try:
-                        study.save_as(scan_id, reco_id, output_fname, slope=slope)
+                        study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
                         if args.bids:
                             study.save_json(scan_id, reco_id, output_fname)
                         print('NifTi file is genetared... [{}]'.format(output_fname))
@@ -148,10 +178,20 @@ def main():
 
     elif args.function == 'tonii_all':
         path = args.input
-        if args.ignore_slope:
-            slope = None
+
+        if not args.ignore_rescale:
+            if args.ignore_slope:
+                slope = None
+            else:
+                slope = False
+            if args.ignore_offset:
+                offset = None
+            else:
+                offset = False
         else:
-            slope = False
+            slope = None
+            offset = None
+
         from os.path import join as opj, isdir, isfile
         list_of_raw = sorted([d for d in os.listdir(path) if isdir(opj(path, d)) \
                               or (isfile(opj(path, d)) and (('zip' in d) or ('PvDataset' in d)))])
@@ -196,7 +236,7 @@ def main():
                         output_fname = os.path.join(output_path, '{}_reco-{}'.format(filename,
                                                                                      str(reco_id).zfill(2)))
                         try:
-                            study.save_as(scan_id, reco_id, output_fname, slope=slope)
+                            study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
                             if args.bids:
                                 study.save_json(scan_id, reco_id, output_fname)
                             if re.search('dti', method, re.IGNORECASE):
@@ -300,10 +340,19 @@ def main():
         df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str})
         json_fname = args.json
 
-        if args.ignore_slope:
-            slope = None
+        if not args.ignore_rescale:
+            if args.ignore_slope:
+                slope = None
+            else:
+                slope = False
+            if args.ignore_offset:
+                offset = None
+            else:
+                offset = False
         else:
-            slope = False
+            slope = None
+            offset = None
+
         # check if the project is multi-session
         if all(pd.isnull(df['SessID'])):
             # SessID was removed
@@ -430,10 +479,10 @@ def main():
                                                                        'among the scans with the same modality.')
                                         else:
                                             conflict_tested.append(fname)
-                                        build_bids_json(dset, sub_row, fname, json_fname, slope=slope)
+                                        build_bids_json(dset, sub_row, fname, json_fname, slope=slope, offset=offset)
                                 else:
                                     fname = f'{row.FileName}'
-                                    build_bids_json(dset, row, fname, json_fname, slope=slope)
+                                    build_bids_json(dset, row, fname, json_fname, slope=slope, offset=offset)
                                 list_tested_fn.append(temp_fname)
                         print('...Done.')
             except FileNotValidError:
