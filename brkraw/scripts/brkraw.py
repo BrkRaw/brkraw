@@ -51,7 +51,7 @@ def main():
     gui.add_argument("-o", "--output", help=output_dir_str, type=str, default=None)
     gui.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     gui.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
-    gui.add_argument("--ignore-rescale", help='remove slope and offset value from header', action='store_true')
+    gui.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
 
     nii.add_argument("input", help=input_str, type=str)
     nii.add_argument("-b", "--bids", help=bids_opt, action='store_true')
@@ -62,14 +62,14 @@ def main():
     nii.add_argument("-s", "--scanid", help="Scan ID, option to specify a particular scan to convert.", type=str)
     nii.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     nii.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
-    nii.add_argument("--ignore-rescale", help='remove slope and offset value from header', action='store_true')
+    nii.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
 
     niiall.add_argument("input", help=input_dir_str, type=str)
     niiall.add_argument("-o", "--output", help=output_dir_str, type=str)
     niiall.add_argument("-b", "--bids", help=bids_opt, action='store_true')
     niiall.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     niiall.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
-    niiall.add_argument("--ignore-rescale", help='remove slope and offset value from header', action='store_true')
+    niiall.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
 
     bids_helper.add_argument("input", help=input_dir_str, type=str)
     bids_helper.add_argument("output", help="output BIDS datasheet filename (.xlsx)", type=str)
@@ -82,7 +82,7 @@ def main():
     bids_convert.add_argument("-o", "--output", help=output_dir_str, type=str, default=False)
     bids_convert.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     bids_convert.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
-    bids_convert.add_argument("--ignore-rescale", help='remove slope and offset value from header', action='store_true')
+    bids_convert.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
 
     args = parser.parse_args()
 
