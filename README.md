@@ -53,6 +53,7 @@ please visit our [GitPage](https://brkraw.github.io).
 - Drs. Mikael Naveau and Gabriel A. Devenyi: The publisher of 
 [bruker2nifti_qa](https://gitlab.com/naveau/bruker2nifti_qa), the set of data 
 to help benchmark testing of Bruker converter.
+- 
 
 ### License:
 GNU General Public License v3.0
