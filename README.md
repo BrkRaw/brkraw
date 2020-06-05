@@ -62,6 +62,7 @@ GNU General Public License v3.0
 Lee, Sung-Ho, Ban, Woomi, & Shih, Yen-Yu Ian. (2020, June 4). BrkRaw/bruker: BrkRaw v0.3.3 (Version 0.3.3). 
 Zenodo. http://doi.org/10.5281/zenodo.3877179
 
+
 **BibTeX**
 ```
 @software{lee_sung_ho_2020_3877179,
