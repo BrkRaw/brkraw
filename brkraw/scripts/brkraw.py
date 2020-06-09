@@ -309,8 +309,10 @@ def main():
                                             df = df.append(item, ignore_index=True)
                                     elif datatype == 'dwi':
                                         item['modality'] = 'dwi'
+                                        df = df.append(item, ignore_index=True)
                                     else:
                                         df = df.append(item, ignore_index=True)
+
         df.to_excel(output, index=None)
 
         if make_json:
