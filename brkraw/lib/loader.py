@@ -739,6 +739,8 @@ class BrukerLoader():
                 niiobj.header['scl_slope'] = data_slp
             else:
                 niiobj.header['scl_slope'] = 1
+        else:
+            niiobj.header['scl_slope'] = 1
         if not offset:
             if offset is not None:
                 if isinstance(data_off, list):
@@ -747,6 +749,8 @@ class BrukerLoader():
                 niiobj.header['scl_inter'] = data_off
             else:
                 niiobj.header['scl_inter'] = 0
+        else:
+            niiobj.header['scl_inter'] = 0
         return niiobj
 
     # EPI
