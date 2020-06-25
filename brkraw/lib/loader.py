@@ -732,19 +732,21 @@ class BrukerLoader():
         niiobj.header['qform_code'] = 1
         niiobj.header['sform_code'] = 0
         if not slope:
-            if isinstance(data_slp, list):
-                raise InvalidApproach('Invalid slope size;'
-                                      'The vector type scl_slope cannot be set in nifti header.')
+            if slope is not None:
+                if isinstance(data_slp, list):
+                    raise InvalidApproach('Invalid slope size;'
+                                          'The vector type scl_slope cannot be set in nifti header.')
+                niiobj.header['scl_slope'] = data_slp
             else:
-                if slope is not None:
-                    niiobj.header['scl_slope'] = data_slp
+                niiobj.header['scl_slope'] = 1
         if not offset:
-            if isinstance(data_off, list):
-                raise InvalidApproach('Invalid offset size;'
-                                      'The vector type scl_offset cannot be set in nifti header.')
+            if offset is not None:
+                if isinstance(data_off, list):
+                    raise InvalidApproach('Invalid offset size;'
+                                          'The vector type scl_offset cannot be set in nifti header.')
+                niiobj.header['scl_inter'] = data_off
             else:
-                if slope is not None:
-                    niiobj.header['scl_inter'] = data_off
+                niiobj.header['scl_inter'] = 0
         return niiobj
 
     # EPI
