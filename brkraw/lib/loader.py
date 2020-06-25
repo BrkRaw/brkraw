@@ -280,10 +280,20 @@ class BrukerLoader():
         method = self._method[scan_id]
         affine = self._get_affine(visu_pars, method)
         group_id = self._get_frame_group_info(visu_pars)['group_id']
-        if 'FG_DTI' in group_id:
-            # DTI dataset has vector slope
+
+        # if 'FG_DTI' in group_id:
+        #     # DTI dataset has vector slope
+        #     slope = True
+        #     offset = True
+        # Blow condition will cover DTI cases
+
+        data_slp, data_off = self._get_dataslp(visu_pars)
+        if isinstance(data_slp, list) and slope is not None:
             slope = True
-        imgobj = self.get_dataobj(scan_id, reco_id, slope=slope)
+            if isinstance(data_off, list) and offset is not None:
+                offset = True
+
+        imgobj = self.get_dataobj(scan_id, reco_id, slope=slope, offset=offset)
         # dataobj = self._get_dataobj(scan_id, reco_id)
         # shape = self._get_matrix_size(visu_pars, dataobj)
         # imgobj = dataobj.reshape(shape[::-1]).T
