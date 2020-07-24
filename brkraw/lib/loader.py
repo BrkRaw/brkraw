@@ -1014,12 +1014,15 @@ class BrukerLoader():
         orient_info = self._get_orient_info(visu_pars, method)
         slice_orient_map = {0: 'sagital', 1: 'coronal', 2: 'axial'}
         num_slice_packs = slice_info['num_slice_packs']
-        version = get_value(visu_pars, 'VisuVersion')
-        if version == 1:  # PV 5.1 required the position correction
-            subj_pose = orient_info['subject_position']
-        else:             # PV 6.01 does not
-            subj_pose = None
+        subj_pose = orient_info['subject_position']
         subj_type = orient_info['subject_type']
+
+        ## Rollback below changes upon comment on issue #10
+        # version = get_value(visu_pars, 'VisuVersion')
+        # if version == 1:  # PV 5.1 required the position correction
+        #     subj_pose = orient_info['subject_position']
+        # else:             # PV 6.01 does not
+        #     subj_pose = None
 
         if num_slice_packs > 1:
             affine = []
