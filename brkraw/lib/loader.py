@@ -479,6 +479,7 @@ class BrukerLoader():
         for k, v in metadata.items():
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+                # Convert the encoding direction meta data into BIDS format
                 if val is not None:
                     if isinstance(val, int):
                         val = encdir_dic[val]
@@ -487,19 +488,31 @@ class BrukerLoader():
                             if is_all_element_same(val):
                                 val = val[0]
                             else:
-                                raise UnexpectedError('Unexpected phase encoding direction in PV5.1.')
+                                # handling condition of multiple phase encoding direction
+                                updated_val = []
+                                for v in val:
+                                    if isinstance(v, int):
+                                        # in PV 6 if each slice package has distinct phase encoding direction
+                                        updated_val.append(encdir_dic[v])
+                                    else:
+                                        # in PV 5.1, element wise code conversion
+                                        encdirs = encdir_code_converter(v)
+                                        if 'phase_enc' in encdirs:
+                                            pe_idx = encdirs.index('phase_enc')
+                                            updated_val.append(encdir_dic[pe_idx])
+                                        else:
+                                            updated_val.append(None)
+                                val = updated_val
                         elif isinstance(val, str):
-                            pass
+                            # in PV 5.1, single value code conversion
+                            encdirs = encdir_code_converter(val)
+                            if 'phase_enc' in encdirs:
+                                pe_idx = encdirs.index('phase_enc')
+                                val = encdir_dic[pe_idx]
+                            else:
+                                val = None
                         else:
                             raise UnexpectedError('Unexpected phase encoding direction in PV5.1.')
-
-                        encdirs = encdir_code_converter(val)
-                        if 'phase_enc' in encdirs:
-                            pe_idx = encdirs.index('phase_enc')
-                            val = encdir_dic[pe_idx]
-                        else:
-                            val = None
-
             if isinstance(val, np.ndarray):
                 val = val.tolist()
             json_obj[k] = val
