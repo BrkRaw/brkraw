@@ -417,3 +417,28 @@ def mkdir(path):
         os.makedirs(path)
     except:
         raise UnexpectedError
+
+
+# brkraw script
+def set_rescale(args):
+    if not args.ignore_rescale:
+        if args.ignore_slope:
+            slope = None
+        else:
+            slope = False
+        if args.ignore_offset:
+            offset = None
+        else:
+            offset = False
+    else:
+        slope = None
+        offset = None
+    return slope, offset
+
+
+def save_meta_files(study, args, scan_id, reco_id, output_fname):
+    method = study._pvobj._method[scan_id].parameters['Method']
+    if re.search('dti', method, re.IGNORECASE):
+        study.save_bdata(scan_id, output_fname)
+    if args.bids:
+        study.save_json(scan_id, reco_id, output_fname)
