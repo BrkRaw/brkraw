@@ -359,7 +359,11 @@ class BrukerLoader():
 
     def get_sitkimg(self, scan_id, reco_id, slope=True, offset=True, is_vector=False):
         """ return SimpleITK image obejct instead Nibabel NIFTI obj"""
-        import SimpleITK as sitk
+        try:
+            import SimpleITK as sitk
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError('The BrkRaw did not be installed with SimpleITK (optional requirement).\n'
+                                      '\t\t\t\t\t Please install SimpleITK to activate this method.')
 
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         method = self._method[scan_id]
