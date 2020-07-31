@@ -1,7 +1,10 @@
 from shleeh import *
 from shleeh.errors import *
+
+from .orient import build_affine_from_orient_info, reversed_pose_correction, get_origin
 from .pvobj import PvDatasetDir, PvDatasetZip
 from .utils import *
+from .orient import to_matvec
 from .reference import ERROR_MESSAGES, ISSUE_REPORT
 import numpy as np
 import zipfile
@@ -272,6 +275,7 @@ class BrukerLoader():
             reco_id:
             crop:   frame crop range
             slope:  if True, slope correction, else, header update
+            offset: if True, offset correction, else, header update
         Returns:
             nibabel.Nifti1Image
         """

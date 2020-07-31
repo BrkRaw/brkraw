@@ -1,20 +1,13 @@
 # -*- coding: utf-8 -*-
 from shleeh import *
 from shleeh.errors import *
+
+from bruker.brkraw.lib.utils import mkdir
 from .. import BrukerLoader, __version__
 import argparse
 import os, re
 
 _supporting_bids_ver = '1.2.2'
-
-
-def mkdir(path):
-    try:
-        os.stat(path)
-    except FileNotFoundError or OSError:
-        os.makedirs(path)
-    except:
-        raise UnexpectedError
 
 
 def main():
