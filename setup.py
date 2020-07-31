@@ -27,13 +27,15 @@ setup(name='bruker',
       packages=find_packages(),
       install_requires=['shleeh>=0.0.7',
                         'nibabel>=3.0.2',
-                        'SimpleITK>=1.2.4',
                         'numpy>=1.18.0',
                         'pandas>=1.0.0',
                         'pillow>=7.1.1',
                         'tqdm>=4.45.0',
                         'openpyxl>=3.0.3',
                         'xlrd>=1.0.0'],
+      extras_require = {
+          'SimpleITK':  ['SimpleITK>=1.2.4']
+      },
       entry_points={
           'console_scripts': [
               'brkraw=brkraw.scripts.brkraw:main',
