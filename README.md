@@ -1,5 +1,6 @@
 [![DOI](https://zenodo.org/badge/245546149.svg)](https://zenodo.org/badge/latestdoi/245546149)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/BrkRaw/tutorials/master)
 
 ## BrkRaw: A comprehensive tool to access raw Bruker Biospin MRI data
 #### Version: 0.3.4
@@ -30,7 +31,6 @@ and the results showed correct geometry and orientation for all datasets.
 We are still looking for more datasets showing orientation issue, 
 **if you have any shareable dataset, please contact the developer.**
 
-
 ### Website
 For more detail information including installation, usage and examples, 
 please visit our [GitPage](https://brkraw.github.io).
@@ -40,6 +40,7 @@ please visit our [GitPage](https://brkraw.github.io).
 - [Converting dataset into BIDS](https://brkraw.github.io/docs/gs_bids.html)
 - [Python API usage examples](https://brkraw.github.io/docs/ap_parent.html)
 - [GUI](https://brkraw.github.io/docs/gs_gui.html)
+- [Interactive Tutorial](https://mybinder.org/v2/gh/BrkRaw/tutorials/ac95b2c87b05664cb678c5dc1a930641397130ed)
 
 
 ### Credits:
