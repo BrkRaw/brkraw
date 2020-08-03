@@ -165,8 +165,7 @@ class BrukerLoader():
             f = fg_info['frame_size']
             if isinstance(data_slp, list):
                 if f != len(data_slp):
-                    raise UnexpectedError(message='data_slp mismatch;'
-                                                  f'{ISSUE_REPORT}')
+                    raise UnexpectedError(message='data_slp mismatch;{}'.format(ISSUE_REPORT))
                 else:
                     if dim == 2:
                         x, y = matrix_size[:2]
@@ -175,8 +174,7 @@ class BrukerLoader():
                         x, y, z = matrix_size[:3]
                         _dataobj = dataobj.reshape([f, x * y * z]).T
                     else:
-                        raise UnexpectedError(message='Unexpected frame shape on DTI image;'
-                                                      f'{ISSUE_REPORT}')
+                        raise UnexpectedError(message='Unexpected frame shape on DTI image;{}'.format(ISSUE_REPORT))
                 dataobj = (_dataobj * data_slp).T
             else:
                 dataobj = dataobj * data_slp
@@ -186,8 +184,7 @@ class BrukerLoader():
             f = fg_info['frame_size']
             if isinstance(data_off, list):
                 if f != len(data_off):
-                    raise UnexpectedError(message='data_off mismatch;'
-                                                  f'{ISSUE_REPORT}')
+                    raise UnexpectedError(message='data_off mismatch;{}'.format(ISSUE_REPORT))
                 else:
                     if dim == 2:
                         x, y = matrix_size[:2]
@@ -196,8 +193,7 @@ class BrukerLoader():
                         x, y, z = matrix_size[:3]
                         _dataobj = dataobj.reshape([f, x * y * z]).T
                     else:
-                        raise UnexpectedError(message='Unexpected frame shape on DTI image;'
-                                                      f'{ISSUE_REPORT}')
+                        raise UnexpectedError(message='Unexpected frame shape on DTI image;{}'.format(ISSUE_REPORT))
                 dataobj = (_dataobj + data_off).T
             else:
                 dataobj = dataobj + data_off
@@ -231,8 +227,7 @@ class BrukerLoader():
             elif group_id[0] in ['FG_DIFFUSION', 'FG_DTI', 'FG_MOVIE', 'FG_COIL', 'FG_CYCLE', 'FG_COMPLEX']:
                 dataobj = swap_slice_axis(group_id, dataobj)
             else:
-                raise UnexpectedError(message='Unexpected frame group combination;'
-                                              f'{ISSUE_REPORT}')
+                raise UnexpectedError(message='Unexpected frame group combination;{}'.format(ISSUE_REPORT))
         return dataobj
 
     def get_fid(self, scan_id):
@@ -426,15 +421,15 @@ class BrukerLoader():
 
     def _inspect_ids(self, scan_id, reco_id):
         if scan_id not in self._avail.keys():
-            print(f'[Error] Invalid Scan ID.\n'
-                  f'  - Your input: {scan_id}\n'
-                  f'  - Available Scan IDs: {list(self._avail.keys())}')
+            print('[Error] Invalid Scan ID.\n'
+                  '  - Your input: {}\n'
+                  '  - Available Scan IDs: {}'.format(scan_id, list(self._avail.keys())))
             raise ValueError
         else:
             if reco_id not in self._avail[scan_id]:
-                print(f'[Error] Invalid Reco ID.\n'
-                      f'  - Your input: {reco_id}\n'
-                      f'  - Available Reco IDs: {self._avail[scan_id]}')
+                print('[Error] Invalid Reco ID.\n'
+                      '  - Your input: {}\n'
+                      '  - Available Reco IDs: {}'.format(reco_id, self._avail[scan_id]))
                 raise ValueError
 
     def save_nifti(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
@@ -703,10 +698,7 @@ class BrukerLoader():
                         s_resol, s_unit,
                         t_resol, t_unit))
                 else:
-                    lines.append(f'    [{str(reco_id).zfill(2)}] dim: {dim}, {cls}')
-                # except Exception as e:
-                #     print(e)
-                #     print(f'Issue found at {scan_id}')
+                    lines.append('    [{}] dim: {}, {}'.format(str(reco_id).zfill(2), dim, cls))
         lines.append('\n')
         print('\n'.join(lines), file=io_handler)
 
@@ -1056,7 +1048,7 @@ class BrukerLoader():
                 if is_reversed:
                     raise UnexpectedError('Invalid VisuCoreDiskSliceOrder;'
                                           'The multi-slice-packs dataset reversed is not tested data.'
-                                          f'{ISSUE_REPORT}')
+                                          '{}'.format(ISSUE_REPORT))
                 affine.append(build_affine_from_orient_info(resol, rmat, pose,
                                                             subj_pose, subj_type,
                                                             slice_orient))
@@ -1093,8 +1085,7 @@ class BrukerLoader():
                 matrix_size[-1]     = total_num_slices
             else:
                 raise UnexpectedError('Matrix size mismatch with multi-slice-packs dataobj;'
-                                      f'{matrix_size}'
-                                      f'{ISSUE_REPORT}')
+                                      '{}{}'.format(matrix_size, ISSUE_REPORT))
         else:
             matrix_size = list(matrix_size[0])
             if 'FG_SLICE' in fg_info['group_id']:
@@ -1113,8 +1104,9 @@ class BrukerLoader():
             dataobj_shape = dataobj.shape[0]
             if multiply_all(matrix_size) != dataobj_shape:
                 raise UnexpectedError('Matrix size mismatch with dataobj;'
-                                      f'{multiply_all(matrix_size)} != {dataobj_shape}'
-                                      f'{ISSUE_REPORT}')
+                                      '{} != {}{}'.format(multiply_all(matrix_size),
+                                                          dataobj_shape,
+                                                          ISSUE_REPORT))
         return matrix_size
 
     @staticmethod
@@ -1126,8 +1118,7 @@ class BrukerLoader():
         elif _fo == 'disk_reverse_slice_order':
             disk_slice_order = 'reverse'
         else:
-            raise UnexpectedError(f'Invalid VisuCoreDiskSliceOrder:{_fo};'
-                                  f'{ISSUE_REPORT}')
+            raise UnexpectedError('Invalid VisuCoreDiskSliceOrder:{};{}'.format(_fo, ISSUE_REPORT))
         return disk_slice_order
 
     def _get_visu_pars(self, scan_id, reco_id):

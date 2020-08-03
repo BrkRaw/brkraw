@@ -339,8 +339,7 @@ def get_bids_ref_obj(ref_path, row):
             if 'func' in ref_data.keys():
                 for k, v in ref_data['func'].items():
                     if k in ref.keys():
-                        raise InvalidApproach(f'Duplicated key is '
-                                              f'found at func: {k}')
+                        raise InvalidApproach('Duplicated key is found at func: {}'.format(k))
                     else:
                         ref[k] = v
         # the below may not optimal for Bruker system,
@@ -351,8 +350,7 @@ def get_bids_ref_obj(ref_path, row):
             if 'fmap' in ref_data.keys():
                 for k, v in ref_data['fmap'].items():
                     if k in ref.keys():
-                        raise InvalidApproach(f'Duplicated key is '
-                                              f'found at fmap: {k}')
+                        raise InvalidApproach('Duplicated key is found at func: {}'.format(k))
                     else:
                         ref[k] = v
     else:

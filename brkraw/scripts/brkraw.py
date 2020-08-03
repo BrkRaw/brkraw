@@ -141,7 +141,7 @@ def main():
                 save_meta_files(study, args, scan_id, reco_id, output_fname)
                 print('NifTi file is generated... [{}]'.format(output_fname))
             except:
-                print(f'Conversion failed: ScanID:{str(scan_id)}, RecoID:{str(reco_id)}')
+                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
         else:
             for scan_id, recos in study._pvobj.avail_reco_id.items():
                 for reco_id in recos:
@@ -151,18 +151,18 @@ def main():
                         save_meta_files(study, args, scan_id, reco_id, output_fname)
                         print('NifTi file is genetared... [{}]'.format(output_fname))
                     except:
-                        print(f'Conversion failed: ScanID:{str(scan_id)}, RecoID:{str(reco_id)}')
+                        print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
 
     elif args.function == 'tonii_all':
         from os.path import join as opj, isdir, isfile
 
         path = args.input
         slope, offset = set_rescale(args)
-        invalid_error_message = f'[Error] Invalid input path: {path}\n'
-        empty_folder = f'        The input path does not contain any raw data.'
-        wrong_target = f'        The input path indicates raw data itself. \n' \
-                       f'        You must input the parents folder instead of path of the raw data\n' \
-                       f'        If you want to convert single session raw data, use (tonii) instead.'
+        invalid_error_message = '[Error] Invalid input path: {}\n'.format(path)
+        empty_folder = '        The input path does not contain any raw data.'
+        wrong_target = '        The input path indicates raw data itself. \n' \
+                       '        You must input the parents folder instead of path of the raw data\n' \
+                       '        If you want to convert single session raw data, use (tonii) instead.'
 
         list_of_raw = sorted([d for d in os.listdir(path) if isdir(opj(path, d)) \
                               or (isfile(opj(path, d)) and (('zip' in d) or ('PvDataset' in d)))])
@@ -208,12 +208,12 @@ def main():
                                 study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
                                 save_meta_files(study, args, scan_id, reco_id, output_fname)
                             except:
-                                print(f'Conversion failed: ScanID:{str(scan_id)}, RecoID:{str(reco_id)}')
-                    print(f'{raw} is converted...')
+                                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+                    print('{} is converted...'.format(raw))
                 else:
-                    print(f'{raw} does not contains any scan data to convert...')
+                    print('{} does not contains any scan data to convert...'.format(raw))
             else:
-                print(f'{raw} is not PvDataset.')
+                print('{} is not PvDataset.'.format(raw))
 
     elif args.function == 'bids_helper':
         import pandas as pd
@@ -223,7 +223,7 @@ def main():
         make_json = args.json
         if not ds_output.endswith('.xlsx'):
             # to prevent pandas ValueError in case user does not provide valid file extension.
-            output = f'{ds_output}.xlsx'
+            output = '{}.xlsx'.format(ds_output)
         else:
             output = ds_output
 
@@ -282,9 +282,9 @@ def main():
 
         if make_json:
             fname = output[:-5]
-            json_fname = f'{fname}.json'
-            print(f'Creating JSON syntax template for parsing the BIDS required metadata '
-                  f'(BIDS v{_supporting_bids_ver}): {json_fname}')
+            json_fname = '{}.json'.format(fname)
+            print('Creating JSON syntax template for parsing the BIDS required metadata '
+                  '(BIDS v{}): {}'.format(_supporting_bids_ver, json_fname))
             with open(json_fname, 'w') as f:
                 import json
                 from ..lib.reference import COMMON_META_REF, FMRI_META_REF, FIELDMAP_META_REF
@@ -340,7 +340,8 @@ def main():
                 json.dump(DATASET_DESC_REF, f, indent=4)
         if not os.path.exists(readme):
             with open(os.path.join(root_path, readme), 'w') as f:
-                f.write(f'This dataset has been converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.\n')
+                f.write('This dataset has been converted using BrkRaw (v{})'
+                        'at {}.\n'.format(json_fname, datetime.datetime.now()))
                 f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
 
         print('Inspect input BIDS datasheet...')
@@ -357,22 +358,22 @@ def main():
 
                     if len(filtered_dset):
                         subj_id = list(set(filtered_dset['SubjID']))[0]
-                        subj_code = f'sub-{subj_id}'
+                        subj_code = 'sub-{}'.format(subj_id)
 
                         for i, row in filtered_dset.iterrows():
                             if multi_session:
                                 # If multi-session, make session dir
-                                sess_code = f'ses-{row.SessID}'
+                                sess_code = 'ses-{}'.format(row.SessID)
                                 subj_path = os.path.join(root_path, subj_code)
                                 mkdir(subj_path)
                                 subj_path = os.path.join(subj_path, sess_code)
                                 mkdir(subj_path)
                                 # add session info to filename as well
-                                fname = f'{subj_code}_{sess_code}'
+                                fname = '{}_{}'.format(subj_code, sess_code)
                             else:
                                 subj_path = os.path.join(root_path, subj_code)
                                 mkdir(subj_path)
-                                fname = f'{subj_code}'
+                                fname = '{}'.format(subj_code)
 
                             datatype = row.DataType
                             dtype_path = os.path.join(subj_path, datatype)
@@ -380,19 +381,19 @@ def main():
 
                             if pd.notnull(row.task):
                                 if bids_validation(df, i, 'task', row.task, 10):
-                                    fname = f'{fname}_task-{row.task}'
+                                    fname = '{}_task-{}'.format(fname, row.task)
                             if pd.notnull(row.acq):
                                 if bids_validation(df, i, 'acq', row.acq, 10):
-                                    fname = f'{fname}_acq-{row.acq}'
+                                    fname = '{}_acq-{}'.format(fname, row.acq)
                             if pd.notnull(row.ce):
                                 if bids_validation(df, i, 'ce', row.ce, 5):
-                                    fname = f'{fname}_ce-{row.ce}'
+                                    fname = '{}_ce-{}'.format(fname, row.ce)
                             if pd.notnull(row.dir):
                                 if bids_validation(df, i, 'dir', row.dir, 2):
-                                    fname = f'{fname}_dir-{row.dir}'
+                                    fname = '{}_dir-{}'.format(fname, row.dir)
                             if pd.notnull(row.rec):
                                 if bids_validation(df, i, 'rec', row.rec, 2):
-                                    fname = f'{fname}_rec-{row.rec}'
+                                    fname = '{}_rec-{}'.format(fname, row.rec)
                             filtered_dset.loc[i, 'FileName'] = fname
                             filtered_dset.loc[i, 'Dir'] = dtype_path
                             if pd.isnull(row.modality):
@@ -412,10 +413,10 @@ def main():
 
                         list_tested_fn = []
                         # Converting data according to the updated sheet
-                        print(f'Converting {dname}...')
+                        print('Converting {}...'.format(dname))
 
                         for i, row in filtered_dset.iterrows():
-                            temp_fname = f'{row.FileName}_{row.modality}'
+                            temp_fname = '{}_{}'.format(row.FileName, row.modality)
                             if temp_fname not in list_tested_fn:
                                 # filter the DataFrame that has same filename (updated without run)
                                 fn_filter = filtered_dset.loc[:, 'FileName'].isin([row.FileName])
@@ -429,19 +430,20 @@ def main():
                                     conflict_tested = []
                                     for j, sub_row in md_df.iterrows():
                                         if pd.isnull(sub_row.run):
-                                            fname = f'{sub_row.FileName}_run-{str(j+1).zfill(2)}'
+                                            fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                         else:
                                             _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                            fname = f'{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
+                                            fname = '{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
                                         if fname in conflict_tested:
-                                            raise ValueConflictInField(f'ScanID:[{sub_row.ScanID}] Conflict error. '
+                                            raise ValueConflictInField('ScanID:[{}] Conflict error. '
                                                                        'The [run] index value must be unique '
-                                                                       'among the scans with the same modality.')
+                                                                       'among the scans with the same modality.'
+                                                                       ''.format(sub_row.ScanID))
                                         else:
                                             conflict_tested.append(fname)
                                         build_bids_json(dset, sub_row, fname, json_fname, slope=slope, offset=offset)
                                 else:
-                                    fname = f'{row.FileName}'
+                                    fname = '{}'.format(row.FileName)
                                     build_bids_json(dset, row, fname, json_fname, slope=slope, offset=offset)
                                 list_tested_fn.append(temp_fname)
                         print('...Done.')
