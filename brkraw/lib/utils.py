@@ -368,9 +368,9 @@ def build_bids_json(dset, row, fname, json_path, slope=False, offset=False):
     if dset.is_multi_echo(row.ScanID, row.RecoID):  # multi_echo
         nii_objs = dset.get_niftiobj(row.ScanID, row.RecoID, crop=crop, slope=slope, offset=offset)
         for echo, nii in enumerate(nii_objs):
-            fname = f'{fname}_echo-{echo + 1}_{row.modality}'
+            fname = '{}_echo-{}_{}'.format(fname, echo + 1, row.modality)
             output_path = os.path.join(row.Dir, fname)
-            nii.to_filename(f'{output_path}.nii.gz')
+            nii.to_filename('{}.nii.gz'.format(output_path))
             if json_path:
                 ref = get_bids_ref_obj(json_path, row)
                 dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir,
