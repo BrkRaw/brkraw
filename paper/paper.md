@@ -13,6 +13,12 @@ authors:
     affiliation: "1, 2, 3"
   - name: Woomi Ban
     affiliation: "1, 3"
+  - name: Jaiden Dumas
+    orcid: 0000-0002-1411-1954
+    affiliation: "1, 4"
+  - name: Gabriel A. Devenyi
+    orcid: 0000-0002-7766-1187
+    affiliation: "5, 6"
   - name: Yen-Yu Ian Shih
     orcid: 0000-0001-6529-911X
     affiliation: "1, 2, 3"
@@ -23,6 +29,12 @@ affiliations:
    index: 2
  - name: Biomedical Research Imaging Center(BRIC), University of North Carolina at Chapel Hill
    index: 3
+ - name: Quantitative Biology track, Department of Biology, University of North Carolina at Chapel Hill
+   index: 4
+ - name: Cerebral Imaging Center, Douglas Mental Health University Institute.
+   index: 5
+ - name: Department of Psychiatry, McGill University
+   index: 6
 date: 22 April 2020
 bibliography: paper.bib
 ---
