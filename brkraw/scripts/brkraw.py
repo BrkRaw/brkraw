@@ -1,20 +1,13 @@
 # -*- coding: utf-8 -*-
 from shleeh import *
 from shleeh.errors import *
+
 from .. import BrukerLoader, __version__
+from ..lib.utils import set_rescale, save_meta_files, mkdir
 import argparse
 import os, re
 
 _supporting_bids_ver = '1.2.2'
-
-
-def mkdir(path):
-    try:
-        os.stat(path)
-    except FileNotFoundError or OSError:
-        os.makedirs(path)
-    except:
-        raise UnexpectedError
 
 
 def main():
@@ -82,7 +75,8 @@ def main():
     bids_convert.add_argument("-o", "--output", help=output_dir_str, type=str, default=False)
     bids_convert.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     bids_convert.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
-    bids_convert.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
+    bids_convert.add_argument("--ignore-rescale", help='remove slope and offset values from header',
+                              action='store_true')
 
     args = parser.parse_args()
 
@@ -132,19 +126,7 @@ def main():
         scan_id = args.scanid
         reco_id = args.recoid
         study = BrukerLoader(path)
-
-        if not args.ignore_rescale:
-            if args.ignore_slope:
-                slope = None
-            else:
-                slope = False
-            if args.ignore_offset:
-                offset = None
-            else:
-                offset = False
-        else:
-            slope = None
-            offset = None
+        slope, offset = set_rescale(args)
 
         if args.output:
             output = args.output
@@ -156,99 +138,82 @@ def main():
                 scan_id = int(scan_id)
                 reco_id = int(reco_id)
                 study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                method = study._pvobj._method[scan_id].parameters['Method']
-                if re.search('dti', method, re.IGNORECASE):
-                    study.save_bdata(scan_id, output_fname)
-                if args.bids:
-                    study.save_json(scan_id, reco_id, output_fname)
+                save_meta_files(study, args, scan_id, reco_id, output_fname)
                 print('NifTi file is generated... [{}]'.format(output_fname))
-            except Exception:
-                print('Failed..')
+            except:
+                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
         else:
             for scan_id, recos in study._pvobj.avail_reco_id.items():
                 for reco_id in recos:
                     output_fname = '{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id)
                     try:
                         study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                        method = study._pvobj._method[scan_id].parameters['Method']
-                        if re.search('dti', method, re.IGNORECASE):
-                            study.save_bdata(scan_id, output_fname)
-                        if args.bids:
-                            study.save_json(scan_id, reco_id, output_fname)
+                        save_meta_files(study, args, scan_id, reco_id, output_fname)
                         print('NifTi file is genetared... [{}]'.format(output_fname))
-                    except Exception as e:
-                        print('Failed..'.format(e))
+                    except:
+                        print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
 
     elif args.function == 'tonii_all':
-        path = args.input
-
-        if not args.ignore_rescale:
-            if args.ignore_slope:
-                slope = None
-            else:
-                slope = False
-            if args.ignore_offset:
-                offset = None
-            else:
-                offset = False
-        else:
-            slope = None
-            offset = None
-
         from os.path import join as opj, isdir, isfile
+
+        path = args.input
+        slope, offset = set_rescale(args)
+        invalid_error_message = '[Error] Invalid input path: {}\n'.format(path)
+        empty_folder = '        The input path does not contain any raw data.'
+        wrong_target = '        The input path indicates raw data itself. \n' \
+                       '        You must input the parents folder instead of path of the raw data\n' \
+                       '        If you want to convert single session raw data, use (tonii) instead.'
+
         list_of_raw = sorted([d for d in os.listdir(path) if isdir(opj(path, d)) \
                               or (isfile(opj(path, d)) and (('zip' in d) or ('PvDataset' in d)))])
+        if not len(list_of_raw):
+            # raise error with message if the folder is empty (or does not contains any PvDataset)
+            print(invalid_error_message, empty_folder)
+            raise InvalidApproach(invalid_error_message)
+        if not BrukerLoader(path).is_pvdataset:
+            # raise error if the input path is identified as PvDataset
+            print(invalid_error_message, wrong_target)
+            raise InvalidApproach(invalid_error_message)
+
         base_path = args.output
         if not base_path:
             base_path = 'Data'
-        try:
-            os.mkdir(base_path)
-        except:
-            pass
+        mkdir(base_path)
         for raw in list_of_raw:
             sub_path = os.path.join(path, raw)
             study = BrukerLoader(sub_path)
-            if len(study._pvobj.avail_scan_id):
-                subj_path = os.path.join(base_path, 'sub-{}'.format(study._pvobj.subj_id))
-                try:
-                    os.mkdir(subj_path)
-                except OSError:
-                    pass
-                sess_path = os.path.join(subj_path, 'ses-{}'.format(study._pvobj.study_id))
-                try:
-                    os.mkdir(sess_path)
-                except OSError:
-                    pass
-                for scan_id, recos in study._pvobj.avail_reco_id.items():
-                    method = study._pvobj._method[scan_id].parameters['Method']
-                    if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
-                        output_path = os.path.join(sess_path, 'func')
-                    elif re.search('dti', method, re.IGNORECASE):
-                        output_path = os.path.join(sess_path, 'dwi')
-                    elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
-                        output_path = os.path.join(sess_path, 'anat')
-                    else:
-                        output_path = os.path.join(sess_path, 'etc')
-                    try:
-                        os.mkdir(output_path)
-                    except OSError:
-                        pass
-                    filename = 'sub-{}_ses-{}_{}'.format(study._pvobj.subj_id, study._pvobj.study_id,
-                                                         str(scan_id).zfill(2))
-                    for reco_id in recos:
-                        output_fname = os.path.join(output_path, '{}_reco-{}'.format(filename,
-                                                                                     str(reco_id).zfill(2)))
-                        try:
-                            study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                            if args.bids:
-                                study.save_json(scan_id, reco_id, output_fname)
-                            if re.search('dti', method, re.IGNORECASE):
-                                study.save_bdata(scan_id, output_fname)
-                        except Exception as e:
-                            print(e)
-                print(f'{raw} is converted...')
+            if study.is_pvdataset:
+                if len(study._pvobj.avail_scan_id):
+                    subj_path = os.path.join(base_path, 'sub-{}'.format(study._pvobj.subj_id))
+                    mkdir(subj_path)
+                    sess_path = os.path.join(subj_path, 'ses-{}'.format(study._pvobj.study_id))
+                    mkdir(sess_path)
+                    for scan_id, recos in study._pvobj.avail_reco_id.items():
+                        method = study._pvobj._method[scan_id].parameters['Method']
+                        if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+                            output_path = os.path.join(sess_path, 'func')
+                        elif re.search('dti', method, re.IGNORECASE):
+                            output_path = os.path.join(sess_path, 'dwi')
+                        elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
+                            output_path = os.path.join(sess_path, 'anat')
+                        else:
+                            output_path = os.path.join(sess_path, 'etc')
+                        mkdir(output_path)
+                        filename = 'sub-{}_ses-{}_{}'.format(study._pvobj.subj_id, study._pvobj.study_id,
+                                                             str(scan_id).zfill(2))
+                        for reco_id in recos:
+                            output_fname = os.path.join(output_path, '{}_reco-{}'.format(filename,
+                                                                                         str(reco_id).zfill(2)))
+                            try:
+                                study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                                save_meta_files(study, args, scan_id, reco_id, output_fname)
+                            except:
+                                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+                    print('{} is converted...'.format(raw))
+                else:
+                    print('{} does not contains any scan data to convert...'.format(raw))
             else:
-                print(f'{raw} is empty...')
+                print('{} is not PvDataset.'.format(raw))
 
     elif args.function == 'bids_helper':
         import pandas as pd
@@ -258,7 +223,7 @@ def main():
         make_json = args.json
         if not ds_output.endswith('.xlsx'):
             # to prevent pandas ValueError in case user does not provide valid file extension.
-            output = f'{ds_output}.xlsx'
+            output = '{}.xlsx'.format(ds_output)
         else:
             output = ds_output
 
@@ -317,9 +282,9 @@ def main():
 
         if make_json:
             fname = output[:-5]
-            json_fname = f'{fname}.json'
-            print(f'Creating JSON syntax template for parsing the BIDS required metadata '
-                  f'(BIDS v{_supporting_bids_ver}): {json_fname}')
+            json_fname = '{}.json'.format(fname)
+            print('Creating JSON syntax template for parsing the BIDS required metadata '
+                  '(BIDS v{}): {}'.format(_supporting_bids_ver, json_fname))
             with open(json_fname, 'w') as f:
                 import json
                 from ..lib.reference import COMMON_META_REF, FMRI_META_REF, FIELDMAP_META_REF
@@ -346,19 +311,7 @@ def main():
         output = args.output
         df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str})
         json_fname = args.json
-
-        if not args.ignore_rescale:
-            if args.ignore_slope:
-                slope = None
-            else:
-                slope = False
-            if args.ignore_offset:
-                offset = None
-            else:
-                offset = False
-        else:
-            slope = None
-            offset = None
+        slope, offset = set_rescale(args)
 
         # check if the project is multi-session
         if all(pd.isnull(df['SessID'])):
@@ -387,7 +340,8 @@ def main():
                 json.dump(DATASET_DESC_REF, f, indent=4)
         if not os.path.exists(readme):
             with open(os.path.join(root_path, readme), 'w') as f:
-                f.write(f'This dataset has been converted using BrkRaw (v{__version__}) at {datetime.datetime.now()}.\n')
+                f.write('This dataset has been converted using BrkRaw (v{})'
+                        'at {}.\n'.format(json_fname, datetime.datetime.now()))
                 f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
 
         print('Inspect input BIDS datasheet...')
@@ -404,22 +358,22 @@ def main():
 
                     if len(filtered_dset):
                         subj_id = list(set(filtered_dset['SubjID']))[0]
-                        subj_code = f'sub-{subj_id}'
+                        subj_code = 'sub-{}'.format(subj_id)
 
                         for i, row in filtered_dset.iterrows():
                             if multi_session:
                                 # If multi-session, make session dir
-                                sess_code = f'ses-{row.SessID}'
+                                sess_code = 'ses-{}'.format(row.SessID)
                                 subj_path = os.path.join(root_path, subj_code)
                                 mkdir(subj_path)
                                 subj_path = os.path.join(subj_path, sess_code)
                                 mkdir(subj_path)
                                 # add session info to filename as well
-                                fname = f'{subj_code}_{sess_code}'
+                                fname = '{}_{}'.format(subj_code, sess_code)
                             else:
                                 subj_path = os.path.join(root_path, subj_code)
                                 mkdir(subj_path)
-                                fname = f'{subj_code}'
+                                fname = '{}'.format(subj_code)
 
                             datatype = row.DataType
                             dtype_path = os.path.join(subj_path, datatype)
@@ -427,19 +381,19 @@ def main():
 
                             if pd.notnull(row.task):
                                 if bids_validation(df, i, 'task', row.task, 10):
-                                    fname = f'{fname}_task-{row.task}'
+                                    fname = '{}_task-{}'.format(fname, row.task)
                             if pd.notnull(row.acq):
                                 if bids_validation(df, i, 'acq', row.acq, 10):
-                                    fname = f'{fname}_acq-{row.acq}'
+                                    fname = '{}_acq-{}'.format(fname, row.acq)
                             if pd.notnull(row.ce):
                                 if bids_validation(df, i, 'ce', row.ce, 5):
-                                    fname = f'{fname}_ce-{row.ce}'
+                                    fname = '{}_ce-{}'.format(fname, row.ce)
                             if pd.notnull(row.dir):
                                 if bids_validation(df, i, 'dir', row.dir, 2):
-                                    fname = f'{fname}_dir-{row.dir}'
+                                    fname = '{}_dir-{}'.format(fname, row.dir)
                             if pd.notnull(row.rec):
                                 if bids_validation(df, i, 'rec', row.rec, 2):
-                                    fname = f'{fname}_rec-{row.rec}'
+                                    fname = '{}_rec-{}'.format(fname, row.rec)
                             filtered_dset.loc[i, 'FileName'] = fname
                             filtered_dset.loc[i, 'Dir'] = dtype_path
                             if pd.isnull(row.modality):
@@ -459,10 +413,10 @@ def main():
 
                         list_tested_fn = []
                         # Converting data according to the updated sheet
-                        print(f'Converting {dname}...')
+                        print('Converting {}...'.format(dname))
 
                         for i, row in filtered_dset.iterrows():
-                            temp_fname = f'{row.FileName}_{row.modality}'
+                            temp_fname = '{}_{}'.format(row.FileName, row.modality)
                             if temp_fname not in list_tested_fn:
                                 # filter the DataFrame that has same filename (updated without run)
                                 fn_filter = filtered_dset.loc[:, 'FileName'].isin([row.FileName])
@@ -476,19 +430,20 @@ def main():
                                     conflict_tested = []
                                     for j, sub_row in md_df.iterrows():
                                         if pd.isnull(sub_row.run):
-                                            fname = f'{sub_row.FileName}_run-{str(j+1).zfill(2)}'
+                                            fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                         else:
                                             _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                            fname = f'{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
+                                            fname = '{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
                                         if fname in conflict_tested:
-                                            raise ValueConflictInField(f'ScanID:[{sub_row.ScanID}] Conflict error. '
+                                            raise ValueConflictInField('ScanID:[{}] Conflict error. '
                                                                        'The [run] index value must be unique '
-                                                                       'among the scans with the same modality.')
+                                                                       'among the scans with the same modality.'
+                                                                       ''.format(sub_row.ScanID))
                                         else:
                                             conflict_tested.append(fname)
                                         build_bids_json(dset, sub_row, fname, json_fname, slope=slope, offset=offset)
                                 else:
-                                    fname = f'{row.FileName}'
+                                    fname = '{}'.format(row.FileName)
                                     build_bids_json(dset, row, fname, json_fname, slope=slope, offset=offset)
                                 list_tested_fn.append(temp_fname)
                         print('...Done.')

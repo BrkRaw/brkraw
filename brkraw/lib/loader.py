@@ -1,7 +1,10 @@
 from shleeh import *
 from shleeh.errors import *
+
+from .orient import build_affine_from_orient_info, reversed_pose_correction, get_origin
 from .pvobj import PvDatasetDir, PvDatasetZip
 from .utils import *
+from .orient import to_matvec
 from .reference import ERROR_MESSAGES, ISSUE_REPORT
 import numpy as np
 import zipfile
@@ -162,8 +165,7 @@ class BrukerLoader():
             f = fg_info['frame_size']
             if isinstance(data_slp, list):
                 if f != len(data_slp):
-                    raise UnexpectedError(message='data_slp mismatch;'
-                                                  f'{ISSUE_REPORT}')
+                    raise UnexpectedError(message='data_slp mismatch;{}'.format(ISSUE_REPORT))
                 else:
                     if dim == 2:
                         x, y = matrix_size[:2]
@@ -172,8 +174,7 @@ class BrukerLoader():
                         x, y, z = matrix_size[:3]
                         _dataobj = dataobj.reshape([f, x * y * z]).T
                     else:
-                        raise UnexpectedError(message='Unexpected frame shape on DTI image;'
-                                                      f'{ISSUE_REPORT}')
+                        raise UnexpectedError(message='Unexpected frame shape on DTI image;{}'.format(ISSUE_REPORT))
                 dataobj = (_dataobj * data_slp).T
             else:
                 dataobj = dataobj * data_slp
@@ -183,8 +184,7 @@ class BrukerLoader():
             f = fg_info['frame_size']
             if isinstance(data_off, list):
                 if f != len(data_off):
-                    raise UnexpectedError(message='data_off mismatch;'
-                                                  f'{ISSUE_REPORT}')
+                    raise UnexpectedError(message='data_off mismatch;{}'.format(ISSUE_REPORT))
                 else:
                     if dim == 2:
                         x, y = matrix_size[:2]
@@ -193,8 +193,7 @@ class BrukerLoader():
                         x, y, z = matrix_size[:3]
                         _dataobj = dataobj.reshape([f, x * y * z]).T
                     else:
-                        raise UnexpectedError(message='Unexpected frame shape on DTI image;'
-                                                      f'{ISSUE_REPORT}')
+                        raise UnexpectedError(message='Unexpected frame shape on DTI image;{}'.format(ISSUE_REPORT))
                 dataobj = (_dataobj + data_off).T
             else:
                 dataobj = dataobj + data_off
@@ -228,8 +227,7 @@ class BrukerLoader():
             elif group_id[0] in ['FG_DIFFUSION', 'FG_DTI', 'FG_MOVIE', 'FG_COIL', 'FG_CYCLE', 'FG_COMPLEX']:
                 dataobj = swap_slice_axis(group_id, dataobj)
             else:
-                raise UnexpectedError(message='Unexpected frame group combination;'
-                                              f'{ISSUE_REPORT}')
+                raise UnexpectedError(message='Unexpected frame group combination;{}'.format(ISSUE_REPORT))
         return dataobj
 
     def get_fid(self, scan_id):
@@ -272,6 +270,7 @@ class BrukerLoader():
             reco_id:
             crop:   frame crop range
             slope:  if True, slope correction, else, header update
+            offset: if True, offset correction, else, header update
         Returns:
             nibabel.Nifti1Image
         """
@@ -280,10 +279,20 @@ class BrukerLoader():
         method = self._method[scan_id]
         affine = self._get_affine(visu_pars, method)
         group_id = self._get_frame_group_info(visu_pars)['group_id']
-        if 'FG_DTI' in group_id:
-            # DTI dataset has vector slope
+
+        # if 'FG_DTI' in group_id:
+        #     # DTI dataset has vector slope
+        #     slope = True
+        #     offset = True
+        # Blow condition will cover DTI cases
+
+        data_slp, data_off = self._get_dataslp(visu_pars)
+        if isinstance(data_slp, list) and slope is not None:
             slope = True
-        imgobj = self.get_dataobj(scan_id, reco_id, slope=slope)
+            if isinstance(data_off, list) and offset is not None:
+                offset = True
+
+        imgobj = self.get_dataobj(scan_id, reco_id, slope=slope, offset=offset)
         # dataobj = self._get_dataobj(scan_id, reco_id)
         # shape = self._get_matrix_size(visu_pars, dataobj)
         # imgobj = dataobj.reshape(shape[::-1]).T
@@ -345,7 +354,11 @@ class BrukerLoader():
 
     def get_sitkimg(self, scan_id, reco_id, slope=True, offset=True, is_vector=False):
         """ return SimpleITK image obejct instead Nibabel NIFTI obj"""
-        import SimpleITK as sitk
+        try:
+            import SimpleITK as sitk
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError('The BrkRaw did not be installed with SimpleITK (optional requirement).\n'
+                                      '\t\t\t\t\t Please install SimpleITK to activate this method.')
 
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         method = self._method[scan_id]
@@ -408,15 +421,15 @@ class BrukerLoader():
 
     def _inspect_ids(self, scan_id, reco_id):
         if scan_id not in self._avail.keys():
-            print(f'[Error] Invalid Scan ID.\n'
-                  f'  - Your input: {scan_id}\n'
-                  f'  - Available Scan IDs: {list(self._avail.keys())}')
+            print('[Error] Invalid Scan ID.\n'
+                  '  - Your input: {}\n'
+                  '  - Available Scan IDs: {}'.format(scan_id, list(self._avail.keys())))
             raise ValueError
         else:
             if reco_id not in self._avail[scan_id]:
-                print(f'[Error] Invalid Reco ID.\n'
-                      f'  - Your input: {reco_id}\n'
-                      f'  - Available Reco IDs: {self._avail[scan_id]}')
+                print('[Error] Invalid Reco ID.\n'
+                      '  - Your input: {}\n'
+                      '  - Available Reco IDs: {}'.format(reco_id, self._avail[scan_id]))
                 raise ValueError
 
     def save_nifti(self, scan_id, reco_id, filename, dir='./', ext='nii.gz',
@@ -469,6 +482,7 @@ class BrukerLoader():
         for k, v in metadata.items():
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
+                # Convert the encoding direction meta data into BIDS format
                 if val is not None:
                     if isinstance(val, int):
                         val = encdir_dic[val]
@@ -477,19 +491,31 @@ class BrukerLoader():
                             if is_all_element_same(val):
                                 val = val[0]
                             else:
-                                raise UnexpectedError('Unexpected phase encoding direction in PV5.1.')
+                                # handling condition of multiple phase encoding direction
+                                updated_val = []
+                                for v in val:
+                                    if isinstance(v, int):
+                                        # in PV 6 if each slice package has distinct phase encoding direction
+                                        updated_val.append(encdir_dic[v])
+                                    else:
+                                        # in PV 5.1, element wise code conversion
+                                        encdirs = encdir_code_converter(v)
+                                        if 'phase_enc' in encdirs:
+                                            pe_idx = encdirs.index('phase_enc')
+                                            updated_val.append(encdir_dic[pe_idx])
+                                        else:
+                                            updated_val.append(None)
+                                val = updated_val
                         elif isinstance(val, str):
-                            pass
+                            # in PV 5.1, single value code conversion
+                            encdirs = encdir_code_converter(val)
+                            if 'phase_enc' in encdirs:
+                                pe_idx = encdirs.index('phase_enc')
+                                val = encdir_dic[pe_idx]
+                            else:
+                                val = None
                         else:
                             raise UnexpectedError('Unexpected phase encoding direction in PV5.1.')
-
-                        encdirs = encdir_code_converter(val)
-                        if 'phase_enc' in encdirs:
-                            pe_idx = encdirs.index('phase_enc')
-                            val = encdir_dic[pe_idx]
-                        else:
-                            val = None
-
             if isinstance(val, np.ndarray):
                 val = val.tolist()
             json_obj[k] = val
@@ -672,10 +698,7 @@ class BrukerLoader():
                         s_resol, s_unit,
                         t_resol, t_unit))
                 else:
-                    lines.append(f'    [{str(reco_id).zfill(2)}] dim: {dim}, {cls}')
-                # except Exception as e:
-                #     print(e)
-                #     print(f'Issue found at {scan_id}')
+                    lines.append('    [{}] dim: {}, {}'.format(str(reco_id).zfill(2), dim, cls))
         lines.append('\n')
         print('\n'.join(lines), file=io_handler)
 
@@ -722,19 +745,25 @@ class BrukerLoader():
         niiobj.header['qform_code'] = 1
         niiobj.header['sform_code'] = 0
         if not slope:
-            if isinstance(data_slp, list):
-                raise InvalidApproach('Invalid slope size;'
-                                      'The vector type scl_slope cannot be set in nifti header.')
+            if slope is not None:
+                if isinstance(data_slp, list):
+                    raise InvalidApproach('Invalid slope size;'
+                                          'The vector type scl_slope cannot be set in nifti header.')
+                niiobj.header['scl_slope'] = data_slp
             else:
-                if slope is not None:
-                    niiobj.header['scl_slope'] = data_slp
+                niiobj.header['scl_slope'] = 1
+        else:
+            niiobj.header['scl_slope'] = 1
         if not offset:
-            if isinstance(data_off, list):
-                raise InvalidApproach('Invalid offset size;'
-                                      'The vector type scl_offset cannot be set in nifti header.')
+            if offset is not None:
+                if isinstance(data_off, list):
+                    raise InvalidApproach('Invalid offset size;'
+                                          'The vector type scl_offset cannot be set in nifti header.')
+                niiobj.header['scl_inter'] = data_off
             else:
-                if slope is not None:
-                    niiobj.header['scl_inter'] = data_off
+                niiobj.header['scl_inter'] = 0
+        else:
+            niiobj.header['scl_inter'] = 0
         return niiobj
 
     # EPI
@@ -998,12 +1027,15 @@ class BrukerLoader():
         orient_info = self._get_orient_info(visu_pars, method)
         slice_orient_map = {0: 'sagital', 1: 'coronal', 2: 'axial'}
         num_slice_packs = slice_info['num_slice_packs']
-        version = get_value(visu_pars, 'VisuVersion')
-        if version == 1:  # PV 5.1 required the position correction
-            subj_pose = orient_info['subject_position']
-        else:             # PV 6.01 does not
-            subj_pose = None
+        subj_pose = orient_info['subject_position']
         subj_type = orient_info['subject_type']
+
+        ## Rollback below changes upon comment on issue #10
+        # version = get_value(visu_pars, 'VisuVersion')
+        # if version == 1:  # PV 5.1 required the position correction
+        #     subj_pose = orient_info['subject_position']
+        # else:             # PV 6.01 does not
+        #     subj_pose = None
 
         if num_slice_packs > 1:
             affine = []
@@ -1016,7 +1048,7 @@ class BrukerLoader():
                 if is_reversed:
                     raise UnexpectedError('Invalid VisuCoreDiskSliceOrder;'
                                           'The multi-slice-packs dataset reversed is not tested data.'
-                                          f'{ISSUE_REPORT}')
+                                          '{}'.format(ISSUE_REPORT))
                 affine.append(build_affine_from_orient_info(resol, rmat, pose,
                                                             subj_pose, subj_type,
                                                             slice_orient))
@@ -1053,8 +1085,7 @@ class BrukerLoader():
                 matrix_size[-1]     = total_num_slices
             else:
                 raise UnexpectedError('Matrix size mismatch with multi-slice-packs dataobj;'
-                                      f'{matrix_size}'
-                                      f'{ISSUE_REPORT}')
+                                      '{}{}'.format(matrix_size, ISSUE_REPORT))
         else:
             matrix_size = list(matrix_size[0])
             if 'FG_SLICE' in fg_info['group_id']:
@@ -1073,8 +1104,9 @@ class BrukerLoader():
             dataobj_shape = dataobj.shape[0]
             if multiply_all(matrix_size) != dataobj_shape:
                 raise UnexpectedError('Matrix size mismatch with dataobj;'
-                                      f'{multiply_all(matrix_size)} != {dataobj_shape}'
-                                      f'{ISSUE_REPORT}')
+                                      '{} != {}{}'.format(multiply_all(matrix_size),
+                                                          dataobj_shape,
+                                                          ISSUE_REPORT))
         return matrix_size
 
     @staticmethod
@@ -1086,8 +1118,7 @@ class BrukerLoader():
         elif _fo == 'disk_reverse_slice_order':
             disk_slice_order = 'reverse'
         else:
-            raise UnexpectedError(f'Invalid VisuCoreDiskSliceOrder:{_fo};'
-                                  f'{ISSUE_REPORT}')
+            raise UnexpectedError('Invalid VisuCoreDiskSliceOrder:{};{}'.format(_fo, ISSUE_REPORT))
         return disk_slice_order
 
     def _get_visu_pars(self, scan_id, reco_id):

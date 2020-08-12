@@ -1,125 +1,12 @@
+from shleeh.errors import UnexpectedError
+
 from .reference import *
 import re
 import os
-import math
 import numpy as np
 from collections import OrderedDict
 from functools import partial, reduce
 from copy import copy as cp
-from nibabel.affines import to_matvec, from_matvec
-
-
-def apply_affine(matrix, affine):
-    return affine.dot(matrix)
-
-
-def apply_rotate(matrix, rad_x=0, rad_y=0, rad_z=0):
-    ''' axis = x or y or z '''
-    rmat = dict(x = np.array([[1, 0, 0],
-                              [0, np.cos(rad_x), -np.sin(rad_x)],
-                              [0, np.sin(rad_x), np.cos(rad_x)]]).astype('float'),
-                y = np.array([[np.cos(rad_y), 0, np.sin(rad_y)],
-                              [0, 1, 0],
-                              [-np.sin(rad_y), 0, np.cos(rad_y)]]).astype('float'),
-                z = np.array([[np.cos(rad_z), -np.sin(rad_z), 0],
-                              [np.sin(rad_z), np.cos(rad_z), 0],
-                              [0, 0, 1]]).astype('float'))
-    af_mat, af_vec = to_matvec(matrix)
-    rotated_mat = rmat['z'].dot(rmat['y'].dot(rmat['x'].dot(af_mat)))
-    rotated_vec = rmat['z'].dot(rmat['y'].dot(rmat['x'].dot(af_vec)))
-    return from_matvec(rotated_mat, rotated_vec)
-
-
-def reversed_pose_correction(pose, rmat, distance):
-    reversed_pose = rmat.dot(pose)
-    reversed_pose[-1] += distance
-    corrected_pose = rmat.T.dot(reversed_pose)
-    return corrected_pose
-
-
-def build_affine_from_orient_info(resol, rmat, pose,
-                                  subj_pose, subj_type, slice_orient):
-    if slice_orient in ['axial', 'sagital']:
-        resol = np.diag(np.array(resol))
-    else:
-        resol = np.diag(np.array(resol) * np.array([1, 1, -1]))
-    rmat = rmat.T.dot(resol)
-
-    affine = from_matvec(rmat, pose)
-
-    # convert space from image to subject
-    # below positions are all reflext human-based position
-    if subj_pose:
-        if subj_pose == 'Head_Supine':
-            affine = apply_rotate(affine, rad_z=np.pi)
-        elif subj_pose == 'Head_Prone':
-            pass
-        # From here, not urgent, extra work to determine correction matrix needed.
-        elif subj_pose == 'Head_Left':
-            affine = apply_rotate(affine, rad_z=np.pi/2)
-        elif subj_pose == 'Head_Right':
-            affine = apply_rotate(affine, rad_z=-np.pi/2)
-        elif subj_pose in ['Foot_Supine', 'Tail_Supine']:
-            affine = apply_rotate(affine, rad_x=np.pi)
-        elif subj_pose in ['Foot_Prone', 'Tail_Prone']:
-            affine = apply_rotate(affine, rad_y=np.pi)
-        elif subj_pose in ['Foot_Left', 'Tail_Left']:
-            affine = apply_rotate(affine, rad_z=np.pi/2)
-        elif subj_pose in ['Foot_Right', 'Tail_Right']:
-            affine = apply_rotate(affine, rad_z=-np.pi/2)
-        else:  # in case Bruker put additional value for this header
-            raise Exception(ERROR_MESSAGES['NotIntegrated'])
-
-    if subj_type != 'Biped':
-        # correct subject space if not biped (human or non-human primates)
-        # not sure this rotation is independent with subject pose, so put here instead last
-        affine = apply_rotate(affine, rad_x=-np.pi/2, rad_y=np.pi)
-    return affine
-
-
-def is_rotation_matrix(matrix):
-    t_matrix = np.transpose(matrix)
-    should_be_identity = np.dot(t_matrix, matrix)
-    i = np.identity(3, dtype=matrix.dtype)
-    n = np.linalg.norm(i - should_be_identity)
-    return n < 1e-6
-
-
-def calc_eulerangle(matrix):
-    assert (is_rotation_matrix(matrix))
-
-    sy = math.sqrt(matrix[0, 0] * matrix[0, 0] + matrix[1, 0] * matrix[1, 0])
-    singular = sy < 1e-6
-    if not singular:
-        x = math.atan2(matrix[2, 1], matrix[2, 2])
-        y = math.atan2(-matrix[2, 0], sy)
-        z = math.atan2(matrix[1, 0], matrix[0, 0])
-    else:
-        x = math.atan2(-matrix[1, 2], matrix[1, 1])
-        y = math.atan2(-matrix[2, 0], sy)
-        z = 0
-    return np.array([math.degrees(x),
-                     math.degrees(y),
-                     math.degrees(z)])
-
-
-def apply_flip(matrix, axis, mat=True, vec=True):
-    '''axis = x or y or z'''
-    flip_idx = dict(x=0, y=1, z=2)
-    orig_mat, orig_vec = to_matvec(matrix)
-
-    aff_mat = np.ones(3)
-    aff_mat[flip_idx[axis]] = -1
-    aff_mat = np.diag(aff_mat)
-    if mat:
-        flip_mat = aff_mat.dot(orig_mat)
-    else:
-        flip_mat = orig_mat
-    if vec:
-        flip_vec = aff_mat.dot(orig_vec)
-    else:
-        flip_vec = orig_vec
-    return from_matvec(flip_mat, flip_vec)
 
 
 def load_param(stringlist):
@@ -249,77 +136,6 @@ def is_numeric(x):
 
 def multiply_all(list):
     return reduce(lambda x, y: x*y, list)
-
-
-def swap_orient_matrix(orient_matrix, axis_orient):
-
-    orient_matrix = cp(orient_matrix)
-
-    axis_for_swap = []
-    for origin, destination in enumerate(axis_orient):
-        if origin != destination:
-            axis_for_swap.append(destination)
-    orient_matrix.T[axis_for_swap] = orient_matrix.T[axis_for_swap[::-1]]
-    return orient_matrix
-
-
-def get_origin(slice_position, gradient_orient):
-    """ TODO: the case was not fully tested, if any coordinate mismatch happened, this function will be the issue.
-    Args:
-        slice_position:  visu_pars.parameters['VisuCorePosition']
-        gradient_orient: method.parameters['PVM_SPackArrGradOrient']
-
-    Returns:
-        x, y, z coordinate for origin of image matrix
-    """
-    slice_position = cp(slice_position)
-    dx, dy, dz = map(lambda x: x.max() - x.min(), slice_position.T)
-    max_delta_axis = np.argmax([dx, dy, dz])
-    rx, ry, rz = [None, None, None]
-
-    if gradient_orient is not None:
-        gradient_orient = np.round(gradient_orient, decimals=0)
-        rx, ry, rz = calc_eulerangle(np.round(gradient_orient[0].T))
-
-    if max_delta_axis == 0:     # sagital
-        if rx != None: # PV 5 filter, only PV6 has gradient_orient info
-            if rz == 90: # typical case
-                idx = slice_position.T[max_delta_axis].argmin()
-            else:
-                idx = slice_position.T[max_delta_axis].argmax()
-        else:
-            idx = slice_position.T[max_delta_axis].argmax()
-    elif max_delta_axis == 1:   # coronal
-        if rx != None:
-            if rx == -90:    # FOV flipped
-                if ry == -90:   # Cyceron cases # 5 and 9
-                    idx = slice_position.T[max_delta_axis].argmax()
-                else:
-                    idx = slice_position.T[max_delta_axis].argmin()
-            else: # rx == -90 are the typical case
-                idx = slice_position.T[max_delta_axis].argmax()
-        else:
-            idx = slice_position.T[max_delta_axis].argmaxs()
-    elif max_delta_axis == 2:   # axial
-        if rx != None:
-            if (abs(ry) == 180) or ((abs(rx) == 180) and (abs(rz) == 180)):
-                # typical case
-                idx = slice_position.T[max_delta_axis].argmax()
-            else:
-                idx = slice_position.T[max_delta_axis].argmin()
-        else:
-            idx = slice_position.T[max_delta_axis].argmin()
-    else:
-        raise Exception
-    origin = slice_position[idx]
-    return origin
-
-
-def reverse_swap(swap_code):
-    reversed_code = [0, 0, 0]
-    for target, origin in enumerate(swap_code):
-        reversed_code[origin] = target
-    return reversed_code
 
 
 # META handler
@@ -523,8 +339,7 @@ def get_bids_ref_obj(ref_path, row):
             if 'func' in ref_data.keys():
                 for k, v in ref_data['func'].items():
                     if k in ref.keys():
-                        raise InvalidApproach(f'Duplicated key is '
-                                              f'found at func: {k}')
+                        raise InvalidApproach('Duplicated key is found at func: {}'.format(k))
                     else:
                         ref[k] = v
         # the below may not optimal for Bruker system,
@@ -535,8 +350,7 @@ def get_bids_ref_obj(ref_path, row):
             if 'fmap' in ref_data.keys():
                 for k, v in ref_data['fmap'].items():
                     if k in ref.keys():
-                        raise InvalidApproach(f'Duplicated key is '
-                                              f'found at fmap: {k}')
+                        raise InvalidApproach('Duplicated key is found at func: {}'.format(k))
                     else:
                         ref[k] = v
     else:
@@ -554,9 +368,9 @@ def build_bids_json(dset, row, fname, json_path, slope=False, offset=False):
     if dset.is_multi_echo(row.ScanID, row.RecoID):  # multi_echo
         nii_objs = dset.get_niftiobj(row.ScanID, row.RecoID, crop=crop, slope=slope, offset=offset)
         for echo, nii in enumerate(nii_objs):
-            fname = f'{fname}_echo-{echo + 1}_{row.modality}'
+            fname = '{}_echo-{}_{}'.format(fname, echo + 1, row.modality)
             output_path = os.path.join(row.Dir, fname)
-            nii.to_filename(f'{output_path}.nii.gz')
+            nii.to_filename('{}.nii.gz'.format(output_path))
             if json_path:
                 ref = get_bids_ref_obj(json_path, row)
                 dset.save_json(row.ScanID, row.RecoID, fname, dir=row.Dir,
@@ -592,3 +406,37 @@ def encdir_code_converter(enc_param):
         return ['phase_enc', 'read_enc', 'slice_enc']
     else:
         raise Exception(ERROR_MESSAGES['PhaseEncDir'])
+
+
+def mkdir(path):
+    try:
+        os.stat(path)
+    except FileNotFoundError or OSError:
+        os.makedirs(path)
+    except:
+        raise UnexpectedError
+
+
+# brkraw script
+def set_rescale(args):
+    if not args.ignore_rescale:
+        if args.ignore_slope:
+            slope = None
+        else:
+            slope = False
+        if args.ignore_offset:
+            offset = None
+        else:
+            offset = False
+    else:
+        slope = None
+        offset = None
+    return slope, offset
+
+
+def save_meta_files(study, args, scan_id, reco_id, output_fname):
+    method = study._pvobj._method[scan_id].parameters['Method']
+    if re.search('dti', method, re.IGNORECASE):
+        study.save_bdata(scan_id, output_fname)
+    if args.bids:
+        study.save_json(scan_id, reco_id, output_fname)

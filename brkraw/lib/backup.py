@@ -106,7 +106,7 @@ class BackupCache:
                                         backup=False)
                     self.raw_data.append(rawobj)
                 else:
-                    self.logging(f'{dir_path} is not a valid directory. [raw dataset must be a directory]',
+                    self.logging('{} is not a valid directory. [raw dataset must be a directory]'.format(dir_path),
                                  'set_raw')
         else:
             rawobj = NamedTuple(data_pid=self.num_raw,
