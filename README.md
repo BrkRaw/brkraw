@@ -47,6 +47,8 @@ please visit our [GitPage](https://brkraw.github.io).
 ##### Authors
 - SungHo Lee (shlee@unc.edu): main developer
 - Woomi Ban (banwoomi@unc.edu): sub-developer who tested and refined the module structure
+- Jaiden Dumas: proofreading of documents and update contents for the user community.
+- Dr. Gabriel A. Devenyi: The vast contributions to refinement of module functionality and troubleshooting.
 - Yen-Yu Ian Shih (shihy@neurology.unc.edu): technical and academical advisory on this project (as well as funding)
 ##### Contributors
 - Drs. Chris Rorden and Sebastiano Ferraris: The pioneers related this project who had been inspired the developer
@@ -55,7 +57,7 @@ please visit our [GitPage](https://brkraw.github.io).
 - Dr. Mikael Naveau: The publisher of 
 [bruker2nifti_qa](https://gitlab.com/naveau/bruker2nifti_qa), the set of data 
 to help benchmark testing of Bruker converter.
-- Dr. Gabriel A. Devenyi: The vast contributions to refinement of module functionality and troubleshooting.
+
 
 ### License:
 GNU General Public License v3.0
