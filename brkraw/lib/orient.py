@@ -4,7 +4,7 @@ from copy import copy as cp
 import numpy as np
 from nibabel.affines import from_matvec, to_matvec
 
-from bruker.brkraw.lib.reference import ERROR_MESSAGES
+from .reference import ERROR_MESSAGES
 
 
 def build_affine_from_orient_info(resol, rmat, pose,
