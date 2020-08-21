@@ -224,7 +224,8 @@ class BrukerLoader():
                         dataobj = np.swapaxes(dataobj, slice_axis, -1)
                         dataobj = np.swapaxes(dataobj, 2, -1)
 
-            elif group_id[0] in ['FG_DIFFUSION', 'FG_DTI', 'FG_MOVIE', 'FG_COIL', 'FG_CYCLE', 'FG_COMPLEX']:
+            elif group_id[0] in ['FG_DIFFUSION', 'FG_DTI', 'FG_MOVIE', 'FG_COIL',
+                                 'FG_CYCLE', 'FG_COMPLEX', 'FG_CARDIAC_MOVIE']:
                 dataobj = swap_slice_axis(group_id, dataobj)
             else:
                 raise UnexpectedError(message='Unexpected frame group combination;{}'.format(ISSUE_REPORT))
