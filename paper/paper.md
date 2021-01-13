@@ -40,66 +40,52 @@ bibliography: paper.bib
 ---
 
 # Summary
+The Magnetic Resonance Imaging (MRI) data are acquired in a vendor-specific format which requiring 
+the conversion for the subsequent data analysis. The Digital Imaging and Communications in Medicine (DICOM) has been 
+used as an international standard for handling MRI data due to its medical application. On the other hand, 
+in the research field, the data formats with a simple structure that only composed of metadata that contains 
+information only for reconstructing binary data, such as NifTi-1, ANALYZE, or NRRD formats, have been adopted as 
+the new standard of choice because of their simplicity and efficiency. 
 
-Accessing and analyzing Magnetic Resonance Imaging (MRI) data required conversion from a hardware-specific format 
-to one compatible with available analysis software. The Digital Imaging and Communications in Medicine (DICOM) 
-is considered as an international standard for handling MRI data in the clinical field due to its flexibility 
-to cover the broad range of information from various imaging modalities and patient information. On the other hand, 
-the complex data structure and the inclusion of unnecessary metadata in DICOM decrease analysis efficiency 
-on various imaging research when the patient-related metadata is not essential for the study. 
-For this reason, image data formats with a more efficient structure capable of encompassing spatial and temporal 
-in a single file, such as NifTi-1, ANALYZE, or NRRD file formats, are becoming the new standard of choice 
-in many imaging research studies. Converting the raw data into DICOM format is still necessary for clinical research, 
-since it is important to preserve the patient-related metadata coupled with the image data. 
-However, the preclinical MRI research using laboratory animals or objects does not require the DICOM conversion step 
-and is rather inefficient. 
+Converting the raw data into DICOM format is still important to preserve the patient-related information coupled 
+with the images in the clinical field, however, in the preclinical setting, the data format does not need to be 
+internally complex so that the canonical way to initially convert data into DICOM and subsequent conversion makes 
+the overall analysis pipeline inefficient.
 
-Researchers have developed conversion software for Bruker Biospin MRI, 
-for converting raw data directly into a NIfTI or ANALYZE format 
-[@Brett:2002; @Ferraris:2017; @Chavarrias:2017; @Rorden:2018] for improving efficiency for data processing.
+Due to this reason, several researchers had developed tools to directly convert raw data to a NIfTI or ANALYZE format, 
+particularly for the preclinical MRI. [@Brett:2002; @Ferraris:2017; @Chavarrias:2017; @Rorden:2018]. These converters 
+significantly improved the efficiency of data analysis workflow for most applications. Still, it can be insufficient 
+for some circumstances when researchers develop a new imaging sequence that requiring new set parameters or 
+an additional layer of preprocessing for image reconstruction or when a quick quality assessment of raw data that 
+the providers' software does not support.
 
-Although the converters significantly improve analysis workflow by direct converting into software friendly file format,
-the software introduced so far has not provided the feature to access the data immediately without conversion.
-Here we present the 'BrkRaw' Python module, a more comprehensive preclinical tool for accessing and utilizing
-raw Bruker Biospin MRI data. The module has been built up upon robust low-level Python Application Programming Interface 
-(API), allowing direct raw data access without conversion to provide the advanced and easy-to-use features 
-for data analysis. 
+Here we present the 'BrkRaw' Python module, a more comprehensive tool to access and handle raw data for the preclinical 
+MRI scanner. Because the Bruker Biospin MRI scanner is the only ultra-high field preclinical MRI scanner currently 
+available in the market, we focussed on this specific vendor instead of developing a universal converter. 
+The BrkRaw module provides Application Programming Interface (API) and command-line tools to help integrate 
+into the data analysis pipeline more flexibly.
 
-The current version of BrkRaw is comprised of four components, the low-level Python API, the high-level Python API,
-the command-line tools, and the graphical user interface (GUI).
+The API provides flexibility to parse any metadata using a custom-designed robust JCAMP-DX loader (the data format of
+storing metadata in Bruker scanner.) as well as the more high-level data loader that converts it to nibabel[@Brett:2020] 
+or SimpleITK[@Lowekamp:2013] object, the two most popular python-based image object, instead of saving it into the file, 
+so the data can be processed at the memory level.
 
-The low-level Python API provides a robust JCAMP-DX loader to convert parameter files embedded in raw data
-into a Python object, additionally the raw Bruker data loader also converts a whole folder containing parameters and
-binary files of a single imaging study session into a Python object. We also designed the zip file to be loaded
-without extraction while considering the accessibility of the archived data.
-
-For the high-level Python API, we focused on providing useful functions to reduce extra effort on converting data into 
-a usable form. It preserves the coordinate system of the image according to the subject position and orientation 
- on the scanner coordinate system (Figure1), which is known to be a challenge in the Bruker Biospin MRI system.
-[@Ferraris:2017; @Naveau:2019].
-The high-level Python API offers to load image data as the two most popular object types 
-in the Python eco-system for image processing (nibabel[@Brett:2020] and SimpleITK[@Lowekamp:2013]), 
-as well as to convert multiple parameters into a structured JSON-type object using a custom JSON-based syntax.
-
-The BrkRaw modules provide two command-line tools, which mainly utilizing low- and high-level Python API for automating 
-routine operation for data management, as well as data conversion. The 'brk-backup' used the direct accessibility 
-of the archived file (zip compressed) to enable the validation of archived data compared to corresponding 
-raw data without extraction. As a result, the command offers to automate the inspection of raw and archived data, 
-archiving of missing or updated data and removing the broken or duplicated data (Figure2).
-
+The command-line tools provide convenient function to convert, archive, and organize the data. 
+First, the 'brk-backup' command is designed to zip compress raw data and archive to target folder with semi-automated 
+inspection function to check missing, updates, broken, or duplicated data (Figure2). 
 The 'brkraw' command, on the other hand, offers a useful function to check data information (Figure3) and 
-to convert data into NifTi-1 format. In addition to this, the command provides automate conversion and organization 
-of large datasets into a ready-to-share data structure, the Brain Imaging Data Structure (BIDS), 
-a standard data structure for neuroimaging research proposed by the open science community for pursuing reproducible science [@Gorgolewski:2016] (Figure4).
+to convert data into NifTi-1 format as conventional converter. 
+In addition to this, the command provides automate conversion and organization of large datasets into a ready-to-share 
+data structure, the Brain Imaging Data Structure (BIDS), a standard data structure for neuroimaging research proposed 
+by the open science community for pursuing reproducible science [@Gorgolewski:2016] (Figure4).
+Lastly, with the 'brkraw gui' command, the module offers the function to preview images and their respective parameters
+without conversion (Figure5) as a show case of utilizing API for quick data assessment. 
 
-Lastly, via the 'brkraw gui' command, the GUI offers improved accessibility for previewing an image and its respective parameters
-without conversion. The converting button will convert a previewing image into NifTi-1 format, therefore, allowing the user to visually check the image before conversion (Figure 5).  
-
-This module has been actively utilized in the Center for Animal MRI (CAMRI)
-at the University of North Carolina at Chapel Hill for several on-going preclinical functional MRI studies,
-including sequence development and data management. We expect this tool to reduce the burden of handling,
-and management of raw Bruker MRI data, thereby benefitting other animal imaging researchers.
-In the future we will develop additional Python-based tools for acute quality control and real-time fMRI data analysis.
+Overall, the BrkRaw demonstrates its flexibility in handling data with the python API as well as the advanced function 
+that conventional converter did not provide. This module has been actively utilized for multiple projects in 
+the Center for Animal MRI (CAMRI) at the University of North Carolina at Chapel Hill. We expect this tool provides a 
+unique advantage to the researchers who utilizing the Bruker preclinical MRI scanner for their research as well as 
+medical imaging scientists who interested in accessing preclinical MRI data more flexible manner.
 
 # Figures
 ![Bruker2Nifti_QA](../imgs/bruker2nifti_qa.png)
