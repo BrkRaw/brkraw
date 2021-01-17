@@ -11,6 +11,7 @@ import zipfile
 import pathlib
 import os
 import re
+import warnings
 np.set_printoptions(formatter={'float_kind':'{:f}'.format})
 
 
@@ -228,7 +229,8 @@ class BrukerLoader():
                                  'FG_CYCLE', 'FG_COMPLEX', 'FG_CARDIAC_MOVIE']:
                 dataobj = swap_slice_axis(group_id, dataobj)
             else:
-                raise UnexpectedError(message='Unexpected frame group combination;{}'.format(ISSUE_REPORT))
+                # the output data will have default matrix shape and order.
+                warnings.warn('Unexpected frame group combination;{}'.format(ISSUE_REPORT), UserWarning)
         return dataobj
 
     def get_fid(self, scan_id):
