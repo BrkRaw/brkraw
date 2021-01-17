@@ -52,7 +52,7 @@ with the images in the clinical field, however, in the preclinical setting, the 
 internally complex so that the canonical way to initially convert data into DICOM and subsequent conversion makes 
 the overall analysis pipeline inefficient.
 
-Due to this reason, several researchers had developed tools to directly convert raw data to a NIfTI or ANALYZE format, 
+Due to this reason, several researchers had developed tools to directly convert raw data to a NifTI or ANALYZE format, 
 particularly for the preclinical MRI. [@Brett:2002; @Ferraris:2017; @Chavarrias:2017; @Rorden:2018]. These converters 
 significantly improved the efficiency of data analysis workflow for most applications. Still, it can be insufficient 
 for some circumstances when researchers develop a new imaging sequence that requiring new set parameters or 
@@ -81,7 +81,7 @@ by the open science community for pursuing reproducible science [@Gorgolewski:20
 Lastly, with the 'brkraw gui' command, the module offers the function to preview images and their respective parameters
 without conversion (Figure5) as a show case of utilizing API for quick data assessment. 
 
-Overall, the BrkRaw demonstrates its flexibility in handling data with the python API as well as the advanced function 
+Overall, the BrkRaw demonstrates its flexibility in handling data with the python API as well as the advanced functions 
 that conventional converter did not provide. This module has been actively utilized for multiple projects in 
 the Center for Animal MRI (CAMRI) at the University of North Carolina at Chapel Hill. We expect this tool provides a 
 unique advantage to the researchers who utilizing the Bruker preclinical MRI scanner for their research as well as 
