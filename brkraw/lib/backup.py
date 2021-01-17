@@ -34,6 +34,8 @@ class BackupCache:
     @property
     def num_raw(self):
         return len(self.raw_data)
+        #TODO: need to check if the space enough to perform backup, as well as handle the crash event
+        #during the backup (the cache updated even the backup failed)
 
     @property
     def num_arc(self):
@@ -119,6 +121,7 @@ class BackupCache:
     def set_arc(self, arc_fname, arc_dir, raw_dir):
         # arcobj: data_pid, path, garbage, crashed, issued
         arc_path = os.path.join(arc_dir, arc_fname)
+
         if not self.isin(arc_fname, raw=False):  # continue if the path is not saved in this cache obj
             issued = False
             try:
@@ -153,9 +156,12 @@ class BackupCache:
                     issued = True
                 else:
                     if not r.removed:
-                        raw = BrukerLoader(raw_path)
-                        if raw.num_recos != arc.num_recos:
-                            issued = True
+                        if not r.backup:
+                            pass
+                        else:
+                            raw = BrukerLoader(raw_path)
+                            if raw.num_recos != arc.num_recos:
+                                issued = True
             arcobj = NamedTuple(data_pid=r.data_pid,
                                 path=arc_fname,
                                 garbage=garbage,
