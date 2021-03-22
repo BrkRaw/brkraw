@@ -231,7 +231,13 @@ def main():
                    'task', 'acq', 'ce', 'rec', 'dir', 'run', 'modality', 'Start', 'End']
         df = pd.DataFrame(columns=Headers)
 
-        for dname in sorted(os.listdir(path)):
+        # if the path directly contains scan files
+        if 'subject' in os.listdir(path):
+            dNames = ['']
+        else:         # old way, when you run against the parent folder (which contains one or more scan folder).
+            dNames = sorted(os.listdir(path))
+
+        for dname in dNames:
             dpath = os.path.join(path, dname)
             try:
                 dset = BrukerLoader(dpath)
