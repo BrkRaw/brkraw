@@ -149,7 +149,7 @@ def main():
                     try:
                         study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
                         save_meta_files(study, args, scan_id, reco_id, output_fname)
-                        print('NifTi file is genetared... [{}]'.format(output_fname))
+                        print('NifTi file is generated... [{}]'.format(output_fname))
                     except:
                         print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
 
