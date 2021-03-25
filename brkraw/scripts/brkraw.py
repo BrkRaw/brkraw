@@ -307,10 +307,8 @@ def main():
     elif args.function == 'bids_convert':
         import pandas as pd
         import numpy as np
-        import json
-        import datetime
         from ..lib.utils import build_bids_json, bids_validation
-
+        
         pd.options.mode.chained_assignment = None
         path = args.input
         datasheet = args.datasheet
@@ -337,18 +335,11 @@ def main():
 
         mkdir(root_path)
 
+        import pdb; pdb.set_trace()
+
         # prepare the required file for converted BIDS dataset
-        data_des = 'dataset_description.json'
-        readme = 'README'
-        if not os.path.exists(data_des):
-            with open(os.path.join(root_path, 'dataset_description.json'), 'w') as f:
-                from ..lib.reference import DATASET_DESC_REF
-                json.dump(DATASET_DESC_REF, f, indent=4)
-        if not os.path.exists(readme):
-            with open(os.path.join(root_path, readme), 'w') as f:
-                f.write('This dataset has been converted using BrkRaw (v{})'
-                        'at {}.\n'.format(json_fname, datetime.datetime.now()))
-                f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
+        generateModalityAgnosticFiles(root_path, json_fname)
+
 
         print('Inspect input BIDS datasheet...')
 
@@ -366,6 +357,8 @@ def main():
                     pvobj = dset.pvobj
                     rawdata = pvobj.path
                     filtered_dset = df[df['RawData'].isin([rawdata])].reset_index()
+
+                    # add Filename and Dir colomn
                     filtered_dset.loc[:, 'FileName'] = [np.nan] * len(filtered_dset)
                     filtered_dset.loc[:, 'Dir'] = [np.nan] * len(filtered_dset)
 
@@ -464,6 +457,44 @@ def main():
                 pass
     else:
         parser.print_help()
+
+
+
+
+
+def generateModalityAgnosticFiles(root_path, json_fname):
+    data_des = 'dataset_description.json'
+    readme = 'README'
+    if not os.path.exists(data_des):
+        with open(os.path.join(root_path, 'dataset_description.json'), 'w') as f:
+            import json
+            import datetime
+            from ..lib.reference import DATASET_DESC_REF
+            json.dump(DATASET_DESC_REF, f, indent=4)
+    if not os.path.exists(readme):
+        with open(os.path.join(root_path, readme), 'w') as f:
+            f.write('This dataset has been converted using BrkRaw (v{})'
+                    'at {}.\n'.format(json_fname, datetime.datetime.now()))
+            f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
+    
+    # Need participant.tsv file and sidecar participants.json
+    #initialize one file here, then within for loop append each line.
+    """
+    https://bids-specification.readthedocs.io/en/stable/03-modality-agnostic-files.html
+    participants.tsv example:
+    participant_id age sex handedness group
+    sub-01 34 M right read
+    sub-02 12 F right write
+    sub-03 33 F n/a read
+    It is RECOMMENDED to accompany each participants.tsv file with a sidecar participants.json file to 
+    describe the TSV column names and properties of their values (see also the section on tabular files). 
+    Such sidecar files are needed to interpret the data, especially so
+    """
+
+
+
+
+
 
 
 if __name__ == '__main__':
