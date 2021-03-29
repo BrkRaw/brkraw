@@ -340,7 +340,6 @@ def main():
         # prepare the required file for converted BIDS dataset
         generateModalityAgnosticFiles(root_path, json_fname)
 
-
         print('Inspect input BIDS datasheet...')
 
         # if the path directly contains scan files for one participant
@@ -365,6 +364,10 @@ def main():
                     if len(filtered_dset):
                         subj_id = list(set(filtered_dset['SubjID']))[0]
                         subj_code = 'sub-{}'.format(subj_id)
+
+                        # append to participants.tsv one record
+                        with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
+                            f.write(subj_code + '\n')
 
                         for i, row in filtered_dset.iterrows():
                             if multi_session:
@@ -459,9 +462,6 @@ def main():
         parser.print_help()
 
 
-
-
-
 def generateModalityAgnosticFiles(root_path, json_fname):
     data_des = 'dataset_description.json'
     readme = 'README'
@@ -473,28 +473,24 @@ def generateModalityAgnosticFiles(root_path, json_fname):
             json.dump(DATASET_DESC_REF, f, indent=4)
     if not os.path.exists(readme):
         with open(os.path.join(root_path, readme), 'w') as f:
+            # I do not know why json_fname here.
             f.write('This dataset has been converted using BrkRaw (v{})'
                     'at {}.\n'.format(json_fname, datetime.datetime.now()))
             f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
     
-    # Need participant.tsv file and sidecar participants.json
-    #initialize one file here, then within for loop append each line.
-    """
-    https://bids-specification.readthedocs.io/en/stable/03-modality-agnostic-files.html
-    participants.tsv example:
-    participant_id age sex handedness group
-    sub-01 34 M right read
-    sub-02 12 F right write
-    sub-03 33 F n/a read
-    It is RECOMMENDED to accompany each participants.tsv file with a sidecar participants.json file to 
-    describe the TSV column names and properties of their values (see also the section on tabular files). 
-    Such sidecar files are needed to interpret the data, especially so
-    """
+    # https://bids-specification.readthedocs.io/en/stable/03-modality-agnostic-files.html
+    # participant.tsv file. if not exist, create it, and append. if need tab use \t
+    with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
+        f.write('participant_id\n')
 
-
-
-
-
+    # participant.json file. if not exist, create it, and append. if need tab use \t
+    with open(os.path.join(root_path, 'participants.json'), 'a+') as f:
+        sideCar = { 
+            "participant_id": {
+                "Description": "Participant identifier"
+            }
+        }
+        json.dump(sideCar, f, indent=4)
 
 
 if __name__ == '__main__':
