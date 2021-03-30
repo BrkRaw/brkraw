@@ -6,6 +6,7 @@ from .. import BrukerLoader, __version__
 from ..lib.utils import set_rescale, save_meta_files, mkdir
 import argparse
 import os, re
+import sys
 
 _supporting_bids_ver = '1.2.2'
 
@@ -335,7 +336,8 @@ def main():
 
         mkdir(root_path)
 
-        import pdb; pdb.set_trace()
+        # To use python debugger
+        #import pdb; pdb.set_trace()
 
         # prepare the required file for converted BIDS dataset
         generateModalityAgnosticFiles(root_path, json_fname)
@@ -450,8 +452,16 @@ def main():
 
 
 def generateModalityAgnosticFiles(root_path, json_fname):
+    """To create ModalityAgnosticFiles in output folder.
+    Args:
+        root_path (str): the root output folder
+        json_fname (str): I do not under why this variable is needed.
+    Returns:
+        nothing: just generate files.
+    """
     data_des = 'dataset_description.json'
     readme = 'README'
+    # why open use only the current folder and os.path not?
     if not os.path.exists(data_des):
         with open(os.path.join(root_path, 'dataset_description.json'), 'w') as f:
             import json
@@ -467,17 +477,27 @@ def generateModalityAgnosticFiles(root_path, json_fname):
     
     # https://bids-specification.readthedocs.io/en/stable/03-modality-agnostic-files.html
     # participant.tsv file. if not exist, create it, and append. if need tab use \t
-    with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
-        f.write('participant_id\n')
+    participantsTsvPath = os.path.join(root_path, 'participants.tsv')
+    if not os.path.exists(participantsTsvPath):
+        with open(participantsTsvPath, 'a+') as f:
+            f.write('participant_id\n')
+    else:
+        print('Exiting before convert..., participants.tsv already exist in output folder: ', participantsTsvPath)
+        sys.exit()
 
     # participant.json file. if not exist, create it, and append. if need tab use \t
-    with open(os.path.join(root_path, 'participants.json'), 'a+') as f:
-        sideCar = { 
-            "participant_id": {
-                "Description": "Participant identifier"
+    participantsJsonPath = os.path.join(root_path, 'participants.json')
+    if not os.path.exists(participantsJsonPath):
+        with open(participantsJsonPath, 'a+') as f:
+            sideCar = { 
+                "participant_id": {
+                    "Description": "Participant identifier"
+                }
             }
-        }
-        json.dump(sideCar, f, indent=4)
+            json.dump(sideCar, f, indent=4)
+    else:
+        print('Exiting...before convert, participants.json already exist in output folder: ', participantsTsvPath)
+        sys.exit()
 
 
 def createParticipantSessionFolder(multi_session, sessID, root_path, subj_code):
