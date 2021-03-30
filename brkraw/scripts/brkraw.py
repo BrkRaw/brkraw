@@ -370,20 +370,7 @@ def main():
                             f.write(subj_code + '\n')
 
                         for i, row in filtered_dset.iterrows():
-                            if multi_session:
-                                # If multi-session, make session dir
-                                sess_code = 'ses-{}'.format(row.SessID)
-                                subj_path = os.path.join(root_path, subj_code)
-                                mkdir(subj_path)
-                                subj_path = os.path.join(subj_path, sess_code)
-                                mkdir(subj_path)
-                                # add session info to filename as well
-                                fname = '{}_{}'.format(subj_code, sess_code)
-                            else:
-                                subj_path = os.path.join(root_path, subj_code)
-                                mkdir(subj_path)
-                                fname = '{}'.format(subj_code)
-
+                            subj_path, fname = createParticipantSessionFolder(multi_session, row.SessID, root_path, subj_code)
                             datatype = row.DataType
                             dtype_path = os.path.join(subj_path, datatype)
                             mkdir(dtype_path)
@@ -491,6 +478,32 @@ def generateModalityAgnosticFiles(root_path, json_fname):
             }
         }
         json.dump(sideCar, f, indent=4)
+
+
+def createParticipantSessionFolder(multi_session, sessID, root_path, subj_code):
+    """To create participant (and session if multi_session) folder.
+    Args:
+        multi_session (bool): multi_session.
+        sessID (str): sessID.
+        root_path (str): the root output folder
+        subj_code (str): subject or participant folder name
+    Returns:
+        list: first 0 element is subj_path, second 1 is fname.
+    """
+    if multi_session:
+        # If multi-session, make session dir
+        sess_code = 'ses-{}'.format(sessID)
+        subj_path = os.path.join(root_path, subj_code)
+        mkdir(subj_path)
+        subj_path = os.path.join(subj_path, sess_code)
+        mkdir(subj_path)
+        # add session info to filename as well
+        fname = '{}_{}'.format(subj_code, sess_code)
+    else:
+        subj_path = os.path.join(root_path, subj_code)
+        mkdir(subj_path)
+        fname = '{}'.format(subj_code)
+    return [subj_path, fname]
 
 
 if __name__ == '__main__':
