@@ -336,9 +336,6 @@ def main():
 
         mkdir(root_path)
 
-        # To use python debugger
-        #import pdb; pdb.set_trace()
-
         # prepare the required file for converted BIDS dataset
         generateModalityAgnosticFiles(root_path, json_fname)
 
@@ -363,6 +360,9 @@ def main():
                     filtered_dset.loc[:, 'FileName'] = [np.nan] * len(filtered_dset)
                     filtered_dset.loc[:, 'Dir'] = [np.nan] * len(filtered_dset)
 
+                    # To use python debugger
+                    import pdb; pdb.set_trace()
+
                     if len(filtered_dset):
                         subj_id = list(set(filtered_dset['SubjID']))[0]
                         subj_code = 'sub-{}'.format(subj_id)
@@ -371,11 +371,9 @@ def main():
                         with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
                             f.write(subj_code + '\n')
 
+                        # first iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality
                         for i, row in filtered_dset.iterrows():
-                            subj_path, fname = createParticipantSessionFolder(multi_session, row.SessID, root_path, subj_code)
-                            datatype = row.DataType
-                            dtype_path = os.path.join(subj_path, datatype)
-                            mkdir(dtype_path)
+                            dtype_path, fname = createFolderTree(multi_session, row, root_path, subj_code)
 
                             if pd.notnull(row.task):
                                 if bids_validation(df, i, 'task', row.task, 10):
@@ -496,15 +494,16 @@ def generateModalityAgnosticFiles(root_path, json_fname):
             }
             json.dump(sideCar, f, indent=4)
     else:
-        print('Exiting...before convert, participants.json already exist in output folder: ', participantsTsvPath)
+        print('Exiting...before convert, participants.json already exist in output folder: ', participantsJsonPath)
         sys.exit()
 
 
-def createParticipantSessionFolder(multi_session, sessID, root_path, subj_code):
+
+def createFolderTree(multi_session, row, root_path, subj_code):
     """To create participant (and session if multi_session) folder.
     Args:
         multi_session (bool): multi_session.
-        sessID (str): sessID.
+        row (obj): a row of data containing sessID and DataType.
         root_path (str): the root output folder
         subj_code (str): subject or participant folder name
     Returns:
@@ -512,7 +511,7 @@ def createParticipantSessionFolder(multi_session, sessID, root_path, subj_code):
     """
     if multi_session:
         # If multi-session, make session dir
-        sess_code = 'ses-{}'.format(sessID)
+        sess_code = 'ses-{}'.format(row.sessID)
         subj_path = os.path.join(root_path, subj_code)
         mkdir(subj_path)
         subj_path = os.path.join(subj_path, sess_code)
@@ -523,7 +522,12 @@ def createParticipantSessionFolder(multi_session, sessID, root_path, subj_code):
         subj_path = os.path.join(root_path, subj_code)
         mkdir(subj_path)
         fname = '{}'.format(subj_code)
-    return [subj_path, fname]
+    
+    datatype = row.DataType
+    dtype_path = os.path.join(subj_path, datatype)
+    mkdir(dtype_path)
+
+    return [dtype_path, fname]
 
 
 if __name__ == '__main__':
