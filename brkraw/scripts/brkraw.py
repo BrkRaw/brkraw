@@ -393,8 +393,10 @@ def main():
                                     fname = '{}_dir-{}'.format(fname, row.dir)
                             if pd.notnull(row.rec):
                                 if bids_validation(df, i, 'rec', row.rec, 2):
-                                    fname = '{}_rec-{}'.format
-
+                                    fname = '{}_rec-{}'.format(fname, row.rec)
+                            filtered_dset.loc[i, 'FileName'] = fname
+                            filtered_dset.loc[i, 'Dir'] = dtype_path
+                            if pd.isnull(row.modality):
                                 method = dset.get_method(row.ScanID).parameters['Method']
                                 if row.DataType == 'anat':
                                     if re.search('flash', method, re.IGNORECASE):
