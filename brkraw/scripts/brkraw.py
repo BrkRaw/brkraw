@@ -240,6 +240,10 @@ def main():
 
         for dname in dNames:
             dpath = os.path.join(path, dname)
+
+            # To use python debugger
+            #import pdb; pdb.set_trace()
+
             try:
                 dset = BrukerLoader(dpath)
             except:
@@ -251,6 +255,9 @@ def main():
 
                     rawdata = pvobj.path
                     subj_id = pvobj.subj_id
+                    
+                    # make subj_id bids appropriate
+                    subj_id = processSubjectID(subj_id)
                     sess_id = pvobj.session_id
 
                     for scan_id, recos in pvobj.avail_reco_id.items():
@@ -360,9 +367,6 @@ def main():
                     filtered_dset.loc[:, 'FileName'] = [np.nan] * len(filtered_dset)
                     filtered_dset.loc[:, 'Dir'] = [np.nan] * len(filtered_dset)
 
-                    # To use python debugger
-                    import pdb; pdb.set_trace()
-
                     if len(filtered_dset):
                         subj_id = list(set(filtered_dset['SubjID']))[0]
                         subj_code = 'sub-{}'.format(subj_id)
@@ -371,7 +375,7 @@ def main():
                         with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
                             f.write(subj_code + '\n')
 
-                        # first iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality
+                        # first iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality, can be a separate function
                         for i, row in filtered_dset.iterrows():
                             dtype_path, fname = createFolderTree(multi_session, row, root_path, subj_code)
 
@@ -389,10 +393,8 @@ def main():
                                     fname = '{}_dir-{}'.format(fname, row.dir)
                             if pd.notnull(row.rec):
                                 if bids_validation(df, i, 'rec', row.rec, 2):
-                                    fname = '{}_rec-{}'.format(fname, row.rec)
-                            filtered_dset.loc[i, 'FileName'] = fname
-                            filtered_dset.loc[i, 'Dir'] = dtype_path
-                            if pd.isnull(row.modality):
+                                    fname = '{}_rec-{}'.format
+
                                 method = dset.get_method(row.ScanID).parameters['Method']
                                 if row.DataType == 'anat':
                                     if re.search('flash', method, re.IGNORECASE):
@@ -447,6 +449,16 @@ def main():
                 pass
     else:
         parser.print_help()
+
+
+def processSubjectID(subj_id):
+    # underscore will mess up bids output
+    if '_' in subj_id:
+        subj_id = subj_id.replace('_', 'Underscore')
+        import warnings
+        # warn user that the subject/participantID has a '_' and is replaced with 'Underscore'
+        warnings.warn('Warning Message: Participant or subject ID has "_"s, replaced with "Underscore" to make it bids compatiable')
+    return subj_id
 
 
 def generateModalityAgnosticFiles(root_path, json_fname):
