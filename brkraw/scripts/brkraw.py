@@ -454,6 +454,12 @@ def main():
 
 
 def processSubjectID(subj_id):
+    """To replace the underscore in subject_id.
+    Args:
+        subj_id (str): the orignal subject id.
+    Returns:
+        str: the replaced subject_id.
+    """
     # underscore will mess up bids output
     if '_' in subj_id:
         subj_id = subj_id.replace('_', 'Underscore')
@@ -517,11 +523,11 @@ def createFolderTree(multi_session, row, root_path, subj_code):
     """To create participant (and session if multi_session) folder.
     Args:
         multi_session (bool): multi_session.
-        row (obj): a row of data containing sessID and DataType.
-        root_path (str): the root output folder
+        row (obj): a (panadas) row of data containing sessID and DataType.
+        root_path (str): the root path of output folder
         subj_code (str): subject or participant folder name
     Returns:
-        list: first 0 element is subj_path, second 1 is fname.
+        list: first 0 element is dtype_path, second 1 is fname.
     """
     if multi_session:
         # If multi-session, make session dir
