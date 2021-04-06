@@ -255,10 +255,14 @@ def main():
 
                     rawdata = pvobj.path
                     subj_id = pvobj.subj_id
-                    
+
                     # make subj_id bids appropriate
-                    subj_id = processSubjectID(subj_id)
+                    subj_id = cleanSubjectID(subj_id)
+
                     sess_id = pvobj.session_id
+
+                    # make sess_id bids appropriate
+                    sess_id = cleanSessionID(sess_id)
 
                     for scan_id, recos in pvobj.avail_reco_id.items():
                         for reco_id in recos:
@@ -453,20 +457,37 @@ def main():
         parser.print_help()
 
 
-def processSubjectID(subj_id):
-    """To replace the underscore in subject_id.
+def cleanSubjectID(subj_id):
+    """To replace the underscore in subject id.
     Args:
         subj_id (str): the orignal subject id.
     Returns:
-        str: the replaced subject_id.
+        str: the replaced subject id.
     """
     # underscore will mess up bids output
     if '_' in subj_id:
         subj_id = subj_id.replace('_', 'Underscore')
         import warnings
         # warn user that the subject/participantID has a '_' and is replaced with 'Underscore'
-        warnings.warn('Warning Message: Participant or subject ID has "_"s, replaced with "Underscore" to make it bids compatiable')
+        warnings.warn('Participant or subject ID has "_"s, replaced with "Underscore" to make it bids compatiable')
     return subj_id
+
+
+# This could integrate with cleanSubjectID, but mind the different warning messages
+def cleanSessionID(sess_id):
+    """To replace the underscore in session id.
+    Args:
+        sess_id (str): the orignal session id.
+    Returns:
+        str: the replaced session id.
+    """
+    # underscore will mess up bids output
+    if '_' in sess_id:
+        sess_id = sess_id.replace('_', 'Underscore')
+        import warnings
+        # warn user that the subject/participantID has a '_' and is replaced with 'Underscore'
+        warnings.warn('Session ID has "_"s, replaced with "Underscore" to make it bids compatiable')
+    return sess_id
 
 
 def generateModalityAgnosticFiles(root_path, json_fname):
