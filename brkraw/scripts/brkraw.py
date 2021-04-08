@@ -241,9 +241,6 @@ def main():
         for dname in dNames:
             dpath = os.path.join(path, dname)
 
-            # To use python debugger
-            #import pdb; pdb.set_trace()
-
             try:
                 dset = BrukerLoader(dpath)
             except:
@@ -273,6 +270,9 @@ def main():
                                 if num_spack != 3:  # excluding localizer
                                     method = dset.get_method(scan_id).parameters['Method']
                                     if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+                                        # To use python debugger
+                                        import pdb; pdb.set_trace()
+                                        #Why epi is function here? there should at lease a comment.
                                         datatype = 'func'
                                     elif re.search('dti', method, re.IGNORECASE):
                                         datatype = 'dwi'
@@ -281,6 +281,7 @@ def main():
                                     elif re.search('fieldmap', method, re.IGNORECASE):
                                         datatype = 'fmap'
                                     else:
+                                        # what is this? seems like holding files not able to identify
                                         datatype = 'etc'
 
                                     item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
