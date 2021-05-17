@@ -463,12 +463,20 @@ def cleanSubjectID(subj_id):
     Returns:
         str: the replaced subject id.
     """
+
+    import warnings
+
     # underscore will mess up bids output
     if '_' in subj_id:
         subj_id = subj_id.replace('_', 'Underscore')
-        import warnings
         # warn user that the subject/participantID has a '_' and is replaced with 'Underscore'
-        warnings.warn('Participant or subject ID has "_"s, replaced with "Underscore" to make it bids compatiable')
+        warnings.warn('Participant or subject ID has "_"s, replaced with "Underscore" to make it bids compatiable. You should avoid use "_" in participant/subject ID for BIDS purpose')
+
+    # Hyphen will mess up bids output
+    if '-' in subj_id:
+        subj_id = subj_id.replace('-', 'Hyphen')
+        # warn user that the subject/participantID has a '-' and is replaced with 'Hyphen'
+        warnings.warn('Participant or subject ID has "-"s, replaced with "Hyphen" to make it bids compatiable. You should avoid use "-" in participant/subject ID for BIDS purpose')
     return subj_id
 
 
@@ -480,12 +488,21 @@ def cleanSessionID(sess_id):
     Returns:
         str: the replaced session id.
     """
+
+    import warnings
+
     # underscore will mess up bids output
     if '_' in sess_id:
         sess_id = sess_id.replace('_', 'Underscore')
-        import warnings
         # warn user that the subject/participantID has a '_' and is replaced with 'Underscore'
-        warnings.warn('Session ID has "_"s, replaced with "Underscore" to make it bids compatiable')
+        warnings.warn('Session ID has "_"s, replaced with "Underscore" to make it bids compatiable. You should avoid use "_" in session ID for BIDS purpose')
+
+    # Hyphen will mess up bids output
+    if '-' in sess_id:
+        sess_id = sess_id.replace('-', 'Hyphen')
+        # warn user that the subject/participantID has a '-' and is replaced with 'Hyphen'
+        warnings.warn('Session ID has "-"s, replaced with "Hyphen" to make it bids compatiable. You should avoid use "-" in session ID for BIDS purpose')
+
     return sess_id
 
 
