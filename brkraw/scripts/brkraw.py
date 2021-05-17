@@ -282,6 +282,14 @@ def main():
                                         # what is this? seems like holding files not able to identify
                                         datatype = 'etc'
 
+                                        # warn user to manually update the DataType in datasheet
+                                        import warnings
+                                        
+                                        msg = "\n \n ----- Important ----- \
+                                        \n We do not know how to classify some of your scan and marked them as etc.\
+                                        \n To produce valid BIDS outputs, please update the datasheet to indicate the proper DataType for them \n"
+                                        warnings.warn(msg)
+
                                     item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
                                     if datatype == 'fmap':
                                         for m, s, e in [['fieldmap', 0, 1], ['magnitude', 1, 2]]:
