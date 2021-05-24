@@ -6,6 +6,7 @@ from .. import BrukerLoader, __version__
 from ..lib.utils import set_rescale, save_meta_files, mkdir
 import argparse
 import os, re
+import sys
 
 _supporting_bids_ver = '1.2.2'
 
@@ -239,6 +240,7 @@ def main():
 
         for dname in dNames:
             dpath = os.path.join(path, dname)
+
             try:
                 dset = BrukerLoader(dpath)
             except:
@@ -250,7 +252,14 @@ def main():
 
                     rawdata = pvobj.path
                     subj_id = pvobj.subj_id
+
+                    # make subj_id bids appropriate
+                    subj_id = cleanSubjectID(subj_id)
+
                     sess_id = pvobj.session_id
+
+                    # make sess_id bids appropriate
+                    sess_id = cleanSessionID(sess_id)
 
                     for scan_id, recos in pvobj.avail_reco_id.items():
                         for reco_id in recos:
@@ -261,6 +270,7 @@ def main():
                                 if num_spack != 3:  # excluding localizer
                                     method = dset.get_method(scan_id).parameters['Method']
                                     if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+                                        #Why epi is function here? there should at lease a comment.
                                         datatype = 'func'
                                     elif re.search('dti', method, re.IGNORECASE):
                                         datatype = 'dwi'
@@ -269,7 +279,16 @@ def main():
                                     elif re.search('fieldmap', method, re.IGNORECASE):
                                         datatype = 'fmap'
                                     else:
+                                        # what is this? seems like holding files not able to identify
                                         datatype = 'etc'
+
+                                        # warn user to manually update the DataType in datasheet
+                                        import warnings
+                                        
+                                        msg = "\n \n ----- Important ----- \
+                                        \n We do not know how to classify some of your scan and marked them as etc.\
+                                        \n To produce valid BIDS outputs, please update the datasheet to indicate the proper DataType for them \n"
+                                        warnings.warn(msg)
 
                                     item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
                                     if datatype == 'fmap':
@@ -307,10 +326,8 @@ def main():
     elif args.function == 'bids_convert':
         import pandas as pd
         import numpy as np
-        import json
-        import datetime
         from ..lib.utils import build_bids_json, bids_validation
-
+        
         pd.options.mode.chained_assignment = None
         path = args.input
         datasheet = args.datasheet
@@ -338,17 +355,7 @@ def main():
         mkdir(root_path)
 
         # prepare the required file for converted BIDS dataset
-        data_des = 'dataset_description.json'
-        readme = 'README'
-        if not os.path.exists(data_des):
-            with open(os.path.join(root_path, 'dataset_description.json'), 'w') as f:
-                from ..lib.reference import DATASET_DESC_REF
-                json.dump(DATASET_DESC_REF, f, indent=4)
-        if not os.path.exists(readme):
-            with open(os.path.join(root_path, readme), 'w') as f:
-                f.write('This dataset has been converted using BrkRaw (v{})'
-                        'at {}.\n'.format(json_fname, datetime.datetime.now()))
-                f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
+        generateModalityAgnosticFiles(root_path, json_fname)
 
         print('Inspect input BIDS datasheet...')
 
@@ -366,6 +373,8 @@ def main():
                     pvobj = dset.pvobj
                     rawdata = pvobj.path
                     filtered_dset = df[df['RawData'].isin([rawdata])].reset_index()
+
+                    # add Filename and Dir colomn
                     filtered_dset.loc[:, 'FileName'] = [np.nan] * len(filtered_dset)
                     filtered_dset.loc[:, 'Dir'] = [np.nan] * len(filtered_dset)
 
@@ -373,24 +382,13 @@ def main():
                         subj_id = list(set(filtered_dset['SubjID']))[0]
                         subj_code = 'sub-{}'.format(subj_id)
 
-                        for i, row in filtered_dset.iterrows():
-                            if multi_session:
-                                # If multi-session, make session dir
-                                sess_code = 'ses-{}'.format(row.SessID)
-                                subj_path = os.path.join(root_path, subj_code)
-                                mkdir(subj_path)
-                                subj_path = os.path.join(subj_path, sess_code)
-                                mkdir(subj_path)
-                                # add session info to filename as well
-                                fname = '{}_{}'.format(subj_code, sess_code)
-                            else:
-                                subj_path = os.path.join(root_path, subj_code)
-                                mkdir(subj_path)
-                                fname = '{}'.format(subj_code)
+                        # append to participants.tsv one record
+                        with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
+                            f.write(subj_code + '\n')
 
-                            datatype = row.DataType
-                            dtype_path = os.path.join(subj_path, datatype)
-                            mkdir(dtype_path)
+                        # first iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality, can be a separate function
+                        for i, row in filtered_dset.iterrows():
+                            dtype_path, fname = createFolderTree(multi_session, row, root_path, subj_code)
 
                             if pd.notnull(row.task):
                                 if bids_validation(df, i, 'task', row.task, 10):
@@ -464,6 +462,137 @@ def main():
                 pass
     else:
         parser.print_help()
+
+
+def cleanSubjectID(subj_id):
+    """To replace the underscore in subject id.
+    Args:
+        subj_id (str): the orignal subject id.
+    Returns:
+        str: the replaced subject id.
+    """
+
+    import warnings
+
+    # underscore will mess up bids output
+    if '_' in subj_id:
+        subj_id = subj_id.replace('_', 'Underscore')
+        # warn user that the subject/participantID has a '_' and is replaced with 'Underscore'
+        warnings.warn('Participant or subject ID has "_"s, replaced with "Underscore" to make it bids compatiable. You should avoid use "_" in participant/subject ID for BIDS purpose')
+
+    # Hyphen will mess up bids output
+    if '-' in subj_id:
+        subj_id = subj_id.replace('-', 'Hyphen')
+        # warn user that the subject/participantID has a '-' and is replaced with 'Hyphen'
+        warnings.warn('Participant or subject ID has "-"s, replaced with "Hyphen" to make it bids compatiable. You should avoid use "-" in participant/subject ID for BIDS purpose')
+    return subj_id
+
+
+# This could integrate with cleanSubjectID, but mind the different warning messages
+def cleanSessionID(sess_id):
+    """To replace the underscore in session id.
+    Args:
+        sess_id (str): the orignal session id.
+    Returns:
+        str: the replaced session id.
+    """
+
+    import warnings
+
+    # underscore will mess up bids output
+    if '_' in sess_id:
+        sess_id = sess_id.replace('_', 'Underscore')
+        # warn user that the subject/participantID has a '_' and is replaced with 'Underscore'
+        warnings.warn('Session ID has "_"s, replaced with "Underscore" to make it bids compatiable. You should avoid use "_" in session ID for BIDS purpose')
+
+    # Hyphen will mess up bids output
+    if '-' in sess_id:
+        sess_id = sess_id.replace('-', 'Hyphen')
+        # warn user that the subject/participantID has a '-' and is replaced with 'Hyphen'
+        warnings.warn('Session ID has "-"s, replaced with "Hyphen" to make it bids compatiable. You should avoid use "-" in session ID for BIDS purpose')
+
+    return sess_id
+
+
+def generateModalityAgnosticFiles(root_path, json_fname):
+    """To create ModalityAgnosticFiles in output folder.
+    Args:
+        root_path (str): the root output folder
+        json_fname (str): I do not under why this variable is needed.
+    Returns:
+        nothing: just generate files.
+    """
+    data_des = 'dataset_description.json'
+    readme = 'README'
+    # why open use only the current folder and os.path not?
+    if not os.path.exists(data_des):
+        with open(os.path.join(root_path, 'dataset_description.json'), 'w') as f:
+            import json
+            import datetime
+            from ..lib.reference import DATASET_DESC_REF
+            json.dump(DATASET_DESC_REF, f, indent=4)
+    if not os.path.exists(readme):
+        with open(os.path.join(root_path, readme), 'w') as f:
+            # I do not know why json_fname here.
+            f.write('This dataset has been converted using BrkRaw (v{})'
+                    'at {}.\n'.format(json_fname, datetime.datetime.now()))
+            f.write('## How to cite?\n - https://doi.org/10.5281/zenodo.3818615\n')
+    
+    # https://bids-specification.readthedocs.io/en/stable/03-modality-agnostic-files.html
+    # participant.tsv file. if not exist, create it, and append. if need tab use \t
+    participantsTsvPath = os.path.join(root_path, 'participants.tsv')
+    if not os.path.exists(participantsTsvPath):
+        with open(participantsTsvPath, 'a+') as f:
+            f.write('participant_id\n')
+    else:
+        print('Exiting before convert..., participants.tsv already exist in output folder: ', participantsTsvPath)
+        sys.exit()
+
+    # participant.json file. if not exist, create it, and append. if need tab use \t
+    participantsJsonPath = os.path.join(root_path, 'participants.json')
+    if not os.path.exists(participantsJsonPath):
+        with open(participantsJsonPath, 'a+') as f:
+            sideCar = { 
+                "participant_id": {
+                    "Description": "Participant identifier"
+                }
+            }
+            json.dump(sideCar, f, indent=4)
+    else:
+        print('Exiting...before convert, participants.json already exist in output folder: ', participantsJsonPath)
+        sys.exit()
+
+
+
+def createFolderTree(multi_session, row, root_path, subj_code):
+    """To create participant (and session if multi_session) folder.
+    Args:
+        multi_session (bool): multi_session.
+        row (obj): a (panadas) row of data containing sessID and DataType.
+        root_path (str): the root path of output folder
+        subj_code (str): subject or participant folder name
+    Returns:
+        list: first 0 element is dtype_path, second 1 is fname.
+    """
+    if multi_session:
+        # If multi-session, make session dir
+        sess_code = 'ses-{}'.format(row.sessID)
+        subj_path = os.path.join(root_path, subj_code)
+        mkdir(subj_path)
+        subj_path = os.path.join(subj_path, sess_code)
+        mkdir(subj_path)
+        # add session info to filename as well
+        fname = '{}_{}'.format(subj_code, sess_code)
+    else:
+        subj_path = os.path.join(root_path, subj_code)
+        mkdir(subj_path)
+        fname = '{}'.format(subj_code)
+    
+    datatype = row.DataType
+    dtype_path = os.path.join(subj_path, datatype)
+    mkdir(dtype_path)
+
+    return [dtype_path, fname]
 
 
 if __name__ == '__main__':
