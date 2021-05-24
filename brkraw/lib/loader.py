@@ -546,6 +546,18 @@ class BrukerLoader():
         for k, v in json_obj.items():
             if v is None:
                 json_obj[k] = 'Value was not specified'
+            
+        # RepetitionTime is mutually exclusive with VolumeTiming, here default with RepetitionTime. 
+        # https://bids-specification.readthedocs.io/en/latest/04-modality-specific-files/01-magnetic-resonance-imaging-data.html#required-fields
+        # To use VolumeTiming, remove the RepetitionTime item in .json file generated from bids_helper.
+
+        if ('RepetitionTime' in json_obj.keys()) and ('VolumeTiming' in json_obj.keys()):
+            if type(json_obj['RepetitionTime']) == int or type(json_obj['RepetitionTime']) == float:
+                del json_obj['VolumeTiming']
+                msg = "Both 'RepetitionTime' and 'VolumeTiming' exist in your .json file, removed 'VolumeTiming' to make it valid for BIDS.\
+                \n To use VolumeTiming, remove the RepetitionTime item but keep VolumeTiming from the .json file generated from bids_helper."
+                warnings.warn(msg)
+
         with open(os.path.join(dir, '{}.json'.format(filename)), 'w') as f:
             import json
             json.dump(json_obj, f, indent=4)
