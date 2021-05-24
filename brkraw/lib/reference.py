@@ -217,8 +217,8 @@ FMRI_META_REF = \
          # - fMRI task information
          Instructions                   = None,
          TaskDescription                = None,
-         CogAtlasID                     = None,
-         CogPOID                        = None
+         CogAtlasID                     = 'https://www.cognitiveatlas.org/fillYourID',
+         CogPOID                        = 'http://www.cogpo.org/fillYourID'
          )
 
 
