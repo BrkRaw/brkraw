@@ -147,8 +147,11 @@ def get_origin(slice_position, gradient_orient):
     rx, ry, rz = [None, None, None]
 
     if gradient_orient is not None:
-        gradient_orient = np.round(gradient_orient, decimals=0)
-        rx, ry, rz = calc_eulerangle(np.round(gradient_orient[0].T))
+        zmat = np.zeros(gradient_orient[0].shape)
+        for cid, col in enumerate(gradient_orient[0].T):
+            yid = np.argmax(abs(col))
+            zmat[cid, yid] = np.round(col[yid], decimals=0)
+        rx, ry, rz = calc_eulerangle(np.round(zmat.T))
 
     if max_delta_axis == 0:     # sagital
         if rx != None: # PV 5 filter, only PV6 has gradient_orient info
