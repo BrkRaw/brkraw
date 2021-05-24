@@ -211,7 +211,8 @@ FMRI_META_REF = \
          NumberOfVolumesDiscardedByScanner  = 'PVM_DummyScans',
          NumberOfVolumesDiscardedByUser     = None,
          DelayTime                      = None,
-         AcquisitionDuration            = None,
+         AcquisitionDuration            = dict(TR           = "PVM_ScanTime",
+                                               Equation     = "TR/1000"),
          DelayAfterTrigger              = None,
 
          # - fMRI task information
