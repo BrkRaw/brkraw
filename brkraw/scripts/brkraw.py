@@ -275,28 +275,11 @@ def main():
 
                                 if num_spack != 3:  # excluding localizer
                                     method = dset.get_method(scan_id).parameters['Method']
-                                    if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
-                                        #Why epi is function here? there should at lease a comment.
-                                        datatype = 'func'
-                                    elif re.search('dti', method, re.IGNORECASE):
-                                        datatype = 'dwi'
-                                    elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
-                                        datatype = 'anat'
-                                    elif re.search('fieldmap', method, re.IGNORECASE):
-                                        datatype = 'fmap'
-                                    else:
-                                        # what is this? seems like holding files not able to identify
-                                        datatype = 'etc'
 
-                                        # warn user to manually update the DataType in datasheet
-                                        import warnings
-                                        
-                                        msg = "\n \n ----- Important ----- \
-                                        \n We do not know how to classify some of your scan and marked them as etc.\
-                                        \n To produce valid BIDS outputs, please update the datasheet to indicate the proper DataType for them \n"
-                                        warnings.warn(msg)
+                                    datatype = assignDataType(method)
 
                                     item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
+                                    #import pdb; pdb.set_trace()
                                     if datatype == 'fmap':
                                         for m, s, e in [['fieldmap', 0, 1], ['magnitude', 1, 2]]:
                                             item['modality'] = m
@@ -305,6 +288,9 @@ def main():
                                             df = df.append(item, ignore_index=True)
                                     elif datatype == 'dwi':
                                         item['modality'] = 'dwi'
+                                        df = df.append(item, ignore_index=True)
+                                    elif datatype == 'anat' and re.search('MSME', method, re.IGNORECASE):
+                                        item['modality'] = 'MESE'
                                         df = df.append(item, ignore_index=True)
                                     else:
                                         df = df.append(item, ignore_index=True)
@@ -518,6 +504,46 @@ def cleanSessionID(sess_id):
         warnings.warn('Session ID has "-"s, replaced with "Hyphen" to make it bids compatiable. You should avoid use "-" in session ID for BIDS purpose')
 
     return sess_id
+
+
+def assignDataType (method):
+    """To assign the dataType based on method.
+    Args:
+        method (str): the method from BrukerLoader.get_method.parameters['Method'].
+    Returns:
+        str: the datatype.
+    """
+    if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+        #Why epi is function here? there should at lease a comment.
+        datatype = 'func'
+    elif re.search('dti', method, re.IGNORECASE):
+        datatype = 'dwi'
+    elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
+        datatype = 'anat'
+    elif re.search('fieldmap', method, re.IGNORECASE):
+        datatype = 'fmap'
+    elif re.search('MSME', method, re.IGNORECASE):
+        datatype = 'anat'
+
+        # warn user for MSME default to anat and MESE
+        import warnings
+        msg = "MSME found in your scan, default to anat DataType and MESE modality, " + \
+        "please update the datasheet to indicate the proper DataType if different than default." 
+        warnings.warn(msg)
+
+    else:
+        # what is this? seems like holding files not able to identify
+        datatype = 'etc'
+
+        # warn user to manually update the DataType in datasheet
+        import warnings
+        
+        msg = "\n \n ----- Important ----- \
+        \n We do not know how to classify some of your scan and marked them as etc.\
+        \n To produce valid BIDS outputs, please update the datasheet to indicate the proper DataType for them \n"
+        warnings.warn(msg)
+
+    return datatype
 
 
 def generateModalityAgnosticFiles(root_path, json_fname):
