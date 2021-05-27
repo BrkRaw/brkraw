@@ -377,43 +377,7 @@ def main():
                         with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
                             f.write(subj_code + '\n')
 
-                        # first iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality, can be a separate function
-                        for i, row in filtered_dset.iterrows():
-                            dtype_path, fname = createFolderTree(multi_session, row, root_path, subj_code)
-
-                            # separate function here
-                            if pd.notnull(row.task):
-                                if bids_validation(df, i, 'task', row.task, 10):
-                                    fname = '{}_task-{}'.format(fname, row.task)
-                            if pd.notnull(row.acq):
-                                if bids_validation(df, i, 'acq', row.acq, 10):
-                                    fname = '{}_acq-{}'.format(fname, row.acq)
-                            if pd.notnull(row.ce):
-                                if bids_validation(df, i, 'ce', row.ce, 5):
-                                    fname = '{}_ce-{}'.format(fname, row.ce)
-                            if pd.notnull(row.dir):
-                                if bids_validation(df, i, 'dir', row.dir, 2):
-                                    fname = '{}_dir-{}'.format(fname, row.dir)
-                            if pd.notnull(row.rec):
-                                if bids_validation(df, i, 'rec', row.rec, 2):
-                                    fname = '{}_rec-{}'.format(fname, row.rec)
-                            filtered_dset.loc[i, 'FileName'] = fname
-                            filtered_dset.loc[i, 'Dir'] = dtype_path
-                            if pd.isnull(row.modality):
-                                method = dset.get_method(row.ScanID).parameters['Method']
-                                if row.DataType == 'anat':
-                                    if re.search('flash', method, re.IGNORECASE):
-                                        modality = 'FLASH'
-                                    elif re.search('rare', method, re.IGNORECASE):
-                                        modality = 'T2w'
-                                    else:
-                                        modality = '{}'.format(method.split(':')[-1])
-                                else:
-                                    modality = '{}'.format(method.split(':')[-1])
-                                filtered_dset.loc[i, 'modality'] = modality
-                            else:
-                                bids_validation(df, i, 'modality', row.modality, 10, dtype=str)
-
+                        filtered_dset = completeFieldsCreateFolders(df, filtered_dset, dset, multi_session, root_path, subj_code)
 
                         list_tested_fn = []
                         # Converting data according to the updated sheet
@@ -627,6 +591,58 @@ def createFolderTree(multi_session, row, root_path, subj_code):
 
     return [dtype_path, fname]
 
+
+def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_path, subj_code):
+    """To complete the dataframe fields and create output folders. [too many parameters]
+    Args:
+        df (dataframe): original pandas dataframe, not sure whether it can replaced by filtered_dset (someone has to figure it out)
+        filtered_dset (dataframe): filtered pandas dataframe
+        dset (object): BrukerLoader(dpath) object
+        multi_session (bool): multi_session.
+        root_path (str): the root path of output folder
+        subj_code (str): subject or participant folder name
+    Returns:
+        dataframe: the completed filtered_dset.
+    """
+    import pandas as pd
+    from ..lib.utils import bids_validation
+
+    # iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality
+    for i, row in filtered_dset.iterrows():
+        dtype_path, fname = createFolderTree(multi_session, row, root_path, subj_code)
+        if pd.notnull(row.task):
+            if bids_validation(df, i, 'task', row.task, 10):
+                fname = '{}_task-{}'.format(fname, row.task)
+        if pd.notnull(row.acq):
+            if bids_validation(df, i, 'acq', row.acq, 10):
+                fname = '{}_acq-{}'.format(fname, row.acq)
+        if pd.notnull(row.ce):
+            if bids_validation(df, i, 'ce', row.ce, 5):
+                fname = '{}_ce-{}'.format(fname, row.ce)
+        if pd.notnull(row.dir):
+            if bids_validation(df, i, 'dir', row.dir, 2):
+                fname = '{}_dir-{}'.format(fname, row.dir)
+        if pd.notnull(row.rec):
+            if bids_validation(df, i, 'rec', row.rec, 2):
+                fname = '{}_rec-{}'.format(fname, row.rec)
+        filtered_dset.loc[i, 'FileName'] = fname
+        filtered_dset.loc[i, 'Dir'] = dtype_path
+        if pd.isnull(row.modality):
+            method = dset.get_method(row.ScanID).parameters['Method']
+            if row.DataType == 'anat':
+                if re.search('flash', method, re.IGNORECASE):
+                    modality = 'FLASH'
+                elif re.search('rare', method, re.IGNORECASE):
+                    modality = 'T2w'
+                else:
+                    modality = '{}'.format(method.split(':')[-1])
+            else:
+                modality = '{}'.format(method.split(':')[-1])
+            filtered_dset.loc[i, 'modality'] = modality
+        else:
+            bids_validation(df, i, 'modality', row.modality, 10, dtype=str)
+    
+    return filtered_dset
 
 if __name__ == '__main__':
     main()
