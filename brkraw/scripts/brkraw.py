@@ -279,7 +279,6 @@ def main():
                                     datatype = assignDataType(method)
 
                                     item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
-                                    #import pdb; pdb.set_trace()
                                     if datatype == 'fmap':
                                         for m, s, e in [['fieldmap', 0, 1], ['magnitude', 1, 2]]:
                                             item['modality'] = m
@@ -382,6 +381,7 @@ def main():
                         for i, row in filtered_dset.iterrows():
                             dtype_path, fname = createFolderTree(multi_session, row, root_path, subj_code)
 
+                            # separate function here
                             if pd.notnull(row.task):
                                 if bids_validation(df, i, 'task', row.task, 10):
                                     fname = '{}_task-{}'.format(fname, row.task)
@@ -413,6 +413,7 @@ def main():
                                 filtered_dset.loc[i, 'modality'] = modality
                             else:
                                 bids_validation(df, i, 'modality', row.modality, 10, dtype=str)
+
 
                         list_tested_fn = []
                         # Converting data according to the updated sheet
