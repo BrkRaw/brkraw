@@ -344,9 +344,10 @@ def main():
 
         # check if the project is multi-session
         if all(pd.isnull(df['SessID'])):
-            # SessID was removed
+            # SessID was removed, this need to go to documentation
             multi_session = False
         else:
+            # if SessionID appears in datasheet, then by default session appears. multi_session variable name need to be changed include_session?.
             num_session = len(list(set(df['SessID'])))
             if num_session > 1:
                 multi_session = True
