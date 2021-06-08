@@ -347,12 +347,9 @@ def main():
             # SessID was removed, this need to go to documentation
             multi_session = False
         else:
+            #import pdb; pdb.set_trace()
             # if SessionID appears in datasheet, then by default session appears. multi_session variable name need to be changed include_session?.
-            num_session = len(list(set(df['SessID'])))
-            if num_session > 1:
-                multi_session = True
-            else:
-                multi_session = False
+            multi_session = True
 
         if not output:
             root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
@@ -575,7 +572,7 @@ def createFolderTree(multi_session, row, root_path, subj_code):
     """To create participant (and session if multi_session) folder.
     Args:
         multi_session (bool): multi_session.
-        row (obj): a (panadas) row of data containing sessID and DataType.
+        row (obj): a (panadas) row of data containing SessID and DataType.
         root_path (str): the root path of output folder
         subj_code (str): subject or participant folder name
     Returns:
@@ -583,7 +580,7 @@ def createFolderTree(multi_session, row, root_path, subj_code):
     """
     if multi_session:
         # If multi-session, make session dir
-        sess_code = 'ses-{}'.format(row.sessID)
+        sess_code = 'ses-{}'.format(row.SessID)
         subj_path = os.path.join(root_path, subj_code)
         mkdir(subj_path)
         subj_path = os.path.join(subj_path, sess_code)
