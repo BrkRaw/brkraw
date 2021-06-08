@@ -342,14 +342,13 @@ def main():
         json_fname = args.json
         slope, offset = set_rescale(args)
 
-        # check if the project is multi-session
+        # check if the project is session included
         if all(pd.isnull(df['SessID'])):
-            # SessID was removed, this need to go to documentation
-            multi_session = False
+            # SessID was removed (not column, but value), this need to go to documentation
+            include_session = False
         else:
-            #import pdb; pdb.set_trace()
-            # if SessionID appears in datasheet, then by default session appears. multi_session variable name need to be changed include_session?.
-            multi_session = True
+            # if SessionID appears in datasheet, then by default session appears.
+            include_session = True
 
         if not output:
             root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
@@ -392,7 +391,7 @@ def main():
 
                         # first iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality, can be a separate function
                         for i, row in filtered_dset.iterrows():
-                            dtype_path, fname = createFolderTree(multi_session, row, root_path, subj_code)
+                            dtype_path, fname = createFolderTree(include_session, row, root_path, subj_code)
 
                             if pd.notnull(row.task):
                                 if bids_validation(df, i, 'task', row.task, 10):
@@ -568,18 +567,18 @@ def generateModalityAgnosticFiles(root_path, json_fname):
 
 
 
-def createFolderTree(multi_session, row, root_path, subj_code):
-    """To create participant (and session if multi_session) folder.
+def createFolderTree(include_session, row, root_path, subj_code):
+    """To create participant (and session if include_session) folder.
     Args:
-        multi_session (bool): multi_session.
+        include_session (bool): include_session.
         row (obj): a (panadas) row of data containing SessID and DataType.
         root_path (str): the root path of output folder
         subj_code (str): subject or participant folder name
     Returns:
         list: first 0 element is dtype_path, second 1 is fname.
     """
-    if multi_session:
-        # If multi-session, make session dir
+    if include_session:
+        # If session included, make session dir
         sess_code = 'ses-{}'.format(row.SessID)
         subj_path = os.path.join(root_path, subj_code)
         mkdir(subj_path)
