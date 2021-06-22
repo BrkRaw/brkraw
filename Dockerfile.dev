@@ -3,13 +3,13 @@
 
 FROM python:3.7
 RUN apt-get update && apt-get install -y git
-RUN mkdir /data
 WORKDIR /home
 RUN git clone https://github.com/BrkRaw/brkraw.git
 WORKDIR /home/brkraw
 RUN git remote rename origin brkraw
-WORKDIR /
 RUN python -m pip install -e /home/brkraw
+RUN mkdir /data
+WORKDIR /data
 
 CMD echo '--------------------'; \
     echo 'To use the bids converter:'; \

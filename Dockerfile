@@ -2,8 +2,9 @@
 # docker run -it --rm -v <your path to your data folder>:/data <your image>
 
 FROM python:3.7
-RUN mkdir /data
 RUN python -m pip install bruker==0.3.3
+RUN mkdir /data
+WORKDIR /data
 
 CMD echo '--------------------'; \
     echo 'To use the bids converter:'; \
