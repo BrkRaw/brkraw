@@ -2,12 +2,10 @@
 # You could directly edit the source code at `/home/brkraw to make changes. Or you could mount your brkraw code folder to /home/brkraw
 
 FROM python:3.7
-RUN apt-get update && apt-get install -y git
 WORKDIR /home
 RUN mkdir ./brkraw
 WORKDIR /home/brkraw
 COPY . .
-RUN git remote add brkraw https://github.com/BrkRaw/brkraw.git
 RUN python -m pip install -e /home/brkraw
 RUN mkdir /data
 WORKDIR /data
