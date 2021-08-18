@@ -310,11 +310,11 @@ class BrukerLoader():
                 start = int(spack_idx * num_slices_each_pack[spack_idx])
                 end = start + num_slices_each_pack[spack_idx]
                 seg_imgobj = imgobj[..., start:end]
-                niiobj = Nifti1Image(seg_imgobj, np.round(affine[spack_idx], decimals=3))
+                niiobj = Nifti1Image(seg_imgobj, affine[spack_idx])
                 niiobj = self._set_nifti_header(niiobj, visu_pars, method, slope=slope, offset=offset)
                 parser.append(niiobj)
             return parser
-        affine = np.round(affine, decimals=3)
+        
         if self.is_multi_echo(scan_id, reco_id):
             # multi-echo image must be splitted
             parser = []
