@@ -103,7 +103,14 @@ class BrukerLoader():
 
     @property
     def num_scans(self):
-        return len(self._pvobj._fid.keys())
+        
+        # [20210820] Add-paravision 360 related. fid does not existed.
+        # return len(self._pvobj._fid.keys())
+        len_scans = len(self._pvobj._fid.keys())
+        if len_scans > 0:
+            return len_scans
+        else:
+            return len(self._pvobj._2dseq.keys())
 
     @property
     def num_recos(self):
