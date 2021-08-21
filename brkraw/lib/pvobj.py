@@ -37,8 +37,19 @@ class PvDatasetBase:
             self.subj_id        = get_value(subject, 'SUBJECT_id')
             self.study_id       = get_value(subject, 'SUBJECT_study_nr')
             self.session_id     = get_value(subject, 'SUBJECT_study_name')
-            self.subj_entry     = get_value(subject, 'SUBJECT_entry').split('_')[-1]
-            self.subj_pose      = get_value(subject, 'SUBJECT_position').split('_')[-1]
+            
+            # [20210820] Add-paravision 360 related.
+            title = subject.headers['TITLE']
+            if "360" in title:
+                self.subj_entry = get_value(subject, 'SUBJECT_study_instrument_position').split('_')[0]
+                self.subj_pose  = get_value(subject, 'SUBJECT_study_instrument_position').split('_')[1]
+            else:
+                self.subj_entry = get_value(subject, 'SUBJECT_entry').split('_')[-1]
+                self.subj_pose  = get_value(subject, 'SUBJECT_position').split('_')[-1]
+            
+            #self.subj_entry     = get_value(subject, 'SUBJECT_entry').split('_')[-1]
+            #self.subj_pose      = get_value(subject, 'SUBJECT_position').split('_')[-1]
+            
             self.subj_sex       = get_value(subject, 'SUBJECT_sex')
             self.subj_type      = get_value(subject, 'SUBJECT_type')
             self.subj_weight    = get_value(subject, 'SUBJECT_weight')
