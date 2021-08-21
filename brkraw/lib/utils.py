@@ -61,6 +61,25 @@ def convert_data_to(data, shape):
             else:
                 data = is_bisarray
         else:
+            
+            # [20210820] Add-paravision 360 related.
+            m_all = re.findall(ptrn_at_array, data)
+            m_all = set(m_all)
+            m_all = list(m_all)
+
+            for str_ptn in m_all:
+                num_cnt = int(str_ptn[0])
+                num_repeat = float(str_ptn[1])
+                str_ptn = "@" + str_ptn[0] + "*(" + str_ptn[1] + ")"
+
+                str_replace_old = str_ptn
+                str_replace_new = [num_repeat for i in range(num_cnt)]
+                str_replace_new = str(str_replace_new)
+                str_replace_new = str_replace_new.replace(",", "")
+                str_replace_new = str_replace_new.replace("[", "")
+                str_replace_new = str_replace_new.replace("]", "")
+                data = data.replace(str_replace_old, str_replace_new)
+            
             if re.match(ptrn_complex_array, data):
                 # data = re.sub(ptrn_complex_array, r'\g<comparray>', data)
                 data_holder = cp(data)
