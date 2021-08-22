@@ -898,7 +898,9 @@ class BrukerLoader():
                             # num_slices_each_pack.append(matrix_shape[id])
                             num_slices_each_pack.append(matrix_shape[0])
                 slice_distances_each_pack = [frame_thickness for _ in range(num_slice_packs)]
-            elif version == 3:
+            # [20210822] Add version 4
+            #elif version == 3:
+            elif version == 3 or version == 4:
                 num_slice_packs = get_value(visu_pars, 'VisuCoreSlicePacksDef')
                 if num_slice_packs is None:
                     num_slice_packs = 1
