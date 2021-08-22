@@ -433,7 +433,9 @@ def main():
                                             fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                         else:
                                             _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                            fname = '{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
+                                            # [20210822] format error
+                                            #fname = '{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
+                                            fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
                                         if fname in conflict_tested:
                                             raise ValueConflictInField('ScanID:[{}] Conflict error. '
                                                                        'The [run] index value must be unique '
