@@ -129,18 +129,21 @@ def main():
         root.mainloop()
 
     elif args.function == 'tonii':
-        path = args.input
-        scan_id = args.scanid
-        reco_id = args.recoid
-        study = BrukerLoader(path)
+        path     = args.input
+        scan_id  = args.scanid
+        reco_id  = args.recoid
+        study    = BrukerLoader(path)
         slope, offset = set_rescale(args)
-
+        acqpars  = study.get_acqp(int(scan_id))
+        scanname = acqpars._parameters['ACQ_scan_name']
+        scanname = scanname.replace(' ','-')
+        
         if args.output:
             output = args.output
         else:
             output = '{}_{}'.format(study._pvobj.subj_id,study._pvobj.study_id)
         if scan_id:
-            output_fname = '{}-{}-{}'.format(output, scan_id, reco_id)
+            output_fname = '{}-{}-{}-{}'.format(output, scan_id, reco_id,scanname)
             try:
                 scan_id = int(scan_id)
                 reco_id = int(reco_id)
@@ -152,7 +155,7 @@ def main():
         else:
             for scan_id, recos in study._pvobj.avail_reco_id.items():
                 for reco_id in recos:
-                    output_fname = '{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id)
+                    output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id,scanname)
                     try:
                         study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
                         save_meta_files(study, args, scan_id, reco_id, output_fname)

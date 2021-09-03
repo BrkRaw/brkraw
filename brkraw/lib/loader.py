@@ -681,6 +681,8 @@ class BrukerLoader():
                 te = ','.join(map(str, te)) if isinstance(te, list) else te
                 pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
                 flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
+                acqpars  = self.get_acqp(int(scan_id))
+                scanname = acqpars._parameters['ACQ_scan_name']
                 param_values = [tr, te, pixel_bw, flip_angle]
                 for k, v in enumerate(param_values):
                     if v is None:
@@ -692,9 +694,10 @@ class BrukerLoader():
                         *param_values)
                     protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
                     sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
-                    lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
+                    lines.append('[{}]\t{}::{}::{}\n\t{}'.format(str(scan_id).zfill(3),
                                                                sequence_name,
                                                                protocol_name,
+                                                               scanname,
                                                                params))
 
                 dim, cls = self._get_dim_info(visu_pars)
