@@ -11,6 +11,8 @@ ptrn_string         = r'^\<(?P<string>[^>]*)\>$'
 ptrn_arraystring    = r'\<(?P<string>[^>]*)\>[,]*'
 ptrn_bisstring      = r'\<(?P<string>\$Bis[^>]*)\#\>'
 ptrn_braces         = r'\((?P<contents>[^()]*)\)'
+# [20210820] Add-paravision 360 related. @[number of repititions]([number]) ex) @5(0)
+ptrn_at_array       = r'@(\d*)\*\(([-]?\d*[.]?\d*[eE]?[-]?\d*?)\)'
 
 # Conditional variables
 HEADER = 0

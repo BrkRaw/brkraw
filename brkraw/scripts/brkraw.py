@@ -129,18 +129,21 @@ def main():
         root.mainloop()
 
     elif args.function == 'tonii':
-        path = args.input
-        scan_id = args.scanid
-        reco_id = args.recoid
-        study = BrukerLoader(path)
+        path     = args.input
+        scan_id  = args.scanid
+        reco_id  = args.recoid
+        study    = BrukerLoader(path)
         slope, offset = set_rescale(args)
-
+        acqpars  = study.get_acqp(int(scan_id))
+        scanname = acqpars._parameters['ACQ_scan_name']
+        scanname = scanname.replace(' ','-')
+        
         if args.output:
             output = args.output
         else:
             output = '{}_{}'.format(study._pvobj.subj_id,study._pvobj.study_id)
         if scan_id:
-            output_fname = '{}-{}-{}'.format(output, scan_id, reco_id)
+            output_fname = '{}-{}-{}-{}'.format(output, scan_id, reco_id,scanname)
             try:
                 scan_id = int(scan_id)
                 reco_id = int(reco_id)
@@ -152,7 +155,7 @@ def main():
         else:
             for scan_id, recos in study._pvobj.avail_reco_id.items():
                 for reco_id in recos:
-                    output_fname = '{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id)
+                    output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id,scanname)
                     try:
                         study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
                         save_meta_files(study, args, scan_id, reco_id, output_fname)
@@ -275,26 +278,8 @@ def main():
 
                                 if num_spack != 3:  # excluding localizer
                                     method = dset.get_method(scan_id).parameters['Method']
-                                    if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
-                                        #Why epi is function here? there should at lease a comment.
-                                        datatype = 'func'
-                                    elif re.search('dti', method, re.IGNORECASE):
-                                        datatype = 'dwi'
-                                    elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
-                                        datatype = 'anat'
-                                    elif re.search('fieldmap', method, re.IGNORECASE):
-                                        datatype = 'fmap'
-                                    else:
-                                        # what is this? seems like holding files not able to identify
-                                        datatype = 'etc'
 
-                                        # warn user to manually update the DataType in datasheet
-                                        import warnings
-                                        
-                                        msg = "\n \n ----- Important ----- \
-                                        \n We do not know how to classify some of your scan and marked them as etc.\
-                                        \n To produce valid BIDS outputs, please update the datasheet to indicate the proper DataType for them \n"
-                                        warnings.warn(msg)
+                                    datatype = assignDataType(method)
 
                                     item = dict(zip(Headers, [rawdata, subj_id, sess_id, scan_id, reco_id, datatype]))
                                     if datatype == 'fmap':
@@ -305,6 +290,9 @@ def main():
                                             df = df.append(item, ignore_index=True)
                                     elif datatype == 'dwi':
                                         item['modality'] = 'dwi'
+                                        df = df.append(item, ignore_index=True)
+                                    elif datatype == 'anat' and re.search('MSME', method, re.IGNORECASE):
+                                        item['modality'] = 'MESE'
                                         df = df.append(item, ignore_index=True)
                                     else:
                                         df = df.append(item, ignore_index=True)
@@ -389,41 +377,7 @@ def main():
                         with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
                             f.write(subj_code + '\n')
 
-                        # first iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality, can be a separate function
-                        for i, row in filtered_dset.iterrows():
-                            dtype_path, fname = createFolderTree(include_session, row, root_path, subj_code)
-
-                            if pd.notnull(row.task):
-                                if bids_validation(df, i, 'task', row.task, 10):
-                                    fname = '{}_task-{}'.format(fname, row.task)
-                            if pd.notnull(row.acq):
-                                if bids_validation(df, i, 'acq', row.acq, 10):
-                                    fname = '{}_acq-{}'.format(fname, row.acq)
-                            if pd.notnull(row.ce):
-                                if bids_validation(df, i, 'ce', row.ce, 5):
-                                    fname = '{}_ce-{}'.format(fname, row.ce)
-                            if pd.notnull(row.dir):
-                                if bids_validation(df, i, 'dir', row.dir, 2):
-                                    fname = '{}_dir-{}'.format(fname, row.dir)
-                            if pd.notnull(row.rec):
-                                if bids_validation(df, i, 'rec', row.rec, 2):
-                                    fname = '{}_rec-{}'.format(fname, row.rec)
-                            filtered_dset.loc[i, 'FileName'] = fname
-                            filtered_dset.loc[i, 'Dir'] = dtype_path
-                            if pd.isnull(row.modality):
-                                method = dset.get_method(row.ScanID).parameters['Method']
-                                if row.DataType == 'anat':
-                                    if re.search('flash', method, re.IGNORECASE):
-                                        modality = 'FLASH'
-                                    elif re.search('rare', method, re.IGNORECASE):
-                                        modality = 'T2w'
-                                    else:
-                                        modality = '{}'.format(method.split(':')[-1])
-                                else:
-                                    modality = '{}'.format(method.split(':')[-1])
-                                filtered_dset.loc[i, 'modality'] = modality
-                            else:
-                                bids_validation(df, i, 'modality', row.modality, 10, dtype=str)
+                        filtered_dset = completeFieldsCreateFolders(df, filtered_dset, dset, multi_session, root_path, subj_code)
 
                         list_tested_fn = []
                         # Converting data according to the updated sheet
@@ -447,7 +401,9 @@ def main():
                                             fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                         else:
                                             _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                            fname = '{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
+                                            # [20210822] format error
+                                            #fname = '{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
+                                            fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
                                         if fname in conflict_tested:
                                             raise ValueConflictInField('ScanID:[{}] Conflict error. '
                                                                        'The [run] index value must be unique '
@@ -515,6 +471,46 @@ def cleanSessionID(sess_id):
         warnings.warn('Session ID has "-"s, replaced with "Hyphen" to make it bids compatiable. You should avoid use "-" in session ID for BIDS purpose')
 
     return sess_id
+
+
+def assignDataType (method):
+    """To assign the dataType based on method.
+    Args:
+        method (str): the method from BrukerLoader.get_method.parameters['Method'].
+    Returns:
+        str: the datatype.
+    """
+    if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+        #Why epi is function here? there should at lease a comment.
+        datatype = 'func'
+    elif re.search('dti', method, re.IGNORECASE):
+        datatype = 'dwi'
+    elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
+        datatype = 'anat'
+    elif re.search('fieldmap', method, re.IGNORECASE):
+        datatype = 'fmap'
+    elif re.search('MSME', method, re.IGNORECASE):
+        datatype = 'anat'
+
+        # warn user for MSME default to anat and MESE
+        import warnings
+        msg = "MSME found in your scan, default to anat DataType and MESE modality, " + \
+        "please update the datasheet to indicate the proper DataType if different than default." 
+        warnings.warn(msg)
+
+    else:
+        # what is this? seems like holding files not able to identify
+        datatype = 'etc'
+
+        # warn user to manually update the DataType in datasheet
+        import warnings
+        
+        msg = "\n \n ----- Important ----- \
+        \n We do not know how to classify some of your scan and marked them as etc.\
+        \n To produce valid BIDS outputs, please update the datasheet to indicate the proper DataType for them \n"
+        warnings.warn(msg)
+
+    return datatype
 
 
 def generateModalityAgnosticFiles(root_path, json_fname):
@@ -597,6 +593,58 @@ def createFolderTree(include_session, row, root_path, subj_code):
 
     return [dtype_path, fname]
 
+
+def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_path, subj_code):
+    """To complete the dataframe fields and create output folders. [too many parameters]
+    Args:
+        df (dataframe): original pandas dataframe, not sure whether it can replaced by filtered_dset (someone has to figure it out)
+        filtered_dset (dataframe): filtered pandas dataframe
+        dset (object): BrukerLoader(dpath) object
+        multi_session (bool): multi_session.
+        root_path (str): the root path of output folder
+        subj_code (str): subject or participant folder name
+    Returns:
+        dataframe: the completed filtered_dset.
+    """
+    import pandas as pd
+    from ..lib.utils import bids_validation
+
+    # iterrows to create folder tree, add to filtered_dset fname, dtype_path, and modality
+    for i, row in filtered_dset.iterrows():
+        dtype_path, fname = createFolderTree(multi_session, row, root_path, subj_code)
+        if pd.notnull(row.task):
+            if bids_validation(df, i, 'task', row.task, 10):
+                fname = '{}_task-{}'.format(fname, row.task)
+        if pd.notnull(row.acq):
+            if bids_validation(df, i, 'acq', row.acq, 10):
+                fname = '{}_acq-{}'.format(fname, row.acq)
+        if pd.notnull(row.ce):
+            if bids_validation(df, i, 'ce', row.ce, 5):
+                fname = '{}_ce-{}'.format(fname, row.ce)
+        if pd.notnull(row.dir):
+            if bids_validation(df, i, 'dir', row.dir, 2):
+                fname = '{}_dir-{}'.format(fname, row.dir)
+        if pd.notnull(row.rec):
+            if bids_validation(df, i, 'rec', row.rec, 2):
+                fname = '{}_rec-{}'.format(fname, row.rec)
+        filtered_dset.loc[i, 'FileName'] = fname
+        filtered_dset.loc[i, 'Dir'] = dtype_path
+        if pd.isnull(row.modality):
+            method = dset.get_method(row.ScanID).parameters['Method']
+            if row.DataType == 'anat':
+                if re.search('flash', method, re.IGNORECASE):
+                    modality = 'FLASH'
+                elif re.search('rare', method, re.IGNORECASE):
+                    modality = 'T2w'
+                else:
+                    modality = '{}'.format(method.split(':')[-1])
+            else:
+                modality = '{}'.format(method.split(':')[-1])
+            filtered_dset.loc[i, 'modality'] = modality
+        else:
+            bids_validation(df, i, 'modality', row.modality, 10, dtype=str)
+    
+    return filtered_dset
 
 if __name__ == '__main__':
     main()

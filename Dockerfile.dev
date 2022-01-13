@@ -1,0 +1,21 @@
+# This docker file build a editable image.
+# You could directly edit the source code at `/home/brkraw to make changes. Or you could mount your brkraw code folder to /home/brkraw
+
+FROM python:3.7
+WORKDIR /home
+RUN mkdir ./brkraw
+WORKDIR /home/brkraw
+COPY . .
+RUN python -m pip install -e /home/brkraw
+RUN mkdir /data
+WORKDIR /data
+
+CMD echo '--------------------'; \
+    echo 'To use the bids converter:'; \
+    echo 'first run bids_helper'; \
+    echo 'brkraw bids_helper <input dir> <output filename> -j'; \
+    echo 'second, run converter'; \
+    echo 'brkraw bids_convert <input dir> <BIDS datasheet.xlsx> -j <JSON syntax template.json> -o <output dir>';\
+    echo '--------------------'; \
+    bash
+

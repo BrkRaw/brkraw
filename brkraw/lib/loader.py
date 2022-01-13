@@ -103,7 +103,13 @@ class BrukerLoader():
 
     @property
     def num_scans(self):
-        return len(self._pvobj._fid.keys())
+        # [20210820] Add-paravision 360 related.
+        # return len(self._pvobj._fid.keys())
+        len_scans = len(self._pvobj._fid.keys())
+        if len_scans > 0:
+            return len_scans
+        else:
+            return len(self._pvobj._2dseq.keys())
 
     @property
     def num_recos(self):
@@ -310,11 +316,11 @@ class BrukerLoader():
                 start = int(spack_idx * num_slices_each_pack[spack_idx])
                 end = start + num_slices_each_pack[spack_idx]
                 seg_imgobj = imgobj[..., start:end]
-                niiobj = Nifti1Image(seg_imgobj, np.round(affine[spack_idx], decimals=3))
+                niiobj = Nifti1Image(seg_imgobj, affine[spack_idx])
                 niiobj = self._set_nifti_header(niiobj, visu_pars, method, slope=slope, offset=offset)
                 parser.append(niiobj)
             return parser
-        affine = np.round(affine, decimals=3)
+        
         if self.is_multi_echo(scan_id, reco_id):
             # multi-echo image must be splitted
             parser = []
@@ -675,6 +681,8 @@ class BrukerLoader():
                 te = ','.join(map(str, te)) if isinstance(te, list) else te
                 pixel_bw = get_value(visu_pars, 'VisuAcqPixelBandwidth')
                 flip_angle = get_value(visu_pars, 'VisuAcqFlipAngle')
+                acqpars  = self.get_acqp(int(scan_id))
+                scanname = acqpars._parameters['ACQ_scan_name']
                 param_values = [tr, te, pixel_bw, flip_angle]
                 for k, v in enumerate(param_values):
                     if v is None:
@@ -686,9 +694,10 @@ class BrukerLoader():
                         *param_values)
                     protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
                     sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
-                    lines.append('[{}]\t{}::{}::\n\t{}'.format(str(scan_id).zfill(3),
+                    lines.append('[{}]\t{}::{}::{}\n\t{}'.format(str(scan_id).zfill(3),
                                                                sequence_name,
                                                                protocol_name,
+                                                               scanname,
                                                                params))
 
                 dim, cls = self._get_dim_info(visu_pars)
@@ -913,7 +922,9 @@ class BrukerLoader():
                             # num_slices_each_pack.append(matrix_shape[id])
                             num_slices_each_pack.append(matrix_shape[0])
                 slice_distances_each_pack = [frame_thickness for _ in range(num_slice_packs)]
-            elif version == 3:
+            # [20210822] Add version 4
+            #elif version == 3:
+            elif version == 3 or version == 4 or version == 5:
                 num_slice_packs = get_value(visu_pars, 'VisuCoreSlicePacksDef')
                 if num_slice_packs is None:
                     num_slice_packs = 1

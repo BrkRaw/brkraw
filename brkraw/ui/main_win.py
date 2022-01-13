@@ -9,7 +9,6 @@ from .config import win_pre_width as _width, win_pre_height as _height
 from .config import win_pst_width, win_pst_height
 from .config import window_posx, window_posy
 
-
 class MainWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -178,11 +177,17 @@ class MainWindow(tk.Tk):
     def _save_as(self):
         date = self._raw.get_scan_time()['date'].strftime("%y%m%d")
         pvobj = self._raw._pvobj
-        filename = '{}_{}_{}_{}_{}_{}'.format(date,
+        acqp  = self._raw.get_acqp
+        this_acqp = acqp(self._scan_id)
+        scan_name = this_acqp.parameters['ACQ_scan_name']
+        scan_name = scan_name.replace(' ','-')
+        filename = '{}_{}_{}_{}_{}_{}_{}'.format(date,
                                               pvobj.subj_id,
                                               pvobj.session_id,
                                               pvobj.study_id,
-                                              self._scan_id, self._reco_id)
+                                              self._scan_id,
+                                              self._reco_id,
+                                              scan_name)
         if self._ignore_slope:
             slope = None
         else:
