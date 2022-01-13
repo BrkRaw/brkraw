@@ -330,16 +330,13 @@ def main():
         json_fname = args.json
         slope, offset = set_rescale(args)
 
-        # check if the project is multi-session
+        # check if the project is session included
         if all(pd.isnull(df['SessID'])):
-            # SessID was removed
-            multi_session = False
+            # SessID was removed (not column, but value), this need to go to documentation
+            include_session = False
         else:
-            num_session = len(list(set(df['SessID'])))
-            if num_session > 1:
-                multi_session = True
-            else:
-                multi_session = False
+            # if SessionID appears in datasheet, then by default session appears.
+            include_session = True
 
         if not output:
             root_path = os.path.abspath(os.path.join(os.path.curdir, 'Data'))
@@ -566,19 +563,19 @@ def generateModalityAgnosticFiles(root_path, json_fname):
 
 
 
-def createFolderTree(multi_session, row, root_path, subj_code):
-    """To create participant (and session if multi_session) folder.
+def createFolderTree(include_session, row, root_path, subj_code):
+    """To create participant (and session if include_session) folder.
     Args:
-        multi_session (bool): multi_session.
-        row (obj): a (panadas) row of data containing sessID and DataType.
+        include_session (bool): include_session.
+        row (obj): a (panadas) row of data containing SessID and DataType.
         root_path (str): the root path of output folder
         subj_code (str): subject or participant folder name
     Returns:
         list: first 0 element is dtype_path, second 1 is fname.
     """
-    if multi_session:
-        # If multi-session, make session dir
-        sess_code = 'ses-{}'.format(row.sessID)
+    if include_session:
+        # If session included, make session dir
+        sess_code = 'ses-{}'.format(row.SessID)
         subj_path = os.path.join(root_path, subj_code)
         mkdir(subj_path)
         subj_path = os.path.join(subj_path, sess_code)
