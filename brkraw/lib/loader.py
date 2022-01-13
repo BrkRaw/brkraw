@@ -921,7 +921,7 @@ class BrukerLoader():
                 slice_distances_each_pack = [frame_thickness for _ in range(num_slice_packs)]
             # [20210822] Add version 4
             #elif version == 3:
-            elif version == 3 or version == 4:
+            elif version == 3 or version == 4 or version == 5:
                 num_slice_packs = get_value(visu_pars, 'VisuCoreSlicePacksDef')
                 if num_slice_packs is None:
                     num_slice_packs = 1
