@@ -31,6 +31,8 @@ class ScanInfo(tk.Frame):
         # Sequence and Protocol names
         sequence_name = get_value(visu_pars, 'VisuAcqSequenceName')
         protocol_name = get_value(visu_pars, 'VisuAcquisitionProtocol')
+        acqpars  = brkraw_obj.get_acqp(int(scan_id))
+        scan_name = acqpars._parameters['ACQ_scan_name']
         # Dimension
         dim = brkraw_obj._get_dim_info(visu_pars)[0]
         # MatrixSize
@@ -53,6 +55,7 @@ class ScanInfo(tk.Frame):
         # Printing out
         self.textbox.insert(tk.END, 'Sequence:\n - {}\n'.format(sequence_name))
         self.textbox.insert(tk.END, 'Protocol:\n - {}\n'.format(protocol_name))
+        self.textbox.insert(tk.END, 'Scan Name:\n - {}\n'.format(scan_name))
         self.textbox.insert(tk.END, 'RepetitionTime:\n - {} msec\n'.format(tr))
         self.textbox.insert(tk.END, 'EchoTime:\n - {} msec\n'.format(te))
         self.textbox.insert(tk.END, 'FlipAngle:\n - {} degree\n\n'.format(flip_angle))
