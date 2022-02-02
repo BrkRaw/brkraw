@@ -64,7 +64,7 @@ class BrukerLoader():
         get_affine(scan_id, reco_id)
             return affine transform matrix
         get_bdata(scan_id, reco_id)
-            return bmat, bvec, bval as string
+            return bvals, bvecs, as string
         get_scan_time(visu_pars=None)
             return dictionary contains the datetime object for session initiate time
             if visu_pars parameter object is given, it will contains scan start time
@@ -457,25 +457,29 @@ class BrukerLoader():
     # - FSL bval, bvec, and bmat
     def save_bdata(self, scan_id, filename, dir='./'):
         method = self._method[scan_id]
-        bval, bvec, bmat = self._get_bdata(method)
+        # bval, bvec, bmat = self._get_bdata(method) # [220201] bmat seems not necessary
+        bvals, bvecs = self._get_bdata(method)
         output_path = os.path.join(dir, filename)
 
         with open('{}.bval'.format(output_path), 'w') as bval_fobj:
-            for item in bval:
-                bval_fobj.write("%f " % item)
-            bval_fobj.write("\n")
+            # for item in bval: # [220201] correct the format
+                # bval_fobj.write("%f " % item)
+            # bval_fobj.write("\n")
+            bval_fobj.write(' '.join(bvals.astype('str')) + '\n')
 
         with open('{}.bvec'.format(output_path), 'w') as bvec_fobj:
-            for row in bvec:
-                for item in row:
-                    bvec_fobj.write("%f " % item)
-                bvec_fobj.write("\n")
+            # for row in bvec: # [220201] correct the format
+                # for item in row:
+                    # bvec_fobj.write("%f " % item)
+                # bvec_fobj.write("\n")
+            for row in bvecs:
+                bvec_fobj.write(' '.join(row.astype('str')) + '\n')
 
-        with open('{}.bmat'.format(output_path), 'w') as bmat_fobj:
-            for row in bmat:
-                for item in row.flatten():
-                    bmat_fobj.write("%s " % item)
-                bmat_fobj.write("\n")
+        # with open('{}.bmat'.format(output_path), 'w') as bmat_fobj: # [220201] remove bmat 
+        #     for row in bmat:
+        #         for item in row.flatten():
+        #             bmat_fobj.write("%s " % item)
+        #         bmat_fobj.write("\n")
 
     # BIDS JSON
     def _parse_json(self, scan_id, reco_id, metadata=None):
@@ -648,7 +652,7 @@ class BrukerLoader():
         for i, (scan_id, recos) in enumerate(self._avail.items()):
             for j, reco_id in enumerate(recos):
                 visu_pars = self._get_visu_pars(scan_id, reco_id)
-                if i == 0:
+                if i == 0 and j == 0:
                     sw_version = get_value(visu_pars, 'VisuCreatorVersion')
 
                     title = 'Paravision {}'.format(sw_version)
@@ -810,10 +814,17 @@ class BrukerLoader():
     # DTI
     @staticmethod
     def _get_bdata(method):
-        bval = get_value(method, 'PVM_DwEffBval')
-        bvec = get_value(method, 'PVM_DwGradVec').T # to have three rows instead of three columns
-        bmat = get_value(method, 'PVM_DwBMat')
-        return bval, bvec, bmat
+        # [220201] parse the input value directly instead of final values & remove bmat
+        # bval = get_value(method, 'PVM_DwEffBval')
+        # bvec = get_value(method, 'PVM_DwGradVec').T # to have three rows instead of three columns
+        # bmat = get_value(method, 'PVM_DwBMat')
+        # return bval, bvec, bmat
+        bval = get_value(method, 'PVM_DwBvalEach')
+        num_b0 = get_value(method, 'PVM_DwAoImages')
+        num_dir = get_value(method, 'PVM_DwNDiffExp')
+        bvals = np.r_[np.zeros(num_b0), np.ones(num_dir - num_b0) * bval]
+        bvecs = np.r_[np.zeros([num_b0, 3]), get_value(method, 'PVM_DwDir')].T
+        return bvals, bvecs
 
     # Generals
     @staticmethod

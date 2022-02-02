@@ -375,12 +375,11 @@ def main():
                     if len(filtered_dset):
                         subj_id = list(set(filtered_dset['SubjID']))[0]
                         subj_code = 'sub-{}'.format(subj_id)
-
                         # append to participants.tsv one record
                         with open(os.path.join(root_path, 'participants.tsv'), 'a+') as f:
                             f.write(subj_code + '\n')
 
-                        filtered_dset = completeFieldsCreateFolders(df, filtered_dset, dset, multi_session, root_path, subj_code)
+                        filtered_dset = completeFieldsCreateFolders(df, filtered_dset, dset, include_session, root_path, subj_code)
 
                         list_tested_fn = []
                         # Converting data according to the updated sheet
