@@ -331,7 +331,7 @@ def main():
         slope, offset = set_rescale(args)
 
         # [20220202] remove non alphanumeric
-        df['SubjID'] = df['SubjID'].str.replace(r'[^0-9a-zA-Z]+', '', regex=True)
+        df['SubjID'] = df['SubjID'].str.replace(r'\W+', '', regex=True)
 
         # check if the project is session included
         if all(pd.isnull(df['SessID'])):
