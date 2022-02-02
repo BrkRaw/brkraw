@@ -459,6 +459,8 @@ def cleanSessionID(sess_id):
     """
 
     import warnings
+    
+    sess_id = str(sess_id)
 
     # underscore will mess up bids output
     if '_' in sess_id:
