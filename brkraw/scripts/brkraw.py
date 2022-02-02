@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from operator import index
 from shleeh import *
 from shleeh.errors import *
 
@@ -71,7 +72,10 @@ def main():
 
     # bids_helper
     bids_helper.add_argument("input", help=input_dir_str, type=str)
-    bids_helper.add_argument("output", help="output BIDS datasheet filename (.xlsx)", type=str)
+    # bids_helper.add_argument("output", help="output BIDS datasheet filename (.xlsx)", type=str)
+    # [220202] make compatible with csv, tsv and xlsx
+    bids_helper.add_argument("output", help="output BIDS datasheet filename", type=str)
+    bids_helper.add_argument("-f", "--format", help="file format of BIDS dataheets. Use this option if you did not specify the extension on output. The available options are (csv/tsv/xlsx) (default: csv)", type=str, default='csv')
     bids_helper.add_argument("-j", "--json", help="create JSON syntax template for "
                                                   "parsing metadata from the header", action='store_true')
 
@@ -232,13 +236,23 @@ def main():
         import pandas as pd
         path = os.path.abspath(args.input)
         ds_output = os.path.abspath(args.output)
-
         make_json = args.json
-        if not ds_output.endswith('.xlsx'):
-            # to prevent pandas ValueError in case user does not provide valid file extension.
-            output = '{}.xlsx'.format(ds_output)
+
+        # [220202] for back compatibility
+        ds_output_ext = os.path.splitext(ds_output)[-1]
+        if ds_output_ext in ['.xlsx', '.csv', '.tsv']:
+            ds_format = ds_output_ext[1:]
         else:
-            output = ds_output
+            ds_format = args.format
+
+        # if not ds_output.endswith('.xlsx'):
+            # to prevent pandas ValueError in case user does not provide valid file extension.
+            # output = '{}.xlsx'.format(ds_output)
+        # else:
+            # output = ds_output
+        
+        # [220202] make compatible with csv, tsv and xlsx
+        output = '{}.{}'.format(ds_output, ds_format) 
 
         Headers = ['RawData', 'SubjID', 'SessID', 'ScanID', 'RecoID', 'DataType',
                    'task', 'acq', 'ce', 'rec', 'dir', 'run', 'modality', 'Start', 'End']
@@ -299,8 +313,15 @@ def main():
                                         df = df.append(item, ignore_index=True)
                                     else:
                                         df = df.append(item, ignore_index=True)
-
-        df.to_excel(output, index=None)
+        if ds_format == 'xlsx':
+            df.to_excel(output, index=None)
+        elif ds_format == 'csv':
+            df.to_csv(output, index=None, sep=',')
+        elif ds_format == 'tsv':
+            df.to_csv(output, index=None, sep='\t')
+        else:
+            print('[{}] is not supported.'.format(ds_format))
+            raise InvalidApproach('Invalid input for datasheet!')
 
         if make_json:
             fname = output[:-5]
@@ -329,7 +350,19 @@ def main():
         path = args.input
         datasheet = args.datasheet
         output = args.output
-        df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str})
+        datasheet_ext = os.path.splitext(datasheet)[-1]
+
+        # [220202] make compatible with csv, tsv and xlsx
+        if datasheet_ext == 'xlsx':
+            df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str})
+        elif datasheet_ext == 'csv':
+            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str}, index_col=None, header=0, sep=',')
+        elif datasheet_ext == 'tsv':
+            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str}, index_col=None, header=0, sep='\t')
+        else:
+            print(f'{datasheet_ext} if not supported format.')
+            raise InvalidApproach('Invalid input for datasheet!')
+            
         json_fname = args.json
         slope, offset = set_rescale(args)
 
