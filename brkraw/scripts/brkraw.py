@@ -143,37 +143,40 @@ def main():
         slope, offset = set_rescale(args)
         study = override_header(study, args.subjecttype, args.position)
         
-        if args.output:
-            output = args.output
-        else:
-            output = '{}_{}'.format(study._pvobj.subj_id,study._pvobj.study_id)
-        if scan_id:
-            acqpars  = study.get_acqp(int(scan_id))
-            scanname = acqpars._parameters['ACQ_scan_name']
-            scanname = scanname.replace(' ','-')
-            output_fname = '{}-{}-{}-{}'.format(output, scan_id, reco_id, scanname)
-            try:
-                scan_id = int(scan_id)
-                reco_id = int(reco_id)
-                study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                save_meta_files(study, args, scan_id, reco_id, output_fname)
-                print('NifTi file is generated... [{}]'.format(output_fname))
-            except:
-                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
-        else:
-            for scan_id, recos in study._pvobj.avail_reco_id.items():
+        if study.is_pvdataset:
+            if args.output:
+                output = args.output
+            else:
+                output = '{}_{}'.format(study._pvobj.subj_id,study._pvobj.study_id)
+            if scan_id:
                 acqpars  = study.get_acqp(int(scan_id))
                 scanname = acqpars._parameters['ACQ_scan_name']
                 scanname = scanname.replace(' ','-')
-                for reco_id in recos:
-                    output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id, scanname)
-                    try:
-                        study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                        save_meta_files(study, args, scan_id, reco_id, output_fname)
-                        print('NifTi file is generated... [{}]'.format(output_fname))
-                    except:
-                        print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
-
+                output_fname = '{}-{}-{}-{}'.format(output, scan_id, reco_id, scanname)
+                try:
+                    scan_id = int(scan_id)
+                    reco_id = int(reco_id)
+                    study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                    save_meta_files(study, args, scan_id, reco_id, output_fname)
+                    print('NifTi file is generated... [{}]'.format(output_fname))
+                except:
+                    print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+            else:
+                for scan_id, recos in study._pvobj.avail_reco_id.items():
+                    acqpars  = study.get_acqp(int(scan_id))
+                    scanname = acqpars._parameters['ACQ_scan_name']
+                    scanname = scanname.replace(' ','-')
+                    for reco_id in recos:
+                        output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id, scanname)
+                        try:
+                            study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                            save_meta_files(study, args, scan_id, reco_id, output_fname)
+                            print('NifTi file is generated... [{}]'.format(output_fname))
+                        except:
+                            print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+        else:
+            print('{} is not PvDataset.'.format(path))
+            
     elif args.function == 'tonii_all':
         from os.path import join as opj, isdir, isfile
 
