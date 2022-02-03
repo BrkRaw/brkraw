@@ -92,6 +92,11 @@ def main():
     bids_convert.add_argument("datasheet", help="input BIDS datahseet filename", type=str)
     bids_convert.add_argument("-j", "--json", help="input JSON syntax template filename", type=str, default=False)
     bids_convert.add_argument("-o", "--output", help=output_dir_str, type=str, default=False)
+    bids_convert.add_argument("-t", "--subjecttype", help="override subject type in case the original setting was not properly set." + \
+                     "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)", type=str, default=None)
+    bids_convert.add_argument("-p", "--position", help="override position information in case the original setting was not properly input." + \
+                     "the position variable can be defiend as <BodyPart>_<Side>, " + \
+                     "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)", type=str, default=None)
     bids_convert.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     bids_convert.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
     bids_convert.add_argument("--ignore-rescale", help='remove slope and offset values from header',
@@ -406,6 +411,7 @@ def main():
             dpath = os.path.join(path, dname)
             try:
                 dset = BrukerLoader(dpath)
+                dset = override_header(dset, args.subjecttype, args.position)
                 if dset.is_pvdataset:
                     pvobj = dset.pvobj
                     rawdata = pvobj.path
