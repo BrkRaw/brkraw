@@ -66,6 +66,7 @@ def main():
     nii.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     nii.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
     nii.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
+    nii.add_argument("--ignore-localizer", help='ignore the scan if it is localizer', action='store_true')
 
     # tonii_all
     niiall.add_argument("input", help=input_dir_str, type=str)
@@ -79,6 +80,7 @@ def main():
     niiall.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     niiall.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
     niiall.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
+    niiall.add_argument("--ignore-localizer", help='ignore the scan if it is localizer', action='store_true')
 
     # bids_helper
     bids_helper.add_argument("input", help=input_dir_str, type=str)
@@ -151,6 +153,7 @@ def main():
         reco_id  = args.recoid
         study    = BrukerLoader(path)
         slope, offset = set_rescale(args)
+        ignore_localizer = args.ignore_localizer
         study = override_header(study, args.subjecttype, args.position)
         
         if study.is_pvdataset:
@@ -163,27 +166,34 @@ def main():
                 scanname = acqpars._parameters['ACQ_scan_name']
                 scanname = scanname.replace(' ','-')
                 output_fname = '{}-{}-{}-{}'.format(output, scan_id, reco_id, scanname)
-                try:
-                    scan_id = int(scan_id)
-                    reco_id = int(reco_id)
-                    study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                    save_meta_files(study, args, scan_id, reco_id, output_fname)
-                    print('NifTi file is generated... [{}]'.format(output_fname))
-                except:
-                    print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+                scan_id = int(scan_id)
+                reco_id = int(reco_id)
+                
+                if ignore_localizer and is_localizer(study, scan_id, reco_id):
+                    print('Identified a localizer, the file will not be converted: ScanID:{}'.format(str(scan_id)))
+                else:
+                    try:
+                        study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                        save_meta_files(study, args, scan_id, reco_id, output_fname)
+                        print('NifTi file is generated... [{}]'.format(output_fname))
+                    except:
+                        print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
             else:
                 for scan_id, recos in study._pvobj.avail_reco_id.items():
                     acqpars  = study.get_acqp(int(scan_id))
                     scanname = acqpars._parameters['ACQ_scan_name']
                     scanname = scanname.replace(' ','-')
-                    for reco_id in recos:
-                        output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id, scanname)
-                        try:
-                            study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                            save_meta_files(study, args, scan_id, reco_id, output_fname)
-                            print('NifTi file is generated... [{}]'.format(output_fname))
-                        except:
-                            print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+                    if ignore_localizer and is_localizer(study, scan_id, recos[0]):
+                        print('Identified a localizer, the file will not be converted: ScanID:{}'.format(str(scan_id)))
+                    else:
+                        for reco_id in recos:
+                            output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id, scanname)
+                            try:
+                                study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                                save_meta_files(study, args, scan_id, reco_id, output_fname)
+                                print('NifTi file is generated... [{}]'.format(output_fname))
+                            except:
+                                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
         else:
             print('{} is not PvDataset.'.format(path))
 
@@ -192,6 +202,7 @@ def main():
 
         path = args.input
         slope, offset = set_rescale(args)
+        ignore_localizer = args.ignore_localizer
         invalid_error_message = '[Error] Invalid input path: {}\n'.format(path)
         empty_folder = '        The input path does not contain any raw data.'
         wrong_target = '        The input path indicates raw data itself. \n' \
@@ -224,26 +235,29 @@ def main():
                     sess_path = os.path.join(subj_path, 'ses-{}'.format(study._pvobj.study_id))
                     mkdir(sess_path)
                     for scan_id, recos in study._pvobj.avail_reco_id.items():
-                        method = study._pvobj._method[scan_id].parameters['Method']
-                        if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
-                            output_path = os.path.join(sess_path, 'func')
-                        elif re.search('dti', method, re.IGNORECASE):
-                            output_path = os.path.join(sess_path, 'dwi')
-                        elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
-                            output_path = os.path.join(sess_path, 'anat')
+                        if ignore_localizer and is_localizer(study, scan_id, recos[0]): # add option to exclude localizer during mass conversion
+                            print('Identified a localizer, the file will not be converted: ScanID:{}'.format(str(scan_id)))
                         else:
-                            output_path = os.path.join(sess_path, 'etc')
-                        mkdir(output_path)
-                        filename = 'sub-{}_ses-{}_{}'.format(study._pvobj.subj_id, study._pvobj.study_id,
-                                                             str(scan_id).zfill(2))
-                        for reco_id in recos:
-                            output_fname = os.path.join(output_path, '{}_reco-{}'.format(filename,
-                                                                                         str(reco_id).zfill(2)))
-                            try:
-                                study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                                save_meta_files(study, args, scan_id, reco_id, output_fname)
-                            except:
-                                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+                            method = study._pvobj._method[scan_id].parameters['Method']
+                            if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+                                output_path = os.path.join(sess_path, 'func')
+                            elif re.search('dti', method, re.IGNORECASE):
+                                output_path = os.path.join(sess_path, 'dwi')
+                            elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
+                                output_path = os.path.join(sess_path, 'anat')
+                            else:
+                                output_path = os.path.join(sess_path, 'etc')
+                            mkdir(output_path)
+                            filename = 'sub-{}_ses-{}_{}'.format(study._pvobj.subj_id, study._pvobj.study_id,
+                                                                str(scan_id).zfill(2))
+                            for reco_id in recos:
+                                output_fname = os.path.join(output_path, '{}_reco-{}'.format(filename,
+                                                                                            str(reco_id).zfill(2)))
+                                try:
+                                    study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                                    save_meta_files(study, args, scan_id, reco_id, output_fname)
+                                except:
+                                    print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
                     print('{} is converted...'.format(raw))
                 else:
                     print('{} does not contains any scan data to convert...'.format(raw))
