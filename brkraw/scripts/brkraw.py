@@ -239,7 +239,7 @@ def main():
         make_json = args.json
 
         # [220202] for back compatibility
-        ds_output_ext = os.path.splitext(ds_output)[-1]
+        ds_fname, ds_output_ext = os.path.splitext(ds_output)
         if ds_output_ext in ['.xlsx', '.csv', '.tsv']:
             ds_format = ds_output_ext[1:]
         else:
@@ -313,11 +313,11 @@ def main():
                                         df = df.append(item, ignore_index=True)
                                     else:
                                         df = df.append(item, ignore_index=True)
-        if ds_format == 'xlsx':
+        if 'xlsx' in ds_format:
             df.to_excel(output, index=None)
-        elif ds_format == 'csv':
+        elif 'csv' in ds_format:
             df.to_csv(output, index=None, sep=',')
-        elif ds_format == 'tsv':
+        elif 'tsv' in ds_format:
             df.to_csv(output, index=None, sep='\t')
         else:
             print('[{}] is not supported.'.format(ds_format))
@@ -353,11 +353,11 @@ def main():
         datasheet_ext = os.path.splitext(datasheet)[-1]
 
         # [220202] make compatible with csv, tsv and xlsx
-        if datasheet_ext == 'xlsx':
+        if 'xlsx' in datasheet_ext:
             df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str})
-        elif datasheet_ext == 'csv':
+        elif 'csv' in datasheet_ext:
             df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str}, index_col=None, header=0, sep=',')
-        elif datasheet_ext == 'tsv':
+        elif 'tsv' in datasheet_ext:
             df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str}, index_col=None, header=0, sep='\t')
         else:
             print(f'{datasheet_ext} if not supported format.')
