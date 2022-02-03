@@ -826,9 +826,17 @@ class BrukerLoader():
         # [220201] parse the input value directly instead of final values & remove bmat
         bval = get_value(method, 'PVM_DwBvalEach')
         num_b0 = get_value(method, 'PVM_DwAoImages')
-        num_dir = get_value(method, 'PVM_DwNDiffExp')
-        bvals = np.r_[np.zeros(num_b0), np.ones(num_dir - num_b0) * bval]
-        bvecs = np.r_[np.zeros([num_b0, 3]), get_value(method, 'PVM_DwDir')].T
+        num_exp = get_value(method, 'PVM_DwNDiffExp')
+        num_dir = int((num_exp - num_b0) / len(bval))
+        bdir = get_value(method, 'PVM_DwDir')
+        bvals = np.r_[np.zeros(num_b0), np.concatenate([bval for i in np.ones(num_dir).astype(int)], axis=0)]
+        bvecs = np.concatenate([np.zeros([num_b0, 3])] + [bdir] * len(bval), axis=0).T
+        # test if results are correctly built
+        try:
+            assert(bvals.shape[0] == num_exp)
+            assert(bvecs.shape[-1] == num_exp)
+        except:
+            raise UnexpectedError('Exceptional case is reported, please report on issue at brkraw github')
         return bvals, bvecs
 
     # Generals
