@@ -303,9 +303,8 @@ def main():
                         for reco_id in recos:
                             visu_pars = dset.get_visu_pars(scan_id, reco_id)
                             if dset._get_dim_info(visu_pars)[1] == 'spatial_only':
-                                num_spack = dset._get_slice_info(visu_pars)['num_slice_packs']
-
-                                if num_spack != 3:  # excluding localizer
+                                
+                                if not is_localizer(dset, scan_id, reco_id):
                                     method = dset.get_method(scan_id).parameters['Method']
 
                                     datatype = assignDataType(method)
@@ -706,7 +705,7 @@ def is_localizer(pvobj, scan_id, reco_id):
     else:
         return False
 
-        
+
 def override_header(pvobj, subjtype, position):
     """override subject position and subject type"""
     import warnings
