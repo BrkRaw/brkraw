@@ -57,6 +57,11 @@ def main():
     nii.add_argument("-r", "--recoid", help="RECO ID (default=1), "
                                             "option to specify a particular reconstruction id to convert",
                      type=int, default=1)
+    nii.add_argument("-t", "--subjecttype", help="override subject type in case the original setting was not properly set." + \
+                     "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)", type=str, default=None)
+    nii.add_argument("-p", "--position", help="override position information in case the original setting was not properly input." + \
+                     "the position variable can be defiend as <BodyPart>_<Side>, " + \
+                     "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)", type=str, default=None)
     nii.add_argument("-s", "--scanid", help="Scan ID, option to specify a particular scan to convert.", type=str)
     nii.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     nii.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
@@ -136,6 +141,7 @@ def main():
         reco_id  = args.recoid
         study    = BrukerLoader(path)
         slope, offset = set_rescale(args)
+        study = override_header(study, args.subjecttype, args.position)
         
         if args.output:
             output = args.output
