@@ -84,6 +84,12 @@ class BrukerLoader():
         info(fobj=None)
             print out the PvDataset major parameters
             if fileobject is given, it will be written in file instead of stdout
+    
+        - method to override header
+        override_subjtype(subjtype)
+            override subject type (e.g. Biped)
+        override_position(position_string)
+            override position of subject (e.g. Head_Prone)
     """
     def __init__(self, path):
         """ class method to initiate object.
@@ -91,6 +97,8 @@ class BrukerLoader():
             path (str): Path of PvDataset.
         """
         self._pvobj = load(path)
+        self._override_position = None
+        self._override_type = None
 
         if (self.num_scans > 0) and (self._subject != None):
             self._is_pvdataset = True
@@ -117,6 +125,32 @@ class BrukerLoader():
     @property
     def is_pvdataset(self):
         return self._is_pvdataset
+
+    def override_subjtype(self, subjtype):
+        """ override subject type
+        Arge:
+            subtype(str): subject type that supported by PV
+        """
+        err_msg = 'Insufficient subject type'
+        if subjtype not in ['Biped', 'Quadruped', 'Phantom', 'Other', 'OtherAnimal']:
+            raise Exception(err_msg)
+        self._override_type = subjtype
+
+    def override_position(self, position_string):
+        """ override subject position
+        Arge:
+            position_string: subject position that supported by PV
+        """
+        err_msg = 'Insufficient position string'
+        try:
+            part, side = position_string.split('_')
+            if part not in ['Head', 'Foot', 'Tail']:
+                raise Exception(err_msg)
+            if side not in ['Supine', 'Prone', 'Left', 'Right']:
+                raise Exception(err_msg)
+            self._override_position = position_string
+        except:
+            raise Exception(err_msg)
 
     def close(self):
         self._pvobj.close()
@@ -960,7 +994,10 @@ class BrukerLoader():
         orient_matrix = get_value(visu_pars, 'VisuCoreOrientation').tolist()
         slice_info = self._get_slice_info(visu_pars)
         slice_position = get_value(visu_pars, 'VisuCorePosition')
-        subj_position = get_value(visu_pars, 'VisuSubjectPosition')
+        if self._override_position is not None: # add option to override
+            subj_position = self._override_position
+        else:
+            subj_position = get_value(visu_pars, 'VisuSubjectPosition')
         gradient_orient = get_value(method, 'PVM_SPackArrGradOrient')
 
         if slice_info['num_slice_packs'] > 1:
@@ -1015,7 +1052,12 @@ class BrukerLoader():
             oorder_parser = get_axis_orient(omatrix_parser)
             vposition_parser = slice_position
 
-        return dict(subject_type = get_value(visu_pars, 'VisuSubjectType'),
+        if self._override_type is not None: # add option to override
+            subj_type = self._override_type
+        else:
+            subj_type = get_value(visu_pars, 'VisuSubjectType')    
+
+        return dict(subject_type = subj_type,
                     subject_position = subj_position,
                     volume_position = vposition_parser,
                     orient_matrix = omatrix_parser,
