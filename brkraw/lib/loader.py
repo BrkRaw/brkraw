@@ -104,7 +104,6 @@ class BrukerLoader():
     @property
     def num_scans(self):
         # [20210820] Add-paravision 360 related.
-        # return len(self._pvobj._fid.keys())
         len_scans = len(self._pvobj._fid.keys())
         if len_scans > 0:
             return len_scans
@@ -287,13 +286,6 @@ class BrukerLoader():
         visu_pars = self._get_visu_pars(scan_id, reco_id)
         method = self._method[scan_id]
         affine = self._get_affine(visu_pars, method)
-        group_id = self._get_frame_group_info(visu_pars)['group_id']
-
-        # if 'FG_DTI' in group_id:
-        #     # DTI dataset has vector slope
-        #     slope = True
-        #     offset = True
-        # Blow condition will cover DTI cases
 
         data_slp, data_off = self._get_dataslp(visu_pars)
         if isinstance(data_slp, list) and slope is not None:
@@ -302,9 +294,6 @@ class BrukerLoader():
                 offset = True
 
         imgobj = self.get_dataobj(scan_id, reco_id, slope=slope, offset=offset)
-        # dataobj = self._get_dataobj(scan_id, reco_id)
-        # shape = self._get_matrix_size(visu_pars, dataobj)
-        # imgobj = dataobj.reshape(shape[::-1]).T
 
         if isinstance(affine, list):
             parser = []
@@ -462,24 +451,11 @@ class BrukerLoader():
         output_path = os.path.join(dir, filename)
 
         with open('{}.bval'.format(output_path), 'w') as bval_fobj:
-            # for item in bval: # [220201] correct the format
-                # bval_fobj.write("%f " % item)
-            # bval_fobj.write("\n")
             bval_fobj.write(' '.join(bvals.astype('str')) + '\n')
 
         with open('{}.bvec'.format(output_path), 'w') as bvec_fobj:
-            # for row in bvec: # [220201] correct the format
-                # for item in row:
-                    # bvec_fobj.write("%f " % item)
-                # bvec_fobj.write("\n")
             for row in bvecs:
                 bvec_fobj.write(' '.join(row.astype('str')) + '\n')
-
-        # with open('{}.bmat'.format(output_path), 'w') as bmat_fobj: # [220201] remove bmat 
-        #     for row in bmat:
-        #         for item in row.flatten():
-        #             bmat_fobj.write("%s " % item)
-        #         bmat_fobj.write("\n")
 
     # BIDS JSON
     def _parse_json(self, scan_id, reco_id, metadata=None):
@@ -663,7 +639,6 @@ class BrukerLoader():
                         datetime = self.get_scan_time()
                     except:
                         datetime = dict(date='None')
-                        # raise Exception('Empty dataset...')
                     lines.append('UserAccount:\t{}'.format(user_account))
                     lines.append('Date:\t\t{}'.format(datetime['date']))
                     lines.append('Researcher:\t{}'.format(user_name))
@@ -815,10 +790,6 @@ class BrukerLoader():
     @staticmethod
     def _get_bdata(method):
         # [220201] parse the input value directly instead of final values & remove bmat
-        # bval = get_value(method, 'PVM_DwEffBval')
-        # bvec = get_value(method, 'PVM_DwGradVec').T # to have three rows instead of three columns
-        # bmat = get_value(method, 'PVM_DwBMat')
-        # return bval, bvec, bmat
         bval = get_value(method, 'PVM_DwBvalEach')
         num_b0 = get_value(method, 'PVM_DwAoImages')
         num_dir = get_value(method, 'PVM_DwNDiffExp')
@@ -927,10 +898,8 @@ class BrukerLoader():
                             raise Exception(ERROR_MESSAGES['SlicePacksSlices'])
                         if num_slice_packs > 1:
                             for s in range(num_slice_packs):
-                                # num_slices_each_pack.append(int(matrix_shape[id]/num_slice_packs))
                                 num_slices_each_pack.append(int(matrix_shape[0]/num_slice_packs))
                         else:
-                            # num_slices_each_pack.append(matrix_shape[id])
                             num_slices_each_pack.append(matrix_shape[0])
                 slice_distances_each_pack = [frame_thickness for _ in range(num_slice_packs)]
             else:
@@ -940,26 +909,22 @@ class BrukerLoader():
                 num_slice_packs = get_value(visu_pars, 'VisuCoreSlicePacksDef')
                 if num_slice_packs is None:
                     num_slice_packs = 1
-                    # raise Exception(ERROR_MESSAGES['NoSlicePacksDef'])
                 else:
                     num_slice_packs = num_slice_packs[0][1]
 
                 slices_info_in_pack = get_value(visu_pars, 'VisuCoreSlicePacksSlices')
                 slice_distance = get_value(visu_pars, 'VisuCoreSlicePacksSliceDist')
                 num_slice_frames = 0
-                # for id, fg in enumerate(frame_groups):
                 for _, fg in enumerate(frame_groups):
                     if re.search('slice', fg, re.IGNORECASE):
                         num_slice_frames += 1
                         if num_slice_frames > 2:
                             raise Exception(ERROR_MESSAGES['SlicePacksSlices'])
                         try:
-                            # num_slices_each_pack = [slices_info_in_pack[id][1] for _ in range(num_slice_packs)]
                             num_slices_each_pack = [slices_info_in_pack[0][1] for _ in range(num_slice_packs)]
                         except:
                             raise Exception(ERROR_MESSAGES['SlicePacksSlices'])
                         if isinstance(slice_distance, list):
-                            # slice_distances_each_pack = [slice_distance[id] for _ in range(num_slice_packs)]
                             slice_distances_each_pack = [slice_distance[0] for _ in range(num_slice_packs)]
                         elif isinstance(slice_distance, float) or isinstance(slice_distance, int):
                             slice_distances_each_pack = [slice_distance for _ in range(num_slice_packs)]
@@ -1067,13 +1032,6 @@ class BrukerLoader():
         num_slice_packs = slice_info['num_slice_packs']
         subj_pose = orient_info['subject_position']
         subj_type = orient_info['subject_type']
-
-        ## Rollback below changes upon comment on issue #10
-        # version = get_value(visu_pars, 'VisuVersion')
-        # if version == 1:  # PV 5.1 required the position correction
-        #     subj_pose = orient_info['subject_position']
-        # else:             # PV 6.01 does not
-        #     subj_pose = None
 
         if num_slice_packs > 1:
             affine = []
