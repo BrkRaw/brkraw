@@ -72,9 +72,7 @@ def main():
 
     # bids_helper
     bids_helper.add_argument("input", help=input_dir_str, type=str)
-    # bids_helper.add_argument("output", help="output BIDS datasheet filename (.xlsx)", type=str)
-    # [220202] make compatible with csv, tsv and xlsx
-    bids_helper.add_argument("output", help="output BIDS datasheet filename", type=str)
+    bids_helper.add_argument("output", help="output BIDS datasheet filename", type=str) # [220202] make compatible with csv, tsv and xlsx
     bids_helper.add_argument("-f", "--format", help="file format of BIDS dataheets. Use this option if you did not specify the extension on output. The available options are (csv/tsv/xlsx) (default: csv)", type=str, default='csv')
     bids_helper.add_argument("-j", "--json", help="create JSON syntax template for "
                                                   "parsing metadata from the header", action='store_true')
@@ -245,12 +243,6 @@ def main():
         else:
             ds_format = args.format
 
-        # if not ds_output.endswith('.xlsx'):
-            # to prevent pandas ValueError in case user does not provide valid file extension.
-            # output = '{}.xlsx'.format(ds_output)
-        # else:
-            # output = ds_output
-        
         # [220202] make compatible with csv, tsv and xlsx
         output = '{}.{}'.format(ds_output, ds_format) 
 
@@ -439,9 +431,7 @@ def main():
                                             fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                         else:
                                             _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                            # [20210822] format error
-                                            #fname = '{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
-                                            fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
+                                            fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2)) # [20210822] format error
                                         if fname in conflict_tested:
                                             raise ValueConflictInField('ScanID:[{}] Conflict error. '
                                                                        'The [run] index value must be unique '
