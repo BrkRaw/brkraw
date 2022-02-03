@@ -71,6 +71,11 @@ def main():
     niiall.add_argument("input", help=input_dir_str, type=str)
     niiall.add_argument("-o", "--output", help=output_dir_str, type=str)
     niiall.add_argument("-b", "--bids", help=bids_opt, action='store_true')
+    niiall.add_argument("-t", "--subjecttype", help="override subject type in case the original setting was not properly set." + \
+                     "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)", type=str, default=None)
+    niiall.add_argument("-p", "--position", help="override position information in case the original setting was not properly input." + \
+                     "the position variable can be defiend as <BodyPart>_<Side>, " + \
+                     "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)", type=str, default=None)
     niiall.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     niiall.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
     niiall.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
@@ -207,6 +212,7 @@ def main():
             sub_path = os.path.join(path, raw)
             study = BrukerLoader(sub_path)
             if study.is_pvdataset:
+                study = override_header(study, args.subjecttype, args.position)
                 if len(study._pvobj.avail_scan_id):
                     subj_path = os.path.join(base_path, 'sub-{}'.format(study._pvobj.subj_id))
                     mkdir(subj_path)
