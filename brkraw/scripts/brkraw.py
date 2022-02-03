@@ -176,7 +176,7 @@ def main():
                             print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
         else:
             print('{} is not PvDataset.'.format(path))
-            
+
     elif args.function == 'tonii_all':
         from os.path import join as opj, isdir, isfile
 
@@ -194,7 +194,7 @@ def main():
             # raise error with message if the folder is empty (or does not contains any PvDataset)
             print(invalid_error_message, empty_folder)
             raise InvalidApproach(invalid_error_message)
-        if not BrukerLoader(path).is_pvdataset:
+        if BrukerLoader(path).is_pvdataset:
             # raise error if the input path is identified as PvDataset
             print(invalid_error_message, wrong_target)
             raise InvalidApproach(invalid_error_message)
