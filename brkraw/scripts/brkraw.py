@@ -676,5 +676,27 @@ def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_pa
     
     return filtered_dset
 
+
+def override_header(pvobj, subjtype, position):
+    """override subject position and subject type"""
+    import warnings
+    if position is not None:
+        try:
+            pvobj.override_position(position)
+        except:
+            msg = "Incorrect position string [{}], using default position instead. Please check your input option.".format(position) + \
+                  "The position variable can be defiend as <BodyPart>_<Side>," + \
+                  "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)"
+            warnings.warn(msg)
+    if subjtype is not None:
+        try:
+            pvobj.override_subjtype(subjtype)
+        except:
+            msg = "Incorrect subject type [{}], using default subject type instead. Please check your input option.".format(subjtype) + \
+                  "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)"
+            warnings.warn(msg)
+    return pvobj
+
+
 if __name__ == '__main__':
     main()
