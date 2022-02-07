@@ -299,7 +299,8 @@ def get_dirsize(dir_path):
     unit_dict = {0: 'B',
                  1: 'KB',
                  2: 'MB',
-                 3: 'GB'}
+                 3: 'GB',
+                 4: 'TB'}
     dir_size = 0
     for root, dirs, files in os.walk(dir_path):
         for f in files:
