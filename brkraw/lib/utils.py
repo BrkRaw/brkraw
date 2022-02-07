@@ -291,6 +291,8 @@ def convert_unit(size_in_bytes, unit):
         return size / (1024 * 1024)
     elif unit == 3:
         return size / (1024 * 1024 * 1024)
+    elif unit == 4:
+        return size / (1024**unit)
     else:
         return int(size)
 
