@@ -391,9 +391,6 @@ def main():
         json_fname = args.json
         slope, offset = set_rescale(args)
 
-        # [20220202] remove non alphanumeric
-        df['SubjID'] = df['SubjID'].str.replace(r'\W+', '', regex=True)
-
         # check if the project is session included
         if all(pd.isnull(df['SessID'])):
             # SessID was removed (not column, but value), this need to go to documentation
