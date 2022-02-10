@@ -820,12 +820,13 @@ class BrukerLoader():
         # bmat = get_value(method, 'PVM_DwBMat')
         # return bval, bvec, bmat
         bval = get_value(method, 'PVM_DwBvalEach')
+        n_bval = len([bval]) if isinstance(bval, int) else len(bval)
         num_b0 = get_value(method, 'PVM_DwAoImages')
         num_exp = get_value(method, 'PVM_DwNDiffExp')
-        num_dir = int((num_exp - num_b0) / len(bval))
+        num_dir = int((num_exp - num_b0) / n_bval)
         bdir = get_value(method, 'PVM_DwDir')
         bvals = np.r_[np.zeros(num_b0), np.concatenate([bval for i in np.ones(num_dir).astype(int)], axis=0)]
-        bvecs = np.concatenate([np.zeros([num_b0, 3])] + [bdir] * len(bvals), axis=0).T
+        bvecs = np.concatenate([np.zeros([num_b0, 3])] + [bdir] * n_bval, axis=0).T
         # test if results are correctly built
         try:
             assert(bvals.shape[0] == num_exp)
