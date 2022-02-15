@@ -779,8 +779,6 @@ class BrukerLoader():
             niiobj.header['slice_end'] = num_slices - 1
         else:
             niiobj.header.set_xyzt_units('mm')
-        niiobj.header['qform_code'] = 1
-        niiobj.header['sform_code'] = 0
         if not slope:
             if slope is not None:
                 if isinstance(data_slp, list):
@@ -801,6 +799,8 @@ class BrukerLoader():
                 niiobj.header['scl_inter'] = 0
         else:
             niiobj.header['scl_inter'] = 0
+        niiobj.set_qform(niiobj.affine, 1)
+        niiobj.set_sform(niiobj.affine, 0)
         return niiobj
 
     # EPI
