@@ -14,6 +14,7 @@ class PvDatasetBase:
     path = None
     _subject = None
     _fid = None
+    _traj = None
     _method = None
     _acqp = None
     _avail_scanid = None
@@ -24,6 +25,7 @@ class PvDatasetBase:
 
     def _reset(self):
         self._fid = dict()
+        self._traj = dict()
         self._method = dict()
         self._acqp = dict()
         self._visu_pars = dict()
@@ -121,6 +123,9 @@ class PvDatasetBase:
 
     def get_fid(self, scan_id):
         return self._open_binary(self._fid[scan_id])
+    
+    def get_traj(self, scan_id):
+        return self._open_binary(self._traj[scan_id])
 
     def get_2dseq(self, scan_id, reco_id):
         # return 2dseq binary string
@@ -176,8 +181,15 @@ class PvDatasetDir(PvDatasetBase):
                         with open(os.path.join(root, 'acqp'), 'r') as f:
                             self._acqp[int(scan_id)] = Parameter(f.read().split('\n'))
                         fid_path = os.path.join(root, 'fid')
+                        traj_path = os.path.join(root, 'traj')
                         if os.path.exists(fid_path):
-                            self._fid[int(scan_id)] = os.path.join(root, 'fid')
+                            self._fid[int(scan_id)] = fid_path
+                        else:
+                            fid_path = os.path.join(root, 'rawdata.job0')
+                            if os.path.exists(fid_path):
+                                self._fid[int(scan_id)] = fid_path
+                        if os.path.exists(traj_path):
+                            self._traj[int(scan_id)] = traj_path
             elif '2dseq' in files and 'visu_pars' in files:
                 path_freg = root.split(os.sep)
                 if len(root.split(os.sep)) == root_path_fregs + 3:
@@ -202,6 +214,9 @@ class PvDatasetDir(PvDatasetBase):
                         else:
                             self._reco[int(scan_id)] = [_reco(reco_id=int(reco_id),
                                                               idx=os.path.join(root, 'reco'))]
+
+    def _open_object(self, path):
+        return open(path, 'rb')
 
     def _open_binary(self, path):
         return open(path, 'rb').read()
@@ -247,6 +262,10 @@ class PvDatasetZip(zf.ZipFile, PvDatasetBase):
                         self._acqp[scan_id] = Parameter(f.read().decode('UTF-8').split('\n'))
                 elif filename == 'fid':
                     self._fid[scan_id] = idx
+                elif filename == 'rawdata.job0':
+                    self._fid[scan_id] = idx
+                elif filename == 'traj':
+                    self._traj[scan_id] = idx
                 else:
                     pass
 
@@ -271,6 +290,9 @@ class PvDatasetZip(zf.ZipFile, PvDatasetBase):
                             self._reco[scan_id].append(_reco(reco_id=reco_id, idx=idx))
                         else:
                             self._reco[scan_id] = [_reco(reco_id=reco_id, idx=idx)]
+
+    def _open_object(self, path):
+        return self.open(self.namelist()[path])
 
     def _open_binary(self, path):
         return self.open(self.namelist()[path]).read()
