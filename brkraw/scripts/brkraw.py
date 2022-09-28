@@ -66,7 +66,7 @@ def main():
     nii.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     nii.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
     nii.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
-    nii.add_argument("--ignore-localizer", help='ignore the scan if it is localizer', action='store_true')
+    nii.add_argument("--ignore-localizer", help='ignore the scan if it is localizer', action='store_true', default=True)
 
     # tonii_all
     niiall.add_argument("input", help=input_dir_str, type=str)
@@ -724,17 +724,17 @@ def override_header(pvobj, subjtype, position):
         try:
             pvobj.override_position(position)
         except:
-            msg = "Incorrect position string [{}], using default position instead. Please check your input option.".format(position) + \
+            msg = "Unknown position string [{}]. Please check your input option.".format(position) + \
                   "The position variable can be defiend as <BodyPart>_<Side>," + \
                   "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)"
-            warnings.warn(msg)
+            raise InvalidApproach(msg)
     if subjtype is not None:
         try:
             pvobj.override_subjtype(subjtype)
         except:
-            msg = "Incorrect subject type [{}], using default subject type instead. Please check your input option.".format(subjtype) + \
+            msg = "Unknown subject type [{}]. Please check your input option.".format(subjtype) + \
                   "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)"
-            warnings.warn(msg)
+            raise InvalidApproach(msg)
     return pvobj
 
 

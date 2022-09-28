@@ -131,7 +131,7 @@ class BrukerLoader():
         Arge:
             subtype(str): subject type that supported by PV
         """
-        err_msg = 'Insufficient subject type'
+        err_msg = 'Unknown subject type [{}]'.format(subjtype)
         if subjtype not in ['Biped', 'Quadruped', 'Phantom', 'Other', 'OtherAnimal']:
             raise Exception(err_msg)
         self._override_type = subjtype
@@ -141,7 +141,7 @@ class BrukerLoader():
         Arge:
             position_string: subject position that supported by PV
         """
-        err_msg = 'Insufficient position string'
+        err_msg = 'Unknown position string [{}]'.format(position_string)
         try:
             part, side = position_string.split('_')
             if part not in ['Head', 'Foot', 'Tail']:
