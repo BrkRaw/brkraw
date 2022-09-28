@@ -258,17 +258,12 @@ def meta_check_express(value, acqp, method, visu_pars):
 
 
 def meta_check_source(key_string, acqp, method, visu_pars):
-    if 'Visu' in key_string:
-        return get_value(visu_pars, key_string)
-    elif 'PVM' in key_string:
-        return get_value(method, key_string)
-    elif 'ACQ' in key_string:
-        return get_value(acqp, key_string)
-    elif key_string == 'PULPROG':
-        return get_value(acqp, key_string)
-    else:
-        return key_string
-        # raise Exception(key_string)
+    pool = [acqp, method, visu_pars]
+    key_exist = [key_string in p.parameters.keys() for p in pool]
+    for i, ans in enumerate(key_exist):
+        if ans:
+            return get_value(pool[i], key_string)
+    return key_string
 
 
 def yes_or_no(question):
