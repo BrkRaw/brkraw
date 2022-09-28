@@ -248,7 +248,7 @@ class BackupCacheHandler:
     def _parse_info(self):
         print('\n-- Parsing metadata from the raw and archived directories --')
         list_of_raw = sorted([d for d in os.listdir(self._rpath) if
-                              os.path.isdir(os.path.join(self._rpath, d))])
+                              os.path.isdir(os.path.join(self._rpath, d)) and 'import' not in d])
         list_of_brk = sorted([d for d in os.listdir(self._apath) if
                               (os.path.isfile(os.path.join(self._apath, d)) and
                                (d.endswith('zip') or d.endswith('PvDatasets')))])

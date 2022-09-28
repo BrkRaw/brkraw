@@ -291,6 +291,8 @@ def convert_unit(size_in_bytes, unit):
         return size / (1024 * 1024)
     elif unit == 3:
         return size / (1024 * 1024 * 1024)
+    elif unit == 4:
+        return size / (1024**unit)
     else:
         return int(size)
 
@@ -299,7 +301,8 @@ def get_dirsize(dir_path):
     unit_dict = {0: 'B',
                  1: 'KB',
                  2: 'MB',
-                 3: 'GB'}
+                 3: 'GB',
+                 4: 'TB'}
     dir_size = 0
     for root, dirs, files in os.walk(dir_path):
         for f in files:

@@ -54,27 +54,37 @@ def main():
     nii.add_argument("input", help=input_str, type=str)
     nii.add_argument("-b", "--bids", help=bids_opt, action='store_true')
     nii.add_argument("-o", "--output", help=output_fnm_str, type=str, default=False)
+    nii.add_argument("-s", "--scanid", help="Scan ID, option to specify a particular scan to convert.", type=str)
     nii.add_argument("-r", "--recoid", help="RECO ID (default=1), "
                                             "option to specify a particular reconstruction id to convert",
                      type=int, default=1)
-    nii.add_argument("-s", "--scanid", help="Scan ID, option to specify a particular scan to convert.", type=str)
+    nii.add_argument("-t", "--subjecttype", help="override subject type in case the original setting was not properly set." + \
+                     "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)", type=str, default=None)
+    nii.add_argument("-p", "--position", help="override position information in case the original setting was not properly input." + \
+                     "the position variable can be defiend as <BodyPart>_<Side>, " + \
+                     "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)", type=str, default=None)
     nii.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     nii.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
     nii.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
+    nii.add_argument("--ignore-localizer", help='ignore the scan if it is localizer', action='store_true', default=True)
 
     # tonii_all
     niiall.add_argument("input", help=input_dir_str, type=str)
     niiall.add_argument("-o", "--output", help=output_dir_str, type=str)
     niiall.add_argument("-b", "--bids", help=bids_opt, action='store_true')
+    niiall.add_argument("-t", "--subjecttype", help="override subject type in case the original setting was not properly set." + \
+                     "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)", type=str, default=None)
+    niiall.add_argument("-p", "--position", help="override position information in case the original setting was not properly input." + \
+                     "the position variable can be defiend as <BodyPart>_<Side>, " + \
+                     "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)", type=str, default=None)
     niiall.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     niiall.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
     niiall.add_argument("--ignore-rescale", help='remove slope and offset values from header', action='store_true')
+    niiall.add_argument("--ignore-localizer", help='ignore the scan if it is localizer', action='store_true')
 
     # bids_helper
     bids_helper.add_argument("input", help=input_dir_str, type=str)
-    # bids_helper.add_argument("output", help="output BIDS datasheet filename (.xlsx)", type=str)
-    # [220202] make compatible with csv, tsv and xlsx
-    bids_helper.add_argument("output", help="output BIDS datasheet filename", type=str)
+    bids_helper.add_argument("output", help="output BIDS datasheet filename", type=str) # [220202] make compatible with csv, tsv and xlsx
     bids_helper.add_argument("-f", "--format", help="file format of BIDS dataheets. Use this option if you did not specify the extension on output. The available options are (csv/tsv/xlsx) (default: csv)", type=str, default='csv')
     bids_helper.add_argument("-j", "--json", help="create JSON syntax template for "
                                                   "parsing metadata from the header", action='store_true')
@@ -84,6 +94,11 @@ def main():
     bids_convert.add_argument("datasheet", help="input BIDS datahseet filename", type=str)
     bids_convert.add_argument("-j", "--json", help="input JSON syntax template filename", type=str, default=False)
     bids_convert.add_argument("-o", "--output", help=output_dir_str, type=str, default=False)
+    bids_convert.add_argument("-t", "--subjecttype", help="override subject type in case the original setting was not properly set." + \
+                     "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)", type=str, default=None)
+    bids_convert.add_argument("-p", "--position", help="override position information in case the original setting was not properly input." + \
+                     "the position variable can be defiend as <BodyPart>_<Side>, " + \
+                     "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)", type=str, default=None)
     bids_convert.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
     bids_convert.add_argument("--ignore-offset", help='remove offset value from header', action='store_true')
     bids_convert.add_argument("--ignore-rescale", help='remove slope and offset values from header',
@@ -138,43 +153,56 @@ def main():
         reco_id  = args.recoid
         study    = BrukerLoader(path)
         slope, offset = set_rescale(args)
+        ignore_localizer = args.ignore_localizer
+        study = override_header(study, args.subjecttype, args.position)
         
-        if args.output:
-            output = args.output
-        else:
-            output = '{}_{}'.format(study._pvobj.subj_id,study._pvobj.study_id)
-        if scan_id:
-            acqpars  = study.get_acqp(int(scan_id))
-            scanname = acqpars._parameters['ACQ_scan_name']
-            scanname = scanname.replace(' ','-')
-            output_fname = '{}-{}-{}-{}'.format(output, scan_id, reco_id, scanname)
-            try:
-                scan_id = int(scan_id)
-                reco_id = int(reco_id)
-                study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                save_meta_files(study, args, scan_id, reco_id, output_fname)
-                print('NifTi file is generated... [{}]'.format(output_fname))
-            except:
-                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
-        else:
-            for scan_id, recos in study._pvobj.avail_reco_id.items():
+        if study.is_pvdataset:
+            if args.output:
+                output = args.output
+            else:
+                output = '{}_{}'.format(study._pvobj.subj_id,study._pvobj.study_id)
+            if scan_id:
                 acqpars  = study.get_acqp(int(scan_id))
                 scanname = acqpars._parameters['ACQ_scan_name']
                 scanname = scanname.replace(' ','-')
-                for reco_id in recos:
-                    output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id, scanname)
+                output_fname = '{}-{}-{}-{}'.format(output, scan_id, reco_id, scanname)
+                scan_id = int(scan_id)
+                reco_id = int(reco_id)
+                
+                if ignore_localizer and is_localizer(study, scan_id, reco_id):
+                    print('Identified a localizer, the file will not be converted: ScanID:{}'.format(str(scan_id)))
+                else:
                     try:
                         study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
                         save_meta_files(study, args, scan_id, reco_id, output_fname)
                         print('NifTi file is generated... [{}]'.format(output_fname))
                     except:
                         print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+            else:
+                for scan_id, recos in study._pvobj.avail_reco_id.items():
+                    acqpars  = study.get_acqp(int(scan_id))
+                    scanname = acqpars._parameters['ACQ_scan_name']
+                    scanname = scanname.replace(' ','-')
+                    if ignore_localizer and is_localizer(study, scan_id, recos[0]):
+                        print('Identified a localizer, the file will not be converted: ScanID:{}'.format(str(scan_id)))
+                    else:
+                        for reco_id in recos:
+                            output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id, scanname)
+                            try:
+                                study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                                save_meta_files(study, args, scan_id, reco_id, output_fname)
+                                print('NifTi file is generated... [{}]'.format(output_fname))
+                            except:
+                                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+        else:
+            print('{} is not PvDataset.'.format(path))
 
     elif args.function == 'tonii_all':
         from os.path import join as opj, isdir, isfile
 
         path = args.input
         slope, offset = set_rescale(args)
+        ignore_localizer = args.ignore_localizer
         invalid_error_message = '[Error] Invalid input path: {}\n'.format(path)
         empty_folder = '        The input path does not contain any raw data.'
         wrong_target = '        The input path indicates raw data itself. \n' \
@@ -187,7 +215,7 @@ def main():
             # raise error with message if the folder is empty (or does not contains any PvDataset)
             print(invalid_error_message, empty_folder)
             raise InvalidApproach(invalid_error_message)
-        if not BrukerLoader(path).is_pvdataset:
+        if BrukerLoader(path).is_pvdataset:
             # raise error if the input path is identified as PvDataset
             print(invalid_error_message, wrong_target)
             raise InvalidApproach(invalid_error_message)
@@ -200,32 +228,36 @@ def main():
             sub_path = os.path.join(path, raw)
             study = BrukerLoader(sub_path)
             if study.is_pvdataset:
+                study = override_header(study, args.subjecttype, args.position)
                 if len(study._pvobj.avail_scan_id):
                     subj_path = os.path.join(base_path, 'sub-{}'.format(study._pvobj.subj_id))
                     mkdir(subj_path)
                     sess_path = os.path.join(subj_path, 'ses-{}'.format(study._pvobj.study_id))
                     mkdir(sess_path)
                     for scan_id, recos in study._pvobj.avail_reco_id.items():
-                        method = study._pvobj._method[scan_id].parameters['Method']
-                        if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
-                            output_path = os.path.join(sess_path, 'func')
-                        elif re.search('dti', method, re.IGNORECASE):
-                            output_path = os.path.join(sess_path, 'dwi')
-                        elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
-                            output_path = os.path.join(sess_path, 'anat')
+                        if ignore_localizer and is_localizer(study, scan_id, recos[0]): # add option to exclude localizer during mass conversion
+                            print('Identified a localizer, the file will not be converted: ScanID:{}'.format(str(scan_id)))
                         else:
-                            output_path = os.path.join(sess_path, 'etc')
-                        mkdir(output_path)
-                        filename = 'sub-{}_ses-{}_{}'.format(study._pvobj.subj_id, study._pvobj.study_id,
-                                                             str(scan_id).zfill(2))
-                        for reco_id in recos:
-                            output_fname = os.path.join(output_path, '{}_reco-{}'.format(filename,
-                                                                                         str(reco_id).zfill(2)))
-                            try:
-                                study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
-                                save_meta_files(study, args, scan_id, reco_id, output_fname)
-                            except:
-                                print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
+                            method = study._pvobj._method[scan_id].parameters['Method']
+                            if re.search('epi', method, re.IGNORECASE) and not re.search('dti', method, re.IGNORECASE):
+                                output_path = os.path.join(sess_path, 'func')
+                            elif re.search('dti', method, re.IGNORECASE):
+                                output_path = os.path.join(sess_path, 'dwi')
+                            elif re.search('flash', method, re.IGNORECASE) or re.search('rare', method, re.IGNORECASE):
+                                output_path = os.path.join(sess_path, 'anat')
+                            else:
+                                output_path = os.path.join(sess_path, 'etc')
+                            mkdir(output_path)
+                            filename = 'sub-{}_ses-{}_{}'.format(study._pvobj.subj_id, study._pvobj.study_id,
+                                                                str(scan_id).zfill(2))
+                            for reco_id in recos:
+                                output_fname = os.path.join(output_path, '{}_reco-{}'.format(filename,
+                                                                                            str(reco_id).zfill(2)))
+                                try:
+                                    study.save_as(scan_id, reco_id, output_fname, slope=slope, offset=offset)
+                                    save_meta_files(study, args, scan_id, reco_id, output_fname)
+                                except:
+                                    print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
                     print('{} is converted...'.format(raw))
                 else:
                     print('{} does not contains any scan data to convert...'.format(raw))
@@ -245,12 +277,6 @@ def main():
         else:
             ds_format = args.format
 
-        # if not ds_output.endswith('.xlsx'):
-            # to prevent pandas ValueError in case user does not provide valid file extension.
-            # output = '{}.xlsx'.format(ds_output)
-        # else:
-            # output = ds_output
-        
         # [220202] make compatible with csv, tsv and xlsx
         output = '{}.{}'.format(ds_output, ds_format) 
 
@@ -291,9 +317,8 @@ def main():
                         for reco_id in recos:
                             visu_pars = dset.get_visu_pars(scan_id, reco_id)
                             if dset._get_dim_info(visu_pars)[1] == 'spatial_only':
-                                num_spack = dset._get_slice_info(visu_pars)['num_slice_packs']
-
-                                if num_spack != 3:  # excluding localizer
+                                
+                                if not is_localizer(dset, scan_id, reco_id):
                                     method = dset.get_method(scan_id).parameters['Method']
 
                                     datatype = assignDataType(method)
@@ -396,6 +421,7 @@ def main():
             dpath = os.path.join(path, dname)
             try:
                 dset = BrukerLoader(dpath)
+                dset = override_header(dset, args.subjecttype, args.position)
                 if dset.is_pvdataset:
                     pvobj = dset.pvobj
                     rawdata = pvobj.path
@@ -436,9 +462,7 @@ def main():
                                             fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
                                         else:
                                             _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                            # [20210822] format error
-                                            #fname = '{sub_row.FileName}_run-{str(sub_row.run).zfill(2)}'
-                                            fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2))
+                                            fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2)) # [20210822] format error
                                         if fname in conflict_tested:
                                             raise ValueConflictInField('ScanID:[{}] Conflict error. '
                                                                        'The [run] index value must be unique '
@@ -682,6 +706,37 @@ def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_pa
             bids_validation(df, i, 'modality', row.modality, 10, dtype=str)
     
     return filtered_dset
+
+
+def is_localizer(pvobj, scan_id, reco_id):
+    visu_pars = pvobj.get_visu_pars(scan_id, reco_id)
+    ac_proc = visu_pars.parameters['VisuAcquisitionProtocol']
+    if re.search('tripilot', ac_proc, re.IGNORECASE) or re.search('localizer', ac_proc, re.IGNORECASE):
+        return True
+    else:
+        return False
+
+
+def override_header(pvobj, subjtype, position):
+    """override subject position and subject type"""
+    import warnings
+    if position is not None:
+        try:
+            pvobj.override_position(position)
+        except:
+            msg = "Unknown position string [{}]. Please check your input option.".format(position) + \
+                  "The position variable can be defiend as <BodyPart>_<Side>," + \
+                  "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)"
+            raise InvalidApproach(msg)
+    if subjtype is not None:
+        try:
+            pvobj.override_subjtype(subjtype)
+        except:
+            msg = "Unknown subject type [{}]. Please check your input option.".format(subjtype) + \
+                  "available options are (Biped, Quadruped, Phantom, Other, OtherAnimal)"
+            raise InvalidApproach(msg)
+    return pvobj
+
 
 if __name__ == '__main__':
     main()
