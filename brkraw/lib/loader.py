@@ -826,6 +826,8 @@ class BrukerLoader():
         """Extract, format, and return diffusion bval and bvec"""
         bvals = np.array(get_value(method, 'PVM_DwEffBval'))
         bvecs = np.array(get_value(method, 'PVM_DwGradVec').T)
+        if np.size(bvals) < 2:
+            bvals = np.array([bvals])
         return bvals, bvecs
 
     # Generals
