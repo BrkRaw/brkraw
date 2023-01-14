@@ -14,6 +14,7 @@ class MainWindow(tk.Tk):
         super(MainWindow, self).__init__(*args, **kwargs)
         self._raw = None
         self._ignore_slope = False
+        self._ignore_offset = False
         self._scan_id = None
         self._reco_id = None
         self._output = None
