@@ -710,9 +710,12 @@ def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_pa
 
 def is_localizer(pvobj, scan_id, reco_id):
     visu_pars = pvobj.get_visu_pars(scan_id, reco_id)
-    ac_proc = visu_pars.parameters['VisuAcquisitionProtocol']
-    if re.search('tripilot', ac_proc, re.IGNORECASE) or re.search('localizer', ac_proc, re.IGNORECASE):
-        return True
+    if 'VisuAcquisitionProtocol' in visu_pars.parameters:
+        ac_proc = visu_pars.parameters['VisuAcquisitionProtocol']
+        if re.search('tripilot', ac_proc, re.IGNORECASE) or re.search('localizer', ac_proc, re.IGNORECASE):
+            return True
+        else:
+            return False
     else:
         return False
 
