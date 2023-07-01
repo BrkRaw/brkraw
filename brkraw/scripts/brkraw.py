@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from operator import index
-from shleeh import *
-from shleeh.errors import *
-
+from ..lib.errors import *
 from .. import BrukerLoader, __version__
 from ..lib.utils import set_rescale, save_meta_files, mkdir
 import argparse
