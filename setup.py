@@ -46,7 +46,6 @@ setup(name='brkraw',
             'Intended Audience :: Science/Research',
             'Topic :: Scientific/Engineering :: Medical Science Apps.',
             'Natural Language :: English',
-            'Programming Language :: Python :: >3.5'
       ],
       keywords = 'bruker data_handler converter administrator_tool'
      )
