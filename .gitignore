@@ -3,6 +3,7 @@ __pycache__
 __pycache__/*
 .idea
 .idea/*
+.DS_Store
 deploy/local.properties
 ui/styles/*.css
 dist
