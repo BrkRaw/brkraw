@@ -1,6 +1,4 @@
-from shleeh import *
-from shleeh.errors import *
-
+from .errors import *
 from .orient import build_affine_from_orient_info, reversed_pose_correction, get_origin
 from .pvobj import PvDatasetDir, PvDatasetZip
 from .utils import *
@@ -13,6 +11,13 @@ import os
 import re
 import warnings
 np.set_printoptions(formatter={'float_kind':'{:f}'.format})
+import enum
+
+
+@enum.unique
+class DataType(enum.Enum):
+    PVDATASET = 1
+    NIFTI1 = 2
 
 
 def load(path):

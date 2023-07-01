@@ -25,8 +25,7 @@ setup(name='brkraw',
       url=__url__,
       license='GNLv3',
       packages=find_packages(),
-      install_requires=['shleeh>=0.1.0',
-                        'nibabel>=3.0.2',
+      install_requires=['nibabel>=3.0.2',
                         'numpy>=1.18.0',
                         'pandas>=1.0.0',
                         'pillow>=7.1.1',
@@ -47,7 +46,6 @@ setup(name='brkraw',
             'Intended Audience :: Science/Research',
             'Topic :: Scientific/Engineering :: Medical Science Apps.',
             'Natural Language :: English',
-            'Programming Language :: Python :: >3.5'
       ],
       keywords = 'bruker data_handler converter administrator_tool'
      )

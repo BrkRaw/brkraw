@@ -1,8 +1,6 @@
-from shleeh import *
-from shleeh.utils import *
-from shleeh.errors import *
+from .errors import *
 from .loader import BrukerLoader
-from .utils import get_dirsize, get_filesize, yes_or_no
+from .utils import get_dirsize, get_filesize, yes_or_no, TimeCounter
 import os
 import sys
 import tqdm
