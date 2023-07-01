@@ -3,7 +3,7 @@
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/BrkRaw/tutorials/master)
 
 ## BrkRaw: A comprehensive tool to access raw Bruker Biospin MRI data
-#### Version: 0.3.4
+#### Version: 0.3.8
 
 ### Description
 
