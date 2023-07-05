@@ -347,8 +347,7 @@ def main():
             raise InvalidApproach('Invalid input for datasheet!')
 
         if make_json:
-            fname = output[:-5]
-            json_fname = '{}.json'.format(fname)
+            json_fname = '{}.json'.format(ds_fname)
             print('Creating JSON syntax template for parsing the BIDS required metadata '
                   '(BIDS v{}): {}'.format(_supporting_bids_ver, json_fname))
             with open(json_fname, 'w') as f:
