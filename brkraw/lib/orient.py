@@ -146,7 +146,7 @@ def get_origin(slice_position, gradient_orient):
     max_delta_axis = np.argmax([dx, dy, dz])
     rx, ry, rz = [None, None, None]
 
-    if gradient_orient is not None:
+    if isinstance(gradient_orient, np.ndarray):
         zmat = np.zeros(gradient_orient[0].shape)
         for cid, col in enumerate(gradient_orient[0].T):
             yid = np.argmax(abs(col))

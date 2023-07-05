@@ -137,7 +137,7 @@ class BackupCache:
                 garbage = True
                 crashed = True
 
-            if raw_dname is not None:
+            if raw_dname != None:
                 r = self.get_rpath_obj(raw_dname)
             else:
                 r = None
@@ -265,7 +265,7 @@ class BackupCacheHandler:
         # update raw dataset information (raw dataset cache will remain even its removed)
         print('\nScanning raw dataset cache...')
         for r in tqdm.tqdm(self.raw_data[:], bar_format=_bar_fmt):
-            if r.path is not None:
+            if r.path != None:
                 if not os.path.exists(os.path.join(self._rpath, r.path)):
                     if not r.removed:
                         r.removed = True
@@ -300,7 +300,7 @@ class BackupCacheHandler:
 
     def is_same_as_raw(self, filename):
         arc = BrukerLoader(os.path.join(self._apath, filename))
-        if arc.pvobj.path is not None:
+        if arc.pvobj.path != None:
             raw_path = os.path.join(self._rpath, arc.pvobj.path)
             if os.path.exists(raw_path):
                 raw = BrukerLoader(raw_path)
@@ -495,7 +495,7 @@ class BackupCacheHandler:
                     print('\nStart removing {} archived data...'.format(label.upper()))
                     if len(dset.items()):
                         for raw_dname, arcs in dset.items():
-                            if raw_dname is not None:
+                            if raw_dname != None:
                                 raw_path = os.path.join(self._rpath, raw_dname)
                                 if os.path.exists(raw_path):
                                     r_size, r_unit = get_dirsize(raw_path)
