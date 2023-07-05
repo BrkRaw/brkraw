@@ -1147,7 +1147,7 @@ class BrukerLoader():
                 if num_temporal_frame > 1:
                     matrix_size.append(num_temporal_frame)
 
-        if dataobj != None:
+        if isinstance(dataobj, np.ndarray):
             # matrix size inspection
             dataobj_shape = dataobj.shape[0]
             if multiply_all(matrix_size) != dataobj_shape:
