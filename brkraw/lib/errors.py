@@ -22,13 +22,13 @@ class FileNotValidError(Error):
         self.file_name = None
         self.data_type = None
 
-        if file_name is not None:
+        if file_name != None:
             self.file_name = os.path.basename(file_name)
             if os.path.isdir(file_name):
                 object_type = 'directory'
             else:
                 object_type = 'file'
-            if data_type is not None:
+            if data_type != None:
                 self.data_type = data_type
                 self.message = "The {} '{}' is not valid {}".format(object_type,
                                                                     self.file_name,
@@ -45,7 +45,7 @@ class ArchiveFailedError(Error):
     file_name = None
 
     def __init__(self, file_name=None):
-        if file_name is not None:
+        if file_name != None:
             self.file_name = os.path.basename(file_name)
             self.message = "The data '{}' is not archived".format(
                 self.file_name)
@@ -58,7 +58,7 @@ class RemoveFailedError(Error):
     file_name = None
 
     def __init__(self, file_name=None):
-        if file_name is not None:
+        if file_name != None:
             self.file_name = os.path.basename(file_name)
             self.message = "The file '{}' is not removed".format(
                 self.file_name)
@@ -72,11 +72,11 @@ class RenameFailedError(Error):
     file2_name = None
 
     def __init__(self, file1_name=None, file2_name=None):
-        if file1_name is not None:
+        if file1_name != None:
             self.file1_name = os.path.basename(file1_name)
-        if file2_name is not None:
+        if file2_name != None:
             self.file2_name = os.path.basename(file2_name)
-        if (self.file1_name is not None) and (self.file2_name is not None):
+        if (self.file1_name != None) and (self.file2_name != None):
             self.message = "Rename failed to execute from:'{}' to:'{}'".format(self.file1_name,
                                                                                self.file2_name)
         else:

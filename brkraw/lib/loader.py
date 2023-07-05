@@ -255,7 +255,7 @@ class BrukerLoader():
                 dataobj_ = np.swapaxes(dataobj_, 2, slice_axis_)
             return dataobj_
 
-        if fg_info['frame_type'] is not None:
+        if fg_info['frame_type'] != None:
             if group_id[0] == 'FG_SLICE':
                 pass
 
@@ -327,9 +327,9 @@ class BrukerLoader():
         affine = self._get_affine(visu_pars, method)
 
         data_slp, data_off = self._get_dataslp(visu_pars)
-        if isinstance(data_slp, list) and slope is not None:
+        if isinstance(data_slp, list) and slope != None:
             slope = True
-            if isinstance(data_off, list) and offset is not None:
+            if isinstance(data_off, list) and offset != None:
                 offset = True
 
         imgobj = self.get_dataobj(scan_id, reco_id, slope=slope, offset=offset)
@@ -359,7 +359,7 @@ class BrukerLoader():
                     f = multiply_all(imgobj_.shape[3:])
                     # all converted nifti must be 4D
                     imgobj_ = imgobj_.reshape([x, y, z, f])
-                if crop is not None:
+                if crop != None:
                     if crop[0] is None:
                         niiobj_ = Nifti1Image(imgobj_[..., :crop[1]], affine)
                     elif crop[1] is None:
@@ -377,7 +377,7 @@ class BrukerLoader():
                 f = multiply_all(imgobj.shape[3:])
                 # all converted nifti must be 4D
                 imgobj = imgobj.reshape([x, y, z, f])
-        if crop is not None:
+        if crop != None:
             if crop[0] is None:
                 niiobj = Nifti1Image(imgobj[..., :crop[1]], affine)
             elif crop[1] is None:
@@ -511,7 +511,7 @@ class BrukerLoader():
             val = meta_get_value(v, acqp, method, visu_pars)
             if k in ['PhaseEncodingDirection', 'SliceEncodingDirection']:
                 # Convert the encoding direction meta data into BIDS format
-                if val is not None:
+                if val != None:
                     if isinstance(val, int):
                         val = encdir_dic[val]
                     else:
@@ -551,7 +551,7 @@ class BrukerLoader():
 
     def save_json(self, scan_id, reco_id, filename, dir='./', metadata=None, condition=None):
         json_obj = self._parse_json(scan_id, reco_id, metadata)
-        if condition is not None:
+        if condition != None:
             code, idx = condition
             if code == 'me':    # multi-echo
                 if 'EchoTime' in json_obj.keys():
@@ -599,7 +599,7 @@ class BrukerLoader():
             # date
             date = dt.datetime.strptime(re.sub(pattern_1, r'\2', subject_date), '%d %b %Y').date()
             # end time
-            if visu_pars is not None:
+            if visu_pars != None:
                 last_scan_time = get_value(visu_pars, 'VisuAcqDate')
                 last_scan_time = dt.time(*map(int, re.sub(pattern_1, r'\1', last_scan_time).split(':')))
                 acq_time = get_value(visu_pars, 'VisuAcqScanTime') / 1000.0
@@ -616,7 +616,7 @@ class BrukerLoader():
             date = dt.date(*map(int, re.sub(pattern_2, r'\1', subject_date).split('-')))
 
             # end date
-            if visu_pars is not None:
+            if visu_pars != None:
                 scan_time = get_value(visu_pars, 'VisuCreationDate')[0]
                 scan_time = dt.time(*map(int, re.sub(pattern_2, r'\2', scan_time).split(':')))
                 return dict(date=date,
@@ -785,7 +785,7 @@ class BrukerLoader():
         else:
             niiobj.header.set_xyzt_units('mm')
         if not slope:
-            if slope is not None:
+            if slope != None:
                 if isinstance(data_slp, list):
                     raise InvalidApproach('Invalid slope size;'
                                           'The vector type scl_slope cannot be set in nifti header.')
@@ -795,7 +795,7 @@ class BrukerLoader():
         else:
             niiobj.header['scl_slope'] = 1
         if not offset:
-            if offset is not None:
+            if offset != None:
                 if isinstance(data_off, list):
                     raise InvalidApproach('Invalid offset size;'
                                           'The vector type scl_offset cannot be set in nifti header.')
@@ -814,7 +814,7 @@ class BrukerLoader():
         total_time = get_value(visu_pars, 'VisuAcqScanTime')
         fg_info = self._get_frame_group_info(visu_pars)
         parser = []
-        if fg_info['frame_type'] is not None:
+        if fg_info['frame_type'] != None:
             for id, fg in enumerate(fg_info['group_id']):
                 if not re.search('slice', fg, re.IGNORECASE):
                     parser.append(fg_info['matrix_shape'][id])
@@ -1004,7 +1004,7 @@ class BrukerLoader():
         orient_matrix = get_value(visu_pars, 'VisuCoreOrientation').tolist()
         slice_info = self._get_slice_info(visu_pars)
         slice_position = get_value(visu_pars, 'VisuCorePosition')
-        if self._override_position is not None: # add option to override
+        if self._override_position != None: # add option to override
             subj_position = self._override_position
         else:
             subj_position = get_value(visu_pars, 'VisuSubjectPosition')
@@ -1062,7 +1062,7 @@ class BrukerLoader():
             oorder_parser = get_axis_orient(omatrix_parser)
             vposition_parser = slice_position
 
-        if self._override_type is not None: # add option to override
+        if self._override_type != None: # add option to override
             subj_type = self._override_type
         else:
             subj_type = get_value(visu_pars, 'VisuSubjectType')    
@@ -1147,7 +1147,7 @@ class BrukerLoader():
                 if num_temporal_frame > 1:
                     matrix_size.append(num_temporal_frame)
 
-        if dataobj is not None:
+        if dataobj != None:
             # matrix size inspection
             dataobj_shape = dataobj.shape[0]
             if multiply_all(matrix_size) != dataobj_shape:

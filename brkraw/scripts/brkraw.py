@@ -296,7 +296,7 @@ def main():
             except:
                 dset = None
 
-            if dset is not None:
+            if dset != None:
                 if dset.is_pvdataset:
                     pvobj = dset.pvobj
 
@@ -305,7 +305,7 @@ def main():
 
                     # make subj_id bids appropriate
                     subj_id = cleanSubjectID(subj_id)
-
+                    
                     sess_id = pvobj.session_id
 
                     # make sess_id bids appropriate
@@ -327,15 +327,15 @@ def main():
                                             item['modality'] = m
                                             item['Start'] = s
                                             item['End'] = e
-                                            df = df.append(item, ignore_index=True)
+                                            df = pd.concat([df, pd.DataFrame([item])], ignore_index=True)
                                     elif datatype == 'dwi':
                                         item['modality'] = 'dwi'
-                                        df = df.append(item, ignore_index=True)
+                                        df = pd.concat([df, pd.DataFrame([item])], ignore_index=True)
                                     elif datatype == 'anat' and re.search('MSME', method, re.IGNORECASE):
                                         item['modality'] = 'MESE'
-                                        df = df.append(item, ignore_index=True)
+                                        df = pd.concat([df, pd.DataFrame([item])], ignore_index=True)
                                     else:
-                                        df = df.append(item, ignore_index=True)
+                                        df = pd.concat([df, pd.DataFrame([item])], ignore_index=True)
         if 'xlsx' in ds_format:
             df.to_excel(output, index=None)
         elif 'csv' in ds_format:
@@ -490,6 +490,8 @@ def cleanSubjectID(subj_id):
 
     import warnings
 
+    subj_id = str(subj_id)
+    
     # underscore will mess up bids output
     if '_' in subj_id:
         subj_id = subj_id.replace('_', 'Underscore')
@@ -721,7 +723,7 @@ def is_localizer(pvobj, scan_id, reco_id):
 def override_header(pvobj, subjtype, position):
     """override subject position and subject type"""
     import warnings
-    if position is not None:
+    if position != None:
         try:
             pvobj.override_position(position)
         except:
@@ -729,7 +731,7 @@ def override_header(pvobj, subjtype, position):
                   "The position variable can be defiend as <BodyPart>_<Side>," + \
                   "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)"
             raise InvalidApproach(msg)
-    if subjtype is not None:
+    if subjtype != None:
         try:
             pvobj.override_subjtype(subjtype)
         except:

@@ -33,7 +33,7 @@ class PvDatasetBase:
         self._2dseq = dict()
 
     def _update_studyinfo(self):
-        if self._subject is not None:
+        if self._subject != None:
             subject = self._subject
             self.user_account   = subject.headers['OWNER']
             self.subj_id        = get_value(subject, 'SUBJECT_id')
