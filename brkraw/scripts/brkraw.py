@@ -87,6 +87,7 @@ def main():
     bids_helper.add_argument("-j", "--json", help="create JSON syntax template for "
                                                   "parsing metadata from the header", action='store_true')
     bids_helper.add_argument("-s", "--subj", help="switch subject and study IDs", action='store_true')
+    bids_helper.add_argument("-t", "--sess", help="switch session and study ID", action='store_true')
 
     # bids_convert
     bids_convert.add_argument("input", help=input_dir_str, type=str)
@@ -265,10 +266,15 @@ def main():
 
     elif args.function == 'bids_helper':
         import pandas as pd
+        import warnings
         path = os.path.abspath(args.input)
         ds_output = os.path.abspath(args.output)
         make_json = args.json
         swap_id = args.subj
+        swap_sess = args.sess
+
+        if swap_id and swap_sess:
+            warnings.warn('\nBoth switch subject/study IDs and switch session/study ID options are on. You probably do not want this!\n')
 
         # [220202] for back compatibility
         ds_fname, ds_output_ext = os.path.splitext(ds_output)
@@ -303,15 +309,19 @@ def main():
                     pvobj = dset.pvobj
 
                     rawdata = pvobj.path
+                    
                     if swap_id:
                         subj_id = pvobj.study_id
                     else:
                         subj_id = pvobj.subj_id
 
+                    if swap_sess:
+                        sess_id = pvobj.study_id
+                    else:
+                        sess_id = pvobj.session_id
+
                     # make subj_id bids appropriate
                     subj_id = cleanSubjectID(subj_id)
-                    
-                    sess_id = pvobj.session_id
 
                     # make sess_id bids appropriate
                     sess_id = cleanSessionID(sess_id)
