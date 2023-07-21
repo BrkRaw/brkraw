@@ -86,6 +86,7 @@ def main():
     bids_helper.add_argument("-f", "--format", help="file format of BIDS dataheets. Use this option if you did not specify the extension on output. The available options are (csv/tsv/xlsx) (default: csv)", type=str, default='csv')
     bids_helper.add_argument("-j", "--json", help="create JSON syntax template for "
                                                   "parsing metadata from the header", action='store_true')
+    bids_helper.add_argument("-s", "--subj", help="switch subject and study IDs", action='store_true')
 
     # bids_convert
     bids_convert.add_argument("input", help=input_dir_str, type=str)
@@ -267,6 +268,7 @@ def main():
         path = os.path.abspath(args.input)
         ds_output = os.path.abspath(args.output)
         make_json = args.json
+        swap_id = args.subj
 
         # [220202] for back compatibility
         ds_fname, ds_output_ext = os.path.splitext(ds_output)
@@ -301,7 +303,10 @@ def main():
                     pvobj = dset.pvobj
 
                     rawdata = pvobj.path
-                    subj_id = pvobj.subj_id
+                    if swap_id:
+                        subj_id = pvobj.study_id
+                    else:
+                        subj_id = pvobj.subj_id
 
                     # make subj_id bids appropriate
                     subj_id = cleanSubjectID(subj_id)
