@@ -1,4 +1,4 @@
-#!/usr/scripts/env python
+#!/usr/bin/env python
 """
 Bruker PVdataset loader / converter
 """

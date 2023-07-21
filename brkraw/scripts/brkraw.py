@@ -276,7 +276,7 @@ def main():
             ds_format = args.format
 
         # [220202] make compatible with csv, tsv and xlsx
-        output = '{}.{}'.format(ds_output, ds_format) 
+        output = '{}.{}'.format(ds_fname, ds_format) 
 
         Headers = ['RawData', 'SubjID', 'SessID', 'ScanID', 'RecoID', 'DataType',
                    'task', 'acq', 'ce', 'rec', 'dir', 'run', 'flip', 'mt', 'part', 'modality', 'Start', 'End']
