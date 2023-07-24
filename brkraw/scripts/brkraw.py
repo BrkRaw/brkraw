@@ -279,7 +279,7 @@ def main():
         output = '{}.{}'.format(ds_output, ds_format) 
 
         Headers = ['RawData', 'SubjID', 'SessID', 'ScanID', 'RecoID', 'DataType',
-                   'task', 'acq', 'ce', 'rec', 'dir', 'run', 'modality', 'Start', 'End']
+                   'task', 'acq', 'ce', 'rec', 'dir', 'run', 'inv', 'flip', 'mt', 'part', 'modality', 'Start', 'End']
         df = pd.DataFrame(columns=Headers)
 
         # if the path directly contains scan files for one participant
