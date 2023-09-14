@@ -14,4 +14,6 @@ tests/tutorials/raw: tests/tutorials/bids_map.csv
 						tests/tutorials/bids_map.csv \
 						--output tests/tutorials/raw
 
-demo: tests/tutorials/raw
+demo: 
+	brkraw info tests/tutorials/SampleData/20190724_114946_BRKRAW_1_1.zip
+	make tests/tutorials/raw

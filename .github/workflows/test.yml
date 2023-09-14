@@ -19,6 +19,7 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
         os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
 
     runs-on: ${{ matrix.os }}
 
@@ -42,10 +43,8 @@ jobs:
         brkraw --version
         brkraw --help
 
-    - name: "smoke end-to-end test: test CLI on tutorial data"
-      run: |
-        brkraw info tests/tutorials/SampleData/20190724_114946_BRKRAW_1_1.zip
-        make demo
+    - name: "smoke end-to-end test: use CLI on tutorial data"
+      run: make demo
         
 
   test_tutorial:
@@ -54,6 +53,7 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
         os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
 
     runs-on: ${{ matrix.os }}
 
@@ -78,5 +78,5 @@ jobs:
     - name: Install tutorial
       run: make tests/tutorials
 
-    - name: test tutorial
+    - name: Test tutorial notebook
       run: python -m pytest --nbmake tests/tutorials/JupyterNotebooks/01_GettingStarted.ipynb
