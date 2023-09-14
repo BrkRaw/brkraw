@@ -1,11 +1,11 @@
-name: CI workflow
+name: test
 
 on:
   # this workflow triggered on below condition [push, pull_request]
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches: [ '*' ]
 
 jobs:
   build:
