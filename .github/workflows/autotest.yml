@@ -1,4 +1,4 @@
-name: CI workflow
+name: test
 
 on:
   # this workflow triggered on below condition [push, pull_request]
