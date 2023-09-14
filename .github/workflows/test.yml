@@ -79,4 +79,6 @@ jobs:
       run: make tests/tutorials
 
     - name: Test tutorial notebook
-      run: python -m pytest --nbmake tests/tutorials/JupyterNotebooks/01_GettingStarted.ipynb
+      run: |
+        python -m pytest --nbmake tests/tutorials/JupyterNotebooks/01_GettingStarted.ipynb
+        tree tests/tutorials/raw
