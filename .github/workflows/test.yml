@@ -13,25 +13,70 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  test_cli:
 
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
         os: [ubuntu-latest, windows-latest, macos-latest]
-        
+
     runs-on: ${{ matrix.os }}
 
     steps:
+
     - uses: actions/checkout@v2
+
     - name: Set up python ${{ matrix.python-version }}
+
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Install package
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+
+    - name: Version and help
+      run: |
+        brkraw --version
+        brkraw --help
+
+    - name: "smoke end-to-end test: test CLI on tutorial data"
+      run: |
+        brkraw info tests/tutorials/SampleData/20190724_114946_BRKRAW_1_1.zip
+        make demo
+        
+
+  test_tutorial:
+
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Set up python ${{ matrix.python-version }}
+
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest
+        pip install pytest nbmake
+
     - name: Install package
-      run: |
-        pip install -e .
+      run: pip install .
+
+    - name: Install tutorial
+      run: make tests/tutorials
+
+    - name: test tutorial
+      run: python -m pytest --nbmake tests/tutorials/JupyterNotebooks/01_GettingStarted.ipynb

@@ -8,8 +8,7 @@ ui/styles/*.css
 dist
 build
 *.pid
-test
-test/*
 *.egg-info
 *.egg-info/*
 .DS_Store
+tests/tutorials
