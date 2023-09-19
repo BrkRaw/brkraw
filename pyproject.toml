@@ -1,0 +1,45 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Science/Research',
+    'Topic :: Scientific/Engineering :: Medical Science Apps.',
+    'Natural Language :: English',
+]
+dependencies = [
+    'nibabel>=3.0.2',
+    'numpy>=1.18.0',
+    'pandas>=1.0.0',
+    'pillow>=7.1.1',
+    'tqdm>=4.45.0',
+    'openpyxl>=3.0.3',
+    'xlrd>=1.0.0'
+]
+description = "Bruker PvDataset Loader"
+license = {text = "GNLv3"}
+version = "0.3.10"
+maintainers = [{name = "SungHo Lee", email = 'shlee@unc.edu'}]
+name = "brkraw"
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ['bruker', 'data_handler', 'converter', 'administrator_tool']
+
+[project.urls]
+Homepage = "https://github.com/brkraw/brkraw"
+
+[project.optional-dependencies]
+SimpleITK = [
+    'SimpleITK>=1.2.4'
+]
+dev = [
+    "flake8",
+    "pytest",
+    "nbmake"
+]
+
+[project.scripts]
+brkraw = "brkraw.scripts.brkraw:main"
+brk-backup = 'brkraw.scripts.brk_backup:main'
