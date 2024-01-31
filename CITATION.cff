@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+
+title: "brkraw"
+
+version: "0.3.10"
+
+abstract: Bruker PvDataset Loader
+
+message: "If you use this software, please cite it as below."
+
+repository-code: "https://github.com/BrkRaw/brkraw"
+
+identifiers:
+  - description: This is the collection of archived snapshots of all releases
+    type: doi
+    value: "10.5281/zenodo.245546149"
+
+contact:
+  - email: shlee@unc.edu
+    family-names: SungHo 
+    given-names: Lee
+
+authors:
+  - email: shlee@unc.edu
+    family-names: SungHo 
+    given-names: Lee
+
+  - email: banwoomi@unc.edu
+    family-names: Woomi  
+    given-names: Ban
+
+  - family-names: Dumas 
+    given-names: Jaiden
+
+  - family-names: Devenyi 
+    given-names: Gabriel A.
+
+  - email: shihy@neurology.unc.edu
+    family-names: Yen-Yu
+    given-names: Ian Shih
+
+license: GPL-3.0
+
+keywords:
+  - bruker
+  - data_handler
+  - converter
+  - administrator_tool
+  - brain imaging data structure
