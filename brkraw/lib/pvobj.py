@@ -37,8 +37,8 @@ class PvDatasetBase:
             subject = self._subject
             self.user_account   = subject.headers['OWNER']
             self.subj_id        = get_value(subject, 'SUBJECT_id')
-            self.study_id       = get_value(subject, 'SUBJECT_study_nr')
-            self.session_id     = get_value(subject, 'SUBJECT_study_name')
+            self.study_id       = get_value(subject, 'SUBJECT_study_name')
+            self.session_id     = get_value(subject, 'SUBJECT_study_nr')
             
             # [20210820] Add-paravision 360 related.
             title = subject.headers['TITLE']
