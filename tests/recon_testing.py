@@ -16,9 +16,11 @@ import matplotlib.pyplot as plt
 import brkraw as br
 from brkraw.lib.parser import Parameter
 from brkraw.lib.pvobj import PvDatasetDir
-from brkraw.lib.utils import get_value
+from brkraw.lib.utils import get_value, mkdir
 import brkraw as br
 from brkraw.lib.recon import recon
+
+import nibabel as nib
 
 
 #PV_zipfile = "/home/jac/data/PV36034results20230630/Wilson_Tim_26171_1_Default_RAREvfl_26174_360.3.4.PvDatasets"
@@ -38,11 +40,19 @@ for ExpNum in data_loader._avail.keys():
     process = 'image' 
     
     # test functions
-    
     start_time = time.time()
     data = recon(fid_binary, acqp, meth, reco, process=process)
     print("{} convert {} seconds".format (process, time.time()-start_time))
     data = data/np.max(np.abs(data)) # Normalize Data
-    #print(data.shape)
+    # Check if Image recontructed
+    output = '{}_{}'.format(data_loader._pvobj.subj_id,data_loader._pvobj.study_id)
+    mkdir(output)
 
+    # Reconstructed Image Matrix is always 7-dimensional
+    if len(data.shape) == 7:
+        output_fname =f"{acqp._parameters['ACQ_scan_name'].strip().replace(' ','_')}"
+        for c in range(data.shape[4]):
+            ni_img  = nib.Nifti1Image(np.abs(np.squeeze(data)), affine=np.eye(4))
+            nib.save(ni_img, os.path.join(output,f"{acqp._parameters['ACQ_scan_name'].strip().replace(' ','_')}_C{c}.nii.gz"))
+        print('NifTi file is generated... [{}]'.format(output_fname))
         
