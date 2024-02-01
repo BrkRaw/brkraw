@@ -89,13 +89,12 @@ def reco_phase_rotate(frame, Reco, actual_framenumber):
     phase_matrix = np.ones_like(frame)
     for index in range(len(RECO_rotate)):
         f = np.arange(dims[index])
-        #print(f)
+
         if RECO_ft_mode in ['COMPLEX_FT', 'COMPLEX_FFT']:
             phase_vector = np.exp(1j*2*np.pi*RECO_rotate[index]*f)
         elif RECO_ft_mode in ['NO_FT', 'NO_FFT']:
             phase_vector = np.ones_like(f)
         elif RECO_ft_mode in ['COMPLEX_IFT', 'COMPLEX_IFFT']:
-            #print(RECO_rotate[index])
             phase_vector = np.exp(1j*2*np.pi*(1-RECO_rotate[index])*f)
         else:
             raise ValueError('Your RECO_ft_mode is not supported')
@@ -236,6 +235,7 @@ def reco_cutoff(frame, Reco, actual_framenumber):
     # Use function only if Reco.RECO_size is not equal to size(frame)
     dim_equal = True
     for i,j in zip(get_value(Reco,'RECO_size'), frame.shape):
+        print(i, j)
         dim_equal = (i==j)
    
     if not dim_equal:
