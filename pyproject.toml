@@ -20,7 +20,7 @@ dependencies = [
 ]
 description = "Bruker PvDataset Loader"
 license = {text = "GNLv3"}
-version = "0.3.10"
+dynamic = ["version"]
 maintainers = [{name = "SungHo Lee", email = 'shlee@unc.edu'}]
 name = "brkraw"
 readme = "README.md"
@@ -39,6 +39,9 @@ dev = [
     "pytest",
     "nbmake"
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "nordic.__version__"}
 
 [project.scripts]
 brkraw = "brkraw.scripts.brkraw:main"

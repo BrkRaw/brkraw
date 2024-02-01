@@ -72,6 +72,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[dev]
 
+    - name: Install optional dependencies for ITK dataset
+      run: |
+        pip install .[SimpleITK]
+
     - name: Install tutorial
       run: make tests/tutorials
 
