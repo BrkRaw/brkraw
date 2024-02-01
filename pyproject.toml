@@ -43,3 +43,4 @@ dev = [
 [project.scripts]
 brkraw = "brkraw.scripts.brkraw:main"
 brk-backup = 'brkraw.scripts.brk_backup:main'
+brkrecon = "brkraw.scripts.brkrecon:main"
