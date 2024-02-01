@@ -154,6 +154,13 @@ def get_value(pars, key):
     else:
         return pars.parameters[key]
 
+def set_value(pars, key, value):
+    if key not in pars.parameters.keys():
+        print('Created a key')
+        pars.parameters[key] = value
+    else:
+        pars.parameters[key] = value
+    return pars
 
 def is_all_element_same(listobj):
     if listobj is None:
