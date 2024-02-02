@@ -263,7 +263,7 @@ def meta_check_source(key_string, acqp, method, visu_pars):
     for i, ans in enumerate(key_exist):
         if ans:
             return get_value(pool[i], key_string)
-    return None
+    return key_string
 
 
 def yes_or_no(question):
