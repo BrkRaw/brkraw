@@ -249,6 +249,8 @@ def meta_check_express(value, acqp, method, visu_pars):
         if k != 'Equation':
             exec('global {}'.format(k))
             val = meta_get_value(v, acqp, method, visu_pars)
+            if isinstance(val, str):
+                val = None
             exec('{} = {}'.format(k, val))
     try:
         exec("output = {}".format(value['Equation']), globals(), lcm)
