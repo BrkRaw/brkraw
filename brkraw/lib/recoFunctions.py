@@ -191,7 +191,7 @@ def reco_FT(frame, Reco, actual_framenumber):
     elif RECO_ft_mode in ['NO_FT', 'NO_FFT']:
         pass
     elif RECO_ft_mode in ['COMPLEX_IFT', 'COMPLEX_IFFT']:
-        frame = np.fft.fftn(frame)
+        frame = np.fft.ifftn(frame)
         #frame = sp.ifft(frame, axes=[0,1,2], center=False)
     else:
         raise ValueError('Your RECO_ft_mode is not supported')
@@ -235,7 +235,6 @@ def reco_cutoff(frame, Reco, actual_framenumber):
     # Use function only if Reco.RECO_size is not equal to size(frame)
     dim_equal = True
     for i,j in zip(get_value(Reco,'RECO_size'), frame.shape):
-        print(i, j)
         dim_equal = (i==j)
    
     if not dim_equal:
