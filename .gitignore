@@ -13,3 +13,4 @@ build
 .DS_Store
 tests/tutorials
 _test.py
+_*.ipynb
