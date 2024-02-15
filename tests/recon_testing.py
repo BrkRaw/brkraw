@@ -35,7 +35,8 @@ for ExpNum in data_loader._avail.keys():
     reco = data_loader._pvobj.get_reco(ExpNum, 1)
     
     print(get_value(acqp, 'ACQ_protocol_name' ), ExpNum)
-
+    print(get_value(acqp, 'ACQ_ScanPipeJobSettings' ), ExpNum)
+    
     # process OPTIONS: 'raw', 'frame', 'CKdata', 'image'    
     process = 'image' 
     

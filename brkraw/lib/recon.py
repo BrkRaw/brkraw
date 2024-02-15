@@ -11,6 +11,8 @@ Created on Sat Jan  20 10:06:38 2024
 
 from .utils import get_value, set_value
 from .recoFunctions import *
+from .reference import BYTEORDER
+from .recoSigpy import compressed_sensing_recon
 import numpy as np
 from copy import deepcopy
 
@@ -44,14 +46,7 @@ def recon(fid_binary, acqp, meth, reco, process = None, recoparts = 'default'):
 
     """
     output = readBrukerRaw(fid_binary, acqp, meth)
-
     if process == 'raw':
-        return output
-    
-    if get_value(meth,'PVM_EncCS') == 'Yes':
-        print(get_value(acqp, 'ACQ_scan_name' ))
-        print("Warning: Compressed Sensing NOT SUPPORTED...")
-        print("returning 'raw' sorting")
         return output
     
     # IF CORRECT SEQUENCES
@@ -62,6 +57,14 @@ def recon(fid_binary, acqp, meth, reco, process = None, recoparts = 'default'):
         'mge'       in get_value(acqp, 'ACQ_protocol_name').lower() or \
         'FLASH.ppg' == get_value(acqp, 'PULPROG'):
 
+        # Compressed Sensing
+        if get_value(meth,'PVM_EncCS') == 'Yes':
+            print(get_value(acqp, 'ACQ_scan_name' ))
+            print("Warning: Compressed Sensing is IN TESTING...")
+            output = compressed_sensing_recon(output, acqp, meth, reco)
+            return output
+
+        # Full Cartesian Pipeline
         output = convertRawToFrame(output, acqp, meth)
         if process == 'frame':
             return output
@@ -93,28 +96,71 @@ def readBrukerRaw(fid_binary, acqp, meth):
 
     Returns
     -------
-    X : np.array 
+    X : np.array [num_lines, channel, scan_size]
     """
-    dt_code = np.dtype('float64') if get_value(acqp, 'ACQ_ScanPipeJobSettings')[0][1] == 'STORE_64bit_float' else np.dtype('int32') 
-    fid = np.frombuffer(fid_binary, dt_code)
+    # Get Data from buffer
+    dt_code = 'int32' 
+    if get_value(acqp, 'ACQ_ScanPipeJobSettings') != None:
+        if get_value(acqp, 'ACQ_ScanPipeJobSettings')[0][1] == 'STORE_64bit_float':
+            dt_code = 'float64' 
     
-    NI = get_value(acqp, 'NI')
-    NR = get_value(acqp, 'NR')
+    if '32' in dt_code:
+        bits = 32 # Need to add a condition here
+    elif '64' in dt_code:
+        bits = 64
+    DT_CODE = np.dtype(dt_code)
+
+    #TODO: FIX LITTLE VS BIG ENDIAN
+    #BYTORDA = get_value(acqp, 'BYTORDA') 
+    #ASSUME BYTE order is little
+    DT_CODE = DT_CODE.newbyteorder('<')
+    fid = np.frombuffer(fid_binary, DT_CODE)
     
-    ACQ_size = get_value(acqp, 'ACQ_jobs')[0][0]
-    numDataHighDim = np.prod(ACQ_size)
-    numSelectedRecievers = get_value(acqp, 'ACQ_ReceiverSelectPerChan').count('Yes')
-    nRecs = numSelectedRecievers
-    
-    jobScanSize = get_value(acqp, 'ACQ_jobs')[0][0]
-    dim1 = int(len(fid)/(jobScanSize*nRecs))
-    
-    # Assume data is complex
-    X = fid[::2] + 1j*fid[1::2] 
-    
-    # [num_lines, channel, scan_size]
-    X = np.reshape(X, [dim1, nRecs, int(jobScanSize/2)])
-    
+    # Sort raw data
+    if '360' in get_value(acqp,'ACQ_sw_version'):
+        # META data
+        ACQ_size = get_value(acqp, 'ACQ_jobs')[0][0]
+        numDataHighDim = np.prod(ACQ_size)
+        nRecs = get_value(acqp, 'ACQ_ReceiverSelectPerChan').count('Yes')
+        
+        jobScanSize = get_value(acqp, 'ACQ_jobs')[0][0]
+        
+        # Assume data is complex
+        X = fid[::2] + 1j*fid[1::2] 
+        
+        # [num_lines, channel, scan_size]
+        X = np.reshape(X, [-1, nRecs, int(jobScanSize/2)])
+
+    else:
+        NI = get_value(acqp, 'NI')
+        NR = get_value(acqp, 'NR')
+        nRecs = 1 # THIS NEEDS TO BE CHANGED BUT IDK HOW
+        ACQ_size = get_value(acqp, 'ACQ_size' )
+
+        if get_value(acqp, 'GO_block_size') == 'Standard_KBlock_Format':
+            blocksize = int(np.ceil(ACQ_size[0]*nRecs*(bits/8)/1024)*1024/(bits/8))
+        else:
+            blocksize = int(ACQ_size[0]*nRecs)
+
+        # CHECK SIZE
+        print(fid.size, blocksize*np.prod(ACQ_size[1:])*NI*NR)
+        if fid.size !=  blocksize*np.prod(ACQ_size[1:])*NI*NR:
+            print('Error Size dont match')
+
+        # Reshape
+        fid = fid[::2] + 1j*fid[1::2] 
+        fid = fid.reshape([-1,blocksize//2])
+
+        # THIS REMOVES ZERO FILL (IDK THE PURPOSE FOR THIS)
+        if blocksize != ACQ_size[0]*nRecs:
+            fid = fid[:,:ACQ_size[0]//2]
+            fid = fid.reshape((-1,nRecs,ACQ_size[0]//2))
+            X = fid.transpose(0,1,2)
+            
+        else:
+            #UNTESTED TIM FEB 12 2024 (IDK WHAT THIS DOES)
+            X = fid.reshape((ACQ_size[0]//2, nRecs, -1))
+        
     return X
 
 
@@ -155,6 +201,9 @@ def convertRawToFrame(data, acqp, meth):
     
     acqSizes = np.zeros(ACQ_dim)
     scanSize = get_value(acqp, 'ACQ_jobs')[0][0]
+    # FIXES for PV 7
+    if scanSize == 0:
+        scanSize = get_value(acqp,'ACQ_size')[0]
     
     isSpatialDim = [i == 'Spatial' for i in get_value(acqp, 'ACQ_dim_desc')]
     spatialDims = sum(isSpatialDim)
@@ -167,7 +216,7 @@ def convertRawToFrame(data, acqp, meth):
     
     numresultsHighDim=np.prod(acqSizes[1:])
     acqSizes[0] = scanSize   
-    
+
     if np.iscomplexobj(results):
         scanSize = int(acqSizes[0]/2)
     else:  
@@ -175,7 +224,7 @@ def convertRawToFrame(data, acqp, meth):
     
     # Resort
     if ACQ_dim>1:
-        # [..., num_lines, channel, scan_size]
+        # [num_readout, channel, scan_size] -> [channel, scan_size, num_readout]
         results = results.transpose((1,2,0))
         
         results = results.reshape(
@@ -228,7 +277,7 @@ def convertFrameToCKData(frame, acqp, meth):
     -------
     data : np.array with size 
         [scansize, ACQ_phase_factor, numDataHighDim/ACQ_phase_factor, numSelectedReceivers, NI, NR]
-        for simplified understand of the data structure
+        for simplified understanding of the data structure
         [x,y,z,_,n_channel,NI,NR]
     """
     NI = get_value(acqp, 'NI')
@@ -242,6 +291,10 @@ def convertFrameToCKData(frame, acqp, meth):
     acqSizes = np.zeros(ACQ_dim)
     
     scanSize = get_value(acqp, 'ACQ_jobs')[0][0]
+    # FIXES for PV 7
+    if scanSize == 0:
+        scanSize = get_value(acqp,'ACQ_size')[0]
+        
     acqSizes[0] = scanSize
     ACQ_size = acqSizes
     
@@ -284,7 +337,6 @@ def convertFrameToCKData(frame, acqp, meth):
     frameData = frame.copy()
     
     # MGE with alternating k-space readout: Reverse every second scan. 
-    
     if get_value(meth, 'EchoAcqMode') != None and get_value(meth,'EchoAcqMode') == 'allEchoes':
         frameData[:,:,:,1::2,:] = np.flipud(frame[:,:,:,1::2,:])
     
