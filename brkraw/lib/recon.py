@@ -161,10 +161,10 @@ def readBrukerRaw(fid_binary, acqp, meth):
         # Reshape
         fid = fid[::2] + 1j*fid[1::2] 
         fid = fid.reshape([-1,blocksize//2])
-
+        #print(nRecs)
         # THIS REMOVES ZERO FILL (IDK THE PURPOSE FOR THIS)
         if blocksize != ACQ_size[0]*nRecs:
-            fid = fid[:,:ACQ_size[0]//2]
+            fid = fid[:,:ACQ_size[0]//2*nRecs]
             fid = fid.reshape((-1,nRecs,ACQ_size[0]//2))
             X = fid.transpose(0,1,2)
             
