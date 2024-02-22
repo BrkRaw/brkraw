@@ -68,7 +68,6 @@ def reco_phase_rotate(frame, Reco, actual_framenumber):
     
     # import variables
     RECO_rotate_all = get_value(Reco,'RECO_rotate')
-
     
     if RECO_rotate_all.shape[1] > actual_framenumber:
         RECO_rotate =  get_value(Reco,'RECO_rotate')[:, actual_framenumber]

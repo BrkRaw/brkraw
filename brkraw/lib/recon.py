@@ -11,7 +11,6 @@ Created on Sat Jan  20 10:06:38 2024
 
 from .utils import get_value, set_value
 from .recoFunctions import *
-from .reference import BYTEORDER
 from .recoSigpy import compressed_sensing_recon
 import numpy as np
 from copy import deepcopy
@@ -98,7 +97,11 @@ def readBrukerRaw(fid_binary, acqp, meth):
     -------
     X : np.array [num_lines, channel, scan_size]
     """
-    # Get Data from buffer
+    from .reference import BYTEORDER, WORDTYPE
+    # META DATA
+    NI = get_value(acqp, 'NI')
+    NR = get_value(acqp, 'NR')
+
     dt_code = 'int32' 
     if get_value(acqp, 'ACQ_ScanPipeJobSettings') != None:
         if get_value(acqp, 'ACQ_ScanPipeJobSettings')[0][1] == 'STORE_64bit_float':
@@ -110,10 +113,13 @@ def readBrukerRaw(fid_binary, acqp, meth):
         bits = 64
     DT_CODE = np.dtype(dt_code)
 
-    #TODO: FIX LITTLE VS BIG ENDIAN
-    #BYTORDA = get_value(acqp, 'BYTORDA') 
-    #ASSUME BYTE order is little
-    DT_CODE = DT_CODE.newbyteorder('<')
+    BYTORDA = get_value(acqp, 'BYTORDA') 
+    if BYTORDA == 'little':
+        DT_CODE = DT_CODE.newbyteorder('<')
+    elif BYTORDA == 'big':
+        DT_CODE = DT_CODE.newbyteorder('>')
+
+    # Get FID FROM buffer
     fid = np.frombuffer(fid_binary, DT_CODE)
     
     # Sort raw data
@@ -132,10 +138,15 @@ def readBrukerRaw(fid_binary, acqp, meth):
         X = np.reshape(X, [-1, nRecs, int(jobScanSize/2)])
 
     else:
-        NI = get_value(acqp, 'NI')
-        NR = get_value(acqp, 'NR')
-        nRecs = 1 # THIS NEEDS TO BE CHANGED BUT IDK HOW
+                
+        nRecs = 1 # PV7 only save 1 channel
+        if get_value(acqp, 'ACQ_ReceiverSelect') != None:
+            nRecs = get_value(acqp, 'ACQ_ReceiverSelect').count('Yes')
+            
+        
         ACQ_size = get_value(acqp, 'ACQ_size' )
+        if type(ACQ_size) == int:
+            ACQ_size = [ACQ_size] 
 
         if get_value(acqp, 'GO_block_size') == 'Standard_KBlock_Format':
             blocksize = int(np.ceil(ACQ_size[0]*nRecs*(bits/8)/1024)*1024/(bits/8))
@@ -143,9 +154,9 @@ def readBrukerRaw(fid_binary, acqp, meth):
             blocksize = int(ACQ_size[0]*nRecs)
 
         # CHECK SIZE
-        print(fid.size, blocksize*np.prod(ACQ_size[1:])*NI*NR)
-        if fid.size !=  blocksize*np.prod(ACQ_size[1:])*NI*NR:
-            print('Error Size dont match')
+        if fid.size != blocksize*np.prod(ACQ_size[1:])*NI*NR:
+            raise Exception('readBrukerRaw 150: Error Size dont match')
+            #print('readBrukerRaw 150: Error Size dont match')
 
         # Reshape
         fid = fid[::2] + 1j*fid[1::2] 
@@ -158,7 +169,7 @@ def readBrukerRaw(fid_binary, acqp, meth):
             X = fid.transpose(0,1,2)
             
         else:
-            #UNTESTED TIM FEB 12 2024 (IDK WHAT THIS DOES)
+            # UNTESTED TIM FEB 12 2024 (IDK WHAT THIS DOES)
             X = fid.reshape((ACQ_size[0]//2, nRecs, -1))
         
     return X
@@ -392,19 +403,20 @@ def brkraw_Reco(kdata, reco, meth, recoparts = 'all'):
         recoparts = ['quadrature', 'phase_rotate', 'zero_filling', 
                      'FT', 'phase_corr_pi']
     # Other stuff
-    RECO_ft_mode = get_value(reco, 'RECO_ft_mode')    
-    if '360' in meth.headers['title'.upper()]:
-        reco_ft_mode_new = []
-        
-        for i in RECO_ft_mode:
-            if i == 'COMPLEX_FT' or i == 'COMPLEX_FFT':
-                reco_ft_mode_new.append('COMPLEX_IFT')
-            else:
-                reco_ft_mode_new.append('COMPLEX_FT')
-                
-        reco = set_value(reco, 'RECO_ft_mode', reco_ft_mode_new)
-        RECO_ft_mode = get_value(reco, 'RECO_ft_mode')
-        
+    RECO_ft_mode = get_value(reco, 'RECO_ft_mode')  
+ 
+    #if '360' in meth.headers['title'.upper()]:
+    reco_ft_mode_new = []
+    
+    for i in RECO_ft_mode:
+        if i == 'COMPLEX_FT' or i == 'COMPLEX_FFT':
+            reco_ft_mode_new.append('COMPLEX_IFT')
+        else:
+            reco_ft_mode_new.append('COMPLEX_FT')
+            
+    reco = set_value(reco, 'RECO_ft_mode', reco_ft_mode_new)
+    RECO_ft_mode = get_value(reco, 'RECO_ft_mode')
+    
     # Adapt FT convention to acquisition version.
     N1, N2, N3, N4, N5, N6, N7 = kdata.shape
 
