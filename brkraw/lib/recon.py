@@ -155,13 +155,13 @@ def readBrukerRaw(fid_binary, acqp, meth):
 
         # CHECK SIZE
         if fid.size != blocksize*np.prod(ACQ_size[1:])*NI*NR:
-            raise Exception('readBrukerRaw 150: Error Size dont match')
+            raise Exception('readBrukerRaw 158: Error Size dont match')
             #print('readBrukerRaw 150: Error Size dont match')
 
         # Reshape
         fid = fid[::2] + 1j*fid[1::2] 
         fid = fid.reshape([-1,blocksize//2])
-        #print(nRecs)
+ 
         # THIS REMOVES ZERO FILL (IDK THE PURPOSE FOR THIS)
         if blocksize != ACQ_size[0]*nRecs:
             fid = fid[:,:ACQ_size[0]//2*nRecs]
@@ -169,8 +169,7 @@ def readBrukerRaw(fid_binary, acqp, meth):
             X = fid.transpose(0,1,2)
             
         else:
-            # UNTESTED TIM FEB 12 2024 (IDK WHAT THIS DOES)
-            # TESTED TIM FEB 26 2024 (USING,EALEXwater_dataset)
+            # TESTED by TIM FEB 26 2024 (USING,EALEXwater_dataset)
             X = fid.reshape((-1, nRecs, ACQ_size[0]//2))
          
     return X
