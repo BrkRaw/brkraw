@@ -170,8 +170,9 @@ def readBrukerRaw(fid_binary, acqp, meth):
             
         else:
             # UNTESTED TIM FEB 12 2024 (IDK WHAT THIS DOES)
-            X = fid.reshape((ACQ_size[0]//2, nRecs, -1))
-        
+            # TESTED TIM FEB 26 2024 (USING,EALEXwater_dataset)
+            X = fid.reshape((-1, nRecs, ACQ_size[0]//2))
+         
     return X
 
 
