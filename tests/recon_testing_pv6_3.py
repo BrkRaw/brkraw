@@ -1,8 +1,9 @@
 """
- DEVELOPED FOR BRUKER PARAVISION 7 datasets
+ DEVELOPED FOR BRUKER PARAVISION 6 datasets
  Below code will work for cartesian sequence
  GRE, MSME, RARE that were acquired with linear
  phase encoding
+ EALEXWater dataset
 
 @author: Tim Ho (UVA) 
 """
@@ -23,11 +24,10 @@ from brkraw.lib.recon import *
 import nibabel as nib
 import sigpy as sp
 
-PV_zipfile = '/home/jac/data/external_data/20231128_132106_hluna_piloFe_irm4_rata26_hluna_piloFe_irm4__1_1'
+PV_zipfile = '/home/jac/data/external_data/Test_Wat202402_15141272_1_Default_0206_Tomato_15141275_6.0.1.PvDatasets'
 data_loader = br.load(PV_zipfile)
 
-ExpNum = 6 
-for ExpNum in data_loader._avail.keys():
+for ExpNum in list(data_loader._avail.keys()):
     # Raw data processing for single job
     fid_binary = data_loader.get_fid(ExpNum)
     acqp = data_loader.get_acqp(ExpNum)
@@ -45,7 +45,7 @@ for ExpNum in data_loader._avail.keys():
 
     NI = get_value(acqp, 'NI')
     NR = get_value(acqp, 'NR')
-    nRecs = 1 # THIS NEEDS TO BE EXAMINED BUT IDK HOW
+    nRecs = 4 # THIS NEEDS TO BE EXAMINED BUT IDK HOW
     ACQ_size = get_value(acqp, 'ACQ_size' )
 
     if get_value(acqp, 'GO_block_size') == 'Standard_KBlock_Format':
@@ -61,7 +61,6 @@ for ExpNum in data_loader._avail.keys():
     # Reshape
     fid = fid[::2] + 1j*fid[1::2] 
     fid = fid.reshape([-1,blocksize//2])
-
     # THIS REMOVES ZERO FILL (IDK THE PURPOSE FOR THIS)
     if blocksize != ACQ_size[0]*nRecs:
         fid = fid[:,:ACQ_size[0]//2]
@@ -69,10 +68,11 @@ for ExpNum in data_loader._avail.keys():
         fid = fid.transpose(0,2,1)
         
     else:
+        print('hello')
         #UNTESTED TIM FEB 12 2024 (IDK WHAT THIS DOES)
-        fid = fid.reshape((ACQ_size[0]//2, nRecs, -1))
+        fid = fid.reshape((-1, nRecs, ACQ_size[0]//2))
         
-
+   
     print(fid.shape)
     frame = convertRawToFrame(fid, acqp, meth)
     print(frame.shape)
@@ -83,17 +83,27 @@ for ExpNum in data_loader._avail.keys():
         
     # test functions
     data = brkraw_Reco(CKdata, deepcopy(reco), meth, recoparts = 'default')
+    plt.figure()
+    for c in range(data.shape[4]):
+        plt.subplot(1,4,c+1)
+        plt.imshow(np.abs(np.squeeze(data[:,:,:,:,c,0,:])))
+    plt.show()
     """
     # -----------------------------------------------------------------
-    data = recon(fid_binary, acqp, meth, reco, recoparts='default')
+    
+    data = recon(fid_binary, acqp, meth, reco, recoparts='all')
     print(data.shape)
     
     if len(data.shape) == 7:
         output = '{}_{}'.format(data_loader._pvobj.subj_id,data_loader._pvobj.study_id)
         mkdir(output)
         output_fname =f"{acqp._parameters['ACQ_scan_name'].strip().replace(' ','_')}"
+        #plt.figure()
         for c in range(data.shape[4]):
-            ni_img  = nib.Nifti1Image(np.angle(np.squeeze(data[:,:,:,:,c,:,:])), affine=np.eye(4))
+            #plt.subplot(1,4,c+1)
+            #plt.imshow(np.abs(np.squeeze(data[:,:,7,:,c,0,:])))
+            ni_img  = nib.Nifti1Image(np.abs(np.squeeze(data[:,:,:,:,c,:,:])), affine=np.eye(4))
             nib.save(ni_img, os.path.join(output,f"{acqp._parameters['ACQ_scan_name'].strip().replace(' ','_')}_C{c}.nii.gz"))
+        #plt.show()
         print('NifTi file is generated... [{}]'.format(output_fname))
            
