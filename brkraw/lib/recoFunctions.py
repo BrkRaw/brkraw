@@ -234,10 +234,10 @@ def reco_cutoff(frame, Reco, actual_framenumber):
     # Use function only if Reco.RECO_size is not equal to size(frame)
     dim_equal = True
     for i,j in zip(get_value(Reco,'RECO_size'), frame.shape):
-        dim_equal = (i==j)
-   
-    if not dim_equal:
-        
+        if i!=j:
+            dim_equal = False
+
+    if not dim_equal:      
         # Import variables
         RECO_offset = get_value(Reco,'RECO_offset')[:, actual_framenumber]
         RECO_size = get_value(Reco, 'RECO_size')
@@ -245,9 +245,9 @@ def reco_cutoff(frame, Reco, actual_framenumber):
         # Cut the new part with RECO_size and RECO_offset
         pos_ges = []
         for i in range(len(RECO_size)):
-
             pos_ges.append(slice(RECO_offset[i], RECO_offset[i] + RECO_size[i]))
         newframe = frame[tuple(pos_ges)]
+    
     else:
         newframe = frame
     
