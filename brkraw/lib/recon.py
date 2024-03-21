@@ -436,7 +436,7 @@ def brkraw_Reco(kdata, reco, meth, recoparts = 'all'):
     
     # --- START RECONSTRUCTION ---
     for recopart in recoparts:
-        print(recopart)
+
         if 'quadrature' in recopart:
             for NR in range(N7):
                 for NI in range(N6):
