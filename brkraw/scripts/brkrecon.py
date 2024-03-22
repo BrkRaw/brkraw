@@ -78,7 +78,6 @@ def main():
                 acqpars  = study.get_acqp(int(scan_id))
                 scanname = acqpars._parameters['ACQ_scan_name']
                 scanname = scanname.replace(' ','-')
-                output_fname = '{}-{}-{}-{}'.format(output, scan_id, reco_id, scanname)
                 scan_id = int(scan_id)
                 reco_id = int(reco_id)
                 
@@ -86,23 +85,7 @@ def main():
                     print('Identified a localizer, the file will not be converted: ScanID:{}'.format(str(scan_id)))
                 else:
                     try:
-                        visu_pars = study._get_visu_pars(scan_id, 1)
-                        method = study._method[scan_id]
-                        affine = study._get_affine(visu_pars, method)
-                        fid_binary = study.get_fid(scan_id)
-                        acqp = study.get_acqp(scan_id)
-                        reco = study._pvobj.get_reco(scan_id, 1)
-                        image = recon(fid_binary, acqp, method, reco, process = process,recoparts='default')
-                        for i in range(image.shape[4]):
-                            for j in range(image.shape[5]):
-                                for k in range(image.shape[6]):
-                                    niiobj = nib.Nifti1Image(np.squeeze(np.abs(image[:,:,:,:,i,j,k])), affine)
-                                    niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                                    niiobj.to_filename(output_fname+'-{}-{}-{}-m'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
-                                    niiobj = nib.Nifti1Image(np.squeeze(np.angle(image[:,:,:,:,i,j,k])), affine)
-                                    niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                                    niiobj.to_filename(output_fname+'-{}-{}-{}-p'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
-                        print('NifTi file is generated... [{}]'.format(output_fname))
+                        recon2nifti(study, scan_id, reco_id, output, scanname, process) 
                     except:
                         print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
             else:
@@ -114,31 +97,33 @@ def main():
                         print('Identified a localizer, the file will not be converted: ScanID:{}'.format(str(scan_id)))
                     else:
                         try:
-                            output_fname = '{}-{}-{}-{}'.format(output, str(scan_id).zfill(2), reco_id, scanname)
-                            visu_pars = study._get_visu_pars(scan_id, 1)
-                            method = study._method[scan_id]
-                            affine = study._get_affine(visu_pars, method)
-                            fid_binary = study.get_fid(scan_id)
-                            acqp = study.get_acqp(scan_id)
-                            reco = study._pvobj.get_reco(scan_id, 1)
-                            image = recon(fid_binary, acqp, method, reco, process = process,recoparts='default')
-                            if len(image.shape) > 7:
-                                continue
-                            for i in range(image.shape[4]):
-                                for j in range(image.shape[5]):
-                                    for k in range(image.shape[6]):
-                                        niiobj = nib.Nifti1Image(np.squeeze(np.abs(image[:,:,:,:,i,j,k])), affine)
-                                        niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                                        niiobj.to_filename(output_fname+'-{}-{}-{}-m'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
-                                        niiobj = nib.Nifti1Image(np.squeeze(np.angle(image[:,:,:,:,i,j,k])), affine)
-                                        niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                                        niiobj.to_filename(output_fname+'-{}-{}-{}-p'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
-                            print('NifTi file is generated... [{}]'.format(output_fname))
+                            recon2nifti(study, scan_id, reco_id, output, scanname, process)   
                         except Exception as e:
                             print('Conversion failed: ScanID:{}'.format(str(scan_id)))
-
         else:
             print('{} is not PvDataset.'.format(path))
+
+def recon2nifti(pvobj, scan_id, reco_id, output, scanname, process):
+    output_fname = '{}-{}-{}-{}'.format(output, str(scan_id), reco_id, scanname)
+    visu_pars = pvobj._get_visu_pars(scan_id, 1)
+    method = pvobj._method[scan_id]
+    affine = pvobj._get_affine(visu_pars, method)
+    fid_binary = pvobj.get_fid(scan_id)
+    acqp = pvobj.get_acqp(scan_id)
+    reco = pvobj._pvobj.get_reco(scan_id, 1)
+    image = recon(fid_binary, acqp, method, reco, process = process,recoparts='default')
+    if len(image.shape) > 7:
+        return
+    for i in range(image.shape[4]):
+        for j in range(image.shape[5]):
+            for k in range(image.shape[6]):
+                niiobj = nib.Nifti1Image(np.squeeze(np.abs(image[:,:,:,:,i,j,k])), affine)
+                niiobj = pvobj._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
+                niiobj.to_filename(output_fname+'-{}-{}-{}-m'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
+                niiobj = nib.Nifti1Image(np.squeeze(np.angle(image[:,:,:,:,i,j,k])), affine)
+                niiobj = pvobj._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
+                niiobj.to_filename(output_fname+'-{}-{}-{}-p'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
+    print('NifTi file is generated... [{}]'.format(output_fname))
     
 def is_localizer(pvobj, scan_id, reco_id):
     visu_pars = pvobj.get_visu_pars(scan_id, reco_id)
