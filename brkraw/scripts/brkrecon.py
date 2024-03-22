@@ -37,7 +37,7 @@ def main():
                                        metavar='command')
     
     nii = subparsers.add_parser("tonii", help='Convert all scans in a dataset to kspace, or complex image matrix')
-    nii.add_argument("-i", "--input", help=input_str, type=str, default=None)
+    nii.add_argument("input", help=input_str, type=str, default=None)
     nii.add_argument("-b", "--bids", help=bids_opt, action='store_true')
     nii.add_argument("-o", "--output", help=output_fnm_str, type=str, default=False)
     nii.add_argument("-s", "--scanid", help="Scan ID, option to specify a particular scan to convert.", type=str)
@@ -93,13 +93,15 @@ def main():
                         acqp = study.get_acqp(scan_id)
                         reco = study._pvobj.get_reco(scan_id, 1)
                         image = recon(fid_binary, acqp, method, reco, process = process,recoparts='default')
-                        print(image.shape)
-                        niiobj = nib.Nifti1Image(np.squeeze(np.abs(image)), affine)
-                        niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                        niiobj.to_filename(output_fname+'-m'+'.nii.gz')
-                        niiobj = nib.Nifti1Image(np.squeeze(np.angle(image)), affine)
-                        niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                        niiobj.to_filename(output_fname+'-p'+'.nii.gz')  
+                        for i in range(image.shape[4]):
+                            for j in range(image.shape[5]):
+                                for k in range(image.shape[6]):
+                                    niiobj = nib.Nifti1Image(np.squeeze(np.abs(image[:,:,:,:,i,j,k])), affine)
+                                    niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
+                                    niiobj.to_filename(output_fname+'-{}-{}-{}-m'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
+                                    niiobj = nib.Nifti1Image(np.squeeze(np.angle(image[:,:,:,:,i,j,k])), affine)
+                                    niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
+                                    niiobj.to_filename(output_fname+'-{}-{}-{}-p'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
                         print('NifTi file is generated... [{}]'.format(output_fname))
                     except:
                         print('Conversion failed: ScanID:{}, RecoID:{}'.format(str(scan_id), str(reco_id)))
@@ -120,18 +122,19 @@ def main():
                             acqp = study.get_acqp(scan_id)
                             reco = study._pvobj.get_reco(scan_id, 1)
                             image = recon(fid_binary, acqp, method, reco, process = process,recoparts='default')
-                            print(image.shape)
                             if len(image.shape) > 7:
                                 continue
-                            niiobj = nib.Nifti1Image(np.squeeze(np.abs(image)), affine)
-                            niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                            niiobj.to_filename(output_fname+'-m'+'.nii.gz')
-                            niiobj = nib.Nifti1Image(np.squeeze(np.angle(image)), affine)
-                            niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                            niiobj.to_filename(output_fname+'-p'+'.nii.gz')
+                            for i in range(image.shape[4]):
+                                for j in range(image.shape[5]):
+                                    for k in range(image.shape[6]):
+                                        niiobj = nib.Nifti1Image(np.squeeze(np.abs(image[:,:,:,:,i,j,k])), affine)
+                                        niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
+                                        niiobj.to_filename(output_fname+'-{}-{}-{}-m'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
+                                        niiobj = nib.Nifti1Image(np.squeeze(np.angle(image[:,:,:,:,i,j,k])), affine)
+                                        niiobj = study._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
+                                        niiobj.to_filename(output_fname+'-{}-{}-{}-p'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
                             print('NifTi file is generated... [{}]'.format(output_fname))
                         except Exception as e:
-                            print(e)
                             print('Conversion failed: ScanID:{}'.format(str(scan_id)))
 
         else:
