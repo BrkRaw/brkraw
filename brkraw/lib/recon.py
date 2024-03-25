@@ -487,7 +487,6 @@ def brkraw_Reco(kdata, reco, meth, recoparts = 'all'):
             reco_size = get_value(reco, 'RECO_size')
             newdata_dims[0:len(reco_size)] = reco_size
             newdata = np.zeros(shape=newdata_dims+[N5, N6, N7], dtype=np.complex128)
-            print(newdata_dims)
             for NR in range(N7):
                 for NI in range(N6):
                     for chan in range(N5):
