@@ -112,8 +112,31 @@ def recon2nifti(pvobj, scan_id, reco_id, output, scanname, process):
     acqp = pvobj.get_acqp(scan_id)
     reco = pvobj._pvobj.get_reco(scan_id, 1)
     image = recon(fid_binary, acqp, method, reco, process = process,recoparts='default')
+
     if len(image.shape) > 7:
         return
+    
+    print(acqp._parameters['ACQ_dim'], acqp._parameters['NSLICES'])
+    #[x,y,z,_,n_channel,NI,NR] 
+    image = image.transpose(0,1,2,5,4,6,3)
+    # MultiSlice Acq Correction
+    if '360' in acqp._parameters['ACQ_sw_version']:
+        if acqp._parameters['ACQ_dim'] == 2 and acqp._parameters['NSLICES'] > 1:
+            new_shape = list(image.shape)
+            new_shape[2] = acqp._parameters['NSLICES']
+            new_shape[3] = int(new_shape[3]/acqp._parameters['NSLICES'])
+            image = image.reshape(new_shape)
+            image = image.transpose(1,0,2,3,4,5,6)
+        print(image.shape)
+    else:
+        if acqp._parameters['ACQ_dim'] == 2 and acqp._parameters['NSLICES'] > 1:
+            new_shape = list(image.shape)
+            new_shape[2] = acqp._parameters['NSLICES']
+            new_shape[3] = int(new_shape[3]/acqp._parameters['NSLICES'])
+            image = image.reshape(new_shape)
+        image = image.transpose(1,0,2,3,4,5,6)
+
+    # [x, y, z, echo, channel]
     for i in range(image.shape[4]):
         for j in range(image.shape[5]):
             for k in range(image.shape[6]):
