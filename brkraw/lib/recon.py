@@ -481,7 +481,6 @@ def brkraw_Reco(kdata, reco, meth, recoparts = 'all'):
                     for chan in range(N5):
                         reco_result[:,:,:,:,chan,NI,NR] = reco_phase_corr_pi(reco_result[:,:,:,:,chan,NI,NR], reco, map_index[(NI+1)*(NR+1)-1])
         
-        # There is a current bug with cutoff function
         if 'cutoff' in recopart: 
             newdata_dims=[1, 1, 1, 1]
             reco_size = get_value(reco, 'RECO_size')
