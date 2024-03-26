@@ -50,7 +50,7 @@ def main():
                      "the position variable can be defiend as <BodyPart>_<Side>, " + \
                      "available BodyParts are (Head, Foot, Tail) and sides are (Supine, Prone, Left, Right). (e.g. Head_Supine)", type=str, default=None)
     
-    nii.add_argument("-f", "--formatting", help="FID processing" + \
+    nii.add_argument("-f", "--formatting", help="FID processing methods" + \
                     "available processing are (CKdata, image)", type=str, default='image')
 
     nii.add_argument("--ignore-slope", help='remove slope value from header', action='store_true')
