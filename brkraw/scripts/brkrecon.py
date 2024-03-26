@@ -134,17 +134,14 @@ def recon2nifti(pvobj, scan_id, reco_id, output, scanname, process):
             new_shape[3] = int(new_shape[3]/acqp._parameters['NSLICES'])
             image = image.reshape(new_shape)
         image = image.transpose(1,0,2,3,4,5,6)
-
-    # [x, y, z, echo, channel]
-    for i in range(image.shape[4]):
-        for j in range(image.shape[5]):
-            for k in range(image.shape[6]):
-                niiobj = nib.Nifti1Image(np.squeeze(np.abs(image[:,:,:,:,i,j,k])), affine)
-                niiobj = pvobj._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                niiobj.to_filename(output_fname+'-{}-{}-{}-m'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
-                niiobj = nib.Nifti1Image(np.squeeze(np.angle(image[:,:,:,:,i,j,k])), affine)
-                niiobj = pvobj._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
-                niiobj.to_filename(output_fname+'-{}-{}-{}-p'.format(str(j+1).zfill(2),str(i+1).zfill(2),str(k+1).zfill(2))+'.nii.gz')
+    print(image.shape)
+    # [x, y, z, echo, channel, NR]
+    niiobj = nib.Nifti1Image(np.squeeze(np.abs(image)), affine)
+    niiobj = pvobj._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
+    niiobj.to_filename(output_fname+'-m'+'.nii.gz')
+    niiobj = nib.Nifti1Image(np.squeeze(np.angle(image)), affine)
+    niiobj = pvobj._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
+    niiobj.to_filename(output_fname+'-p'+'.nii.gz')
     print('NifTi file is generated... [{}]'.format(output_fname))
     
 def is_localizer(pvobj, scan_id, reco_id):
