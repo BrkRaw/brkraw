@@ -134,7 +134,7 @@ def recon2nifti(pvobj, scan_id, reco_id, output, scanname, process):
             new_shape[3] = int(new_shape[3]/acqp._parameters['NSLICES'])
             image = image.reshape(new_shape)
         image = image.transpose(1,0,2,3,4,5,6)
-    print(image.shape)
+
     # [x, y, z, echo, channel, NR]
     niiobj = nib.Nifti1Image(np.squeeze(np.abs(image)), affine)
     niiobj = pvobj._set_nifti_header(niiobj, visu_pars, method, slope=False, offset=False)
