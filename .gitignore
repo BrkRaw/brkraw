@@ -14,3 +14,4 @@ build
 tests/tutorials
 _test.py
 _*.ipynb
+_*.log
