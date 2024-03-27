@@ -35,6 +35,7 @@ class MainWindow(tk.Tk):
             title = "Select file",
             filetypes = (("Zip compressed", "*.zip"),
                          ("Paravision 6 format", "*.PVdatasets"),
+                         ("Paravision 360 format", "*.PvDatasets")
                          ))
         self._extend_layout()
         self._load_dataset()

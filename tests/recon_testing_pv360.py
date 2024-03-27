@@ -35,7 +35,7 @@ for ExpNum in data_loader._avail.keys():
     reco = data_loader._pvobj.get_reco(ExpNum, 1)
     
     print(get_value(acqp, 'ACQ_protocol_name' ), ExpNum)
-
+    
     # process OPTIONS: 'raw', 'frame', 'CKdata', 'image'    
     process = 'image' 
     
@@ -46,13 +46,16 @@ for ExpNum in data_loader._avail.keys():
     data = data/np.max(np.abs(data)) # Normalize Data
     # Check if Image recontructed
     output = '{}_{}'.format(data_loader._pvobj.subj_id,data_loader._pvobj.study_id)
-    mkdir(output)
+    #mkdir(output)
 
     # Reconstructed Image Matrix is always 7-dimensional
+    #[x,y,z,_,n_channel,NI,NR]
     if len(data.shape) == 7:
+        print(data.shape)
         output_fname =f"{acqp._parameters['ACQ_scan_name'].strip().replace(' ','_')}"
+    
         for c in range(data.shape[4]):
-            ni_img  = nib.Nifti1Image(np.abs(np.squeeze(data)), affine=np.eye(4))
-            nib.save(ni_img, os.path.join(output,f"{acqp._parameters['ACQ_scan_name'].strip().replace(' ','_')}_C{c}.nii.gz"))
+            ni_img  = nib.Nifti1Image(np.abs(np.squeeze(data[:,:,:,:,c,:,:])), affine=np.eye(4))
+            #nib.save(ni_img, os.path.join(output,f"{acqp._parameters['ACQ_scan_name'].strip().replace(' ','_')}_C{c}.nii.gz"))
         print('NifTi file is generated... [{}]'.format(output_fname))
         

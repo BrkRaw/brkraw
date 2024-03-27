@@ -68,7 +68,6 @@ def reco_phase_rotate(frame, Reco, actual_framenumber):
     
     # import variables
     RECO_rotate_all = get_value(Reco,'RECO_rotate')
-
     
     if RECO_rotate_all.shape[1] > actual_framenumber:
         RECO_rotate =  get_value(Reco,'RECO_rotate')[:, actual_framenumber]
@@ -89,13 +88,12 @@ def reco_phase_rotate(frame, Reco, actual_framenumber):
     phase_matrix = np.ones_like(frame)
     for index in range(len(RECO_rotate)):
         f = np.arange(dims[index])
-        #print(f)
+
         if RECO_ft_mode in ['COMPLEX_FT', 'COMPLEX_FFT']:
             phase_vector = np.exp(1j*2*np.pi*RECO_rotate[index]*f)
         elif RECO_ft_mode in ['NO_FT', 'NO_FFT']:
             phase_vector = np.ones_like(f)
         elif RECO_ft_mode in ['COMPLEX_IFT', 'COMPLEX_IFFT']:
-            #print(RECO_rotate[index])
             phase_vector = np.exp(1j*2*np.pi*(1-RECO_rotate[index])*f)
         else:
             raise ValueError('Your RECO_ft_mode is not supported')
@@ -192,7 +190,7 @@ def reco_FT(frame, Reco, actual_framenumber):
     elif RECO_ft_mode in ['NO_FT', 'NO_FFT']:
         pass
     elif RECO_ft_mode in ['COMPLEX_IFT', 'COMPLEX_IFFT']:
-        frame = np.fft.fftn(frame)
+        frame = np.fft.ifftn(frame)
         #frame = sp.ifft(frame, axes=[0,1,2], center=False)
     else:
         raise ValueError('Your RECO_ft_mode is not supported')
@@ -236,10 +234,10 @@ def reco_cutoff(frame, Reco, actual_framenumber):
     # Use function only if Reco.RECO_size is not equal to size(frame)
     dim_equal = True
     for i,j in zip(get_value(Reco,'RECO_size'), frame.shape):
-        dim_equal = (i==j)
-   
-    if not dim_equal:
-        
+        if i!=j:
+            dim_equal = False
+
+    if not dim_equal:      
         # Import variables
         RECO_offset = get_value(Reco,'RECO_offset')[:, actual_framenumber]
         RECO_size = get_value(Reco, 'RECO_size')
@@ -247,9 +245,9 @@ def reco_cutoff(frame, Reco, actual_framenumber):
         # Cut the new part with RECO_size and RECO_offset
         pos_ges = []
         for i in range(len(RECO_size)):
-
             pos_ges.append(slice(RECO_offset[i], RECO_offset[i] + RECO_size[i]))
         newframe = frame[tuple(pos_ges)]
+    
     else:
         newframe = frame
     
