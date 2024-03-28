@@ -15,7 +15,7 @@ import numpy as np
 from copy import deepcopy
 
 
-def recon(fid_binary, acqp, meth, reco, process = None, recoparts = 'default'):
+def recon(fid_binary, acqp, meth, reco, process = 'image', recoparts = 'default'):
     """ Process FID -> Channel Sorted -> Frame-Sorted -> K-Sorted -> Image
     
     Parameters
@@ -44,14 +44,7 @@ def recon(fid_binary, acqp, meth, reco, process = None, recoparts = 'default'):
 
     """
     output = readBrukerRaw(fid_binary, acqp, meth)
-
     if process == 'raw':
-        return output
-    
-    if get_value(meth,'PVM_EncCS') == 'Yes':
-        print(get_value(acqp, 'ACQ_scan_name' ))
-        print("Warning: Compressed Sensing NOT SUPPORTED...")
-        print("returning 'raw' sorting")
         return output
     
     # IF CORRECT SEQUENCES
@@ -62,6 +55,20 @@ def recon(fid_binary, acqp, meth, reco, process = None, recoparts = 'default'):
         'mge'       in get_value(acqp, 'ACQ_protocol_name').lower() or \
         'FLASH.ppg' == get_value(acqp, 'PULPROG'):
 
+        # Compressed Sensing
+        if get_value(meth,'PVM_EncCS') == 'Yes':
+            try:
+                import sigpy as sp 
+                from . import recoSigpy
+            except ImportError:
+                raise ImportError('Sigpy Module Not Installed')
+            
+            print(get_value(acqp, 'ACQ_scan_name' ))
+            print("Warning: Compressed Sensing is not fully supported ...")
+            output = recoSigpy.compressed_sensing_recon(output, acqp, meth, reco)
+            return output
+
+        # Full Cartesian Pipeline
         output = convertRawToFrame(output, acqp, meth)
         if process == 'frame':
             return output
@@ -93,28 +100,80 @@ def readBrukerRaw(fid_binary, acqp, meth):
 
     Returns
     -------
-    X : np.array 
+    X : np.array [num_lines, channel, scan_size]
     """
-    dt_code = np.dtype('float64') if get_value(acqp, 'ACQ_ScanPipeJobSettings')[0][1] == 'STORE_64bit_float' else np.dtype('int32') 
-    fid = np.frombuffer(fid_binary, dt_code)
-    
+    from .reference import BYTEORDER, WORDTYPE
+    # META DATA
     NI = get_value(acqp, 'NI')
     NR = get_value(acqp, 'NR')
+
+    dt_code = 'int32' 
+    if get_value(acqp, 'ACQ_ScanPipeJobSettings') != None:
+        if get_value(acqp, 'ACQ_ScanPipeJobSettings')[0][1] == 'STORE_64bit_float':
+            dt_code = 'float64' 
     
-    ACQ_size = get_value(acqp, 'ACQ_jobs')[0][0]
-    numDataHighDim = np.prod(ACQ_size)
-    numSelectedRecievers = get_value(acqp, 'ACQ_ReceiverSelectPerChan').count('Yes')
-    nRecs = numSelectedRecievers
+    if '32' in dt_code:
+        bits = 32 # Need to add a condition here
+    elif '64' in dt_code:
+        bits = 64
+    DT_CODE = np.dtype(dt_code)
+
+    BYTORDA = get_value(acqp, 'BYTORDA') 
+    if BYTORDA == 'little':
+        DT_CODE = DT_CODE.newbyteorder('<')
+    elif BYTORDA == 'big':
+        DT_CODE = DT_CODE.newbyteorder('>')
+
+    # Get FID FROM buffer
+    fid = np.frombuffer(fid_binary, DT_CODE)
     
-    jobScanSize = get_value(acqp, 'ACQ_jobs')[0][0]
-    dim1 = int(len(fid)/(jobScanSize*nRecs))
-    
-    # Assume data is complex
-    X = fid[::2] + 1j*fid[1::2] 
-    
-    # [num_lines, channel, scan_size]
-    X = np.reshape(X, [dim1, nRecs, int(jobScanSize/2)])
-    
+    # Sort raw data
+    if '360' in get_value(acqp,'ACQ_sw_version'):
+        # METAdata for 360
+        ACQ_size = get_value(acqp, 'ACQ_jobs')[0][0]
+        numDataHighDim = np.prod(ACQ_size)
+        nRecs = get_value(acqp, 'ACQ_ReceiverSelectPerChan').count('Yes')
+        
+        jobScanSize = get_value(acqp, 'ACQ_jobs')[0][0]
+        
+        # Assume data is complex
+        X = fid[::2] + 1j*fid[1::2] 
+        
+        # [num_lines, channel, scan_size]
+        X = np.reshape(X, [-1, nRecs, int(jobScanSize/2)])
+
+    else:
+        # METAdata Versions Before 360        
+        nRecs = 1 # PV7 only save 1 channel
+        if get_value(acqp, 'ACQ_ReceiverSelect') != None:
+            nRecs = get_value(acqp, 'ACQ_ReceiverSelect').count('Yes')
+            
+        ACQ_size = get_value(acqp, 'ACQ_size' )
+        if type(ACQ_size) == int:
+            ACQ_size = [ACQ_size] 
+
+        if get_value(acqp, 'GO_block_size') == 'Standard_KBlock_Format':
+            blocksize = int(np.ceil(ACQ_size[0]*nRecs*(bits/8)/1024)*1024/(bits/8))
+        else:
+            blocksize = int(ACQ_size[0]*nRecs)
+
+        # CHECK SIZE
+        if fid.size != blocksize*np.prod(ACQ_size[1:])*NI*NR:
+            raise Exception('readBrukerRaw 158: Error Size dont match')
+
+        # Convert to Complex
+        fid = fid[::2] + 1j*fid[1::2] 
+        fid = fid.reshape([-1,blocksize//2])
+ 
+        # Reshape Matrix [num_lines, channel, scan_size]
+        if blocksize != ACQ_size[0]*nRecs:
+            fid = fid[:,:ACQ_size[0]//2*nRecs]
+            fid = fid.reshape((-1,nRecs,ACQ_size[0]//2))
+            X = fid.transpose(0,1,2)
+            
+        else:
+            X = fid.reshape((-1, nRecs, ACQ_size[0]//2))
+         
     return X
 
 
@@ -137,7 +196,7 @@ def convertRawToFrame(data, acqp, meth):
  
     results = data.copy()
      
-    # Turn Raw into frame
+    # Metadata
     NI = get_value(acqp, 'NI')
     NR = get_value(acqp, 'NR')
     
@@ -155,6 +214,9 @@ def convertRawToFrame(data, acqp, meth):
     
     acqSizes = np.zeros(ACQ_dim)
     scanSize = get_value(acqp, 'ACQ_jobs')[0][0]
+
+    if scanSize == 0:
+        scanSize = get_value(acqp,'ACQ_size')[0]
     
     isSpatialDim = [i == 'Spatial' for i in get_value(acqp, 'ACQ_dim_desc')]
     spatialDims = sum(isSpatialDim)
@@ -167,15 +229,15 @@ def convertRawToFrame(data, acqp, meth):
     
     numresultsHighDim=np.prod(acqSizes[1:])
     acqSizes[0] = scanSize   
-    
+
     if np.iscomplexobj(results):
         scanSize = int(acqSizes[0]/2)
     else:  
         scanSize = acqSizes[0]
     
-    # Resort
+    # Start Resort based on 
     if ACQ_dim>1:
-        # [..., num_lines, channel, scan_size]
+        # [num_readout, channel, scan_size] -> [channel, scan_size, num_readout]
         results = results.transpose((1,2,0))
         
         results = results.reshape(
@@ -200,16 +262,17 @@ def convertRawToFrame(data, acqp, meth):
         frame[:,:,:,ACQ_obj_order,:] = results 
         
     else:
+        # ACQ = 1, Method is a Spectroscopy
         # Havent encountered this situation yet
         # Leaving code in just in case
         '''
         results = np.reshape(results,(numSelectedRecievers, scanSize,1,NI,NR), order='F')
         return_out = np.zeros_like(results)
         return_out = np.transpose(results, (1, 2, 0, 3, 4))
-        frame = return_out'''
-        raise 'Bug here 120'
+        frame = return_out
+        '''
+        raise Exception('Bug here 120')
         
-    
     return frame
 
 
@@ -228,9 +291,10 @@ def convertFrameToCKData(frame, acqp, meth):
     -------
     data : np.array with size 
         [scansize, ACQ_phase_factor, numDataHighDim/ACQ_phase_factor, numSelectedReceivers, NI, NR]
-        for simplified understand of the data structure
+        for simplified understanding of the data structure
         [x,y,z,_,n_channel,NI,NR]
     """
+    # Metadata 
     NI = get_value(acqp, 'NI')
     NR = get_value(acqp, 'NR')
     
@@ -239,9 +303,11 @@ def convertFrameToCKData(frame, acqp, meth):
     ACQ_dim             = get_value(acqp, 'ACQ_dim')
     numSelectedReceivers= frame.shape[2]
     
-    acqSizes = np.zeros(ACQ_dim)
-    
+    acqSizes = np.zeros(ACQ_dim)   
     scanSize = get_value(acqp, 'ACQ_jobs')[0][0]
+    if scanSize == 0:
+        scanSize = get_value(acqp,'ACQ_size')[0]
+        
     acqSizes[0] = scanSize
     ACQ_size = acqSizes
     
@@ -279,15 +345,12 @@ def convertFrameToCKData(frame, acqp, meth):
         # No zero-filling/interpolation available.
         PVM_EncZf = np.ones((ACQ_dim))
     
-    # Resort
-    
+    # Start Resort Process
     frameData = frame.copy()
     
     # MGE with alternating k-space readout: Reverse every second scan. 
-    
     if get_value(meth, 'EchoAcqMode') != None and get_value(meth,'EchoAcqMode') == 'allEchoes':
         frameData[:,:,:,1::2,:] = np.flipud(frame[:,:,:,1::2,:])
-    
     
     # Calculate size of Cartesian k-space
     # Step 1: Anti-Aliasing
@@ -297,14 +360,11 @@ def convertFrameToCKData(frame, acqp, meth):
     reduceZf = 2*np.floor( (ckSize - ckSize/np.array(PVM_EncZf))/2 )
     ckSize = ckSize - reduceZf
     
-    # # index of central k-space point (+1 for 1-based indexing in MATLAB) 
+    # index of central k-space point (+1 for 1-based indexing in MATLAB) 
     ckCenterIndex = np.floor(ckSize/2 + 0.25) + 1
-
     readStartIndex = int(ckSize[0]-scanSize + 1)
-    
 
-    # Reshape & store
-    # switch ACQ_dim
+    # Reshape & store based on dimension
     if ACQ_dim == 1:
         frameData = np.reshape(frameData,(scanSize, 1, 1, 1, numSelectedReceivers, NI, NR) , order='F')
         data = np.zeros((ckSize[0], 1, 1, 1, numSelectedReceivers, NI, NR), dtype=complex)
@@ -339,21 +399,20 @@ def brkraw_Reco(kdata, reco, meth, recoparts = 'all'):
     elif recoparts == 'default':
         recoparts = ['quadrature', 'phase_rotate', 'zero_filling', 
                      'FT', 'phase_corr_pi']
-    # Other stuff
-    RECO_ft_mode = get_value(reco, 'RECO_ft_mode')    
-    if '360' in meth.headers['title'.upper()]:
-        reco_ft_mode_new = []
-        
-        for i in RECO_ft_mode:
-            if i == 'COMPLEX_FT' or i == 'COMPLEX_FFT':
-                reco_ft_mode_new.append('COMPLEX_IFT')
-            else:
-                reco_ft_mode_new.append('COMPLEX_FT')
-                
-        reco = set_value(reco, 'RECO_ft_mode', reco_ft_mode_new)
-        RECO_ft_mode = get_value(reco, 'RECO_ft_mode')
-        
+    # Metadata
+    RECO_ft_mode = get_value(reco, 'RECO_ft_mode')  
+    
     # Adapt FT convention to acquisition version.
+    reco_ft_mode_new = []
+    for i in RECO_ft_mode:
+        if i == 'COMPLEX_FT' or i == 'COMPLEX_FFT':
+            reco_ft_mode_new.append('COMPLEX_IFT')
+        else:
+            reco_ft_mode_new.append('COMPLEX_FT')           
+    reco = set_value(reco, 'RECO_ft_mode', reco_ft_mode_new)
+    RECO_ft_mode = get_value(reco, 'RECO_ft_mode')
+    
+    # DIMS
     N1, N2, N3, N4, N5, N6, N7 = kdata.shape
 
     dims = kdata.shape[0:4]
@@ -377,6 +436,7 @@ def brkraw_Reco(kdata, reco, meth, recoparts = 'all'):
     
     # --- START RECONSTRUCTION ---
     for recopart in recoparts:
+
         if 'quadrature' in recopart:
             for NR in range(N7):
                 for NI in range(N6):
@@ -421,20 +481,17 @@ def brkraw_Reco(kdata, reco, meth, recoparts = 'all'):
                     for chan in range(N5):
                         reco_result[:,:,:,:,chan,NI,NR] = reco_phase_corr_pi(reco_result[:,:,:,:,chan,NI,NR], reco, map_index[(NI+1)*(NR+1)-1])
         
-        ''' # There is a current bug with cutoff function
         if 'cutoff' in recopart: 
             newdata_dims=[1, 1, 1, 1]
             reco_size = get_value(reco, 'RECO_size')
             newdata_dims[0:len(reco_size)] = reco_size
             newdata = np.zeros(shape=newdata_dims+[N5, N6, N7], dtype=np.complex128)
-            
             for NR in range(N7):
                 for NI in range(N6):
                     for chan in range(N5):
                         newdata[:,:,:,:,chan,NI,NR] = reco_cutoff(reco_result[:,:,:,:,chan,NI,NR], reco, map_index[(NI+1)*(NR+1)-1])
         
             reco_result=newdata
-        '''
 
         if 'scale_phase_channels' in recopart: 
             for NR in range(N7):
@@ -470,6 +527,5 @@ def brkraw_Reco(kdata, reco, meth, recoparts = 'all'):
                         for chan in range(N5):
                             reco_result[:,:,:,:,chan,NI,NR] = reco_transposition(reco_result[:,:,:,:,chan,NI,NR], reco, map_index[(NI+1)*(NR+1)-1])
     # --- End of RECONSTRUCTION Loop --- 
-
-
+                            
     return reco_result
