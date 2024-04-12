@@ -105,19 +105,20 @@ class BaseMethods:
         Raises:
             ValueError: If the key does not exist in the files.
         """
-        contents = self._contents if 'files' in self._contents else self._contents[list(self._contents.keys())[0]]
-        rootpath = self._rootpath if 'files' in self._contents else self._path
-        files = contents.get('files')
+        rootpath = self._rootpath or self._path
+        if not self.contents:
+            raise ValueError(f'file not exists in "{rel_path}".')
+        files = self.contents.get('files')
         path_list = [*([str(self._scan_id)] if self._scan_id else []), *(['pdata', str(self._reco_id)] if self._reco_id else []), key]
 
         if key not in files:
-            if file_indexes := contents.get('file_indexes'):
+            if file_indexes := self.contents.get('file_indexes'):
                 rel_path = self._path
             else:
                 rel_path = os.path.join(*path_list)
             raise ValueError(f'file not exists in "{rel_path}".\n [{", ".join(files)}]')
 
-        if file_indexes := contents.get('file_indexes'):
+        if file_indexes := self.contents.get('file_indexes'):
             with zipfile.ZipFile(rootpath) as zf:
                 idx = file_indexes[files.index(key)]
                 return zf.open(zf.namelist()[idx])
@@ -135,7 +136,9 @@ class BaseMethods:
         Returns:
             list: The lines of the file as strings.
         """
-        return self._open_as_fileobject(key).read().decode('UTF-8').split('\n')
+        with self._open_as_fileobject(key) as f:
+            string  = f.read().decode('UTF-8').split('\n')
+        return string
 
     def __getitem__(self, key):
         """Returns the value associated with the given key.
@@ -172,10 +175,10 @@ class BaseMethods:
             return Parameter(self._open_as_string(key), name=key, scan_id=self._scan_id, reco_id=self._reco_id)
         elif any(binary_key == key or binary_key.replace('.', '_') == key for binary_key in self._binary_files):
             return self._open_as_fileobject(key)
-        elif any(file_key == key or file_key.replace('.', '_') == key for file_key in self._contents['files']):
+        elif any(file_key == key or file_key.replace('.', '_') == key for file_key in self.contents['files']):
             return self._open_as_fileobject(key)
         else:
-            raise AttributeError
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     def config(self, **kwargs):
         """
@@ -194,6 +197,9 @@ class BaseMethods:
         if 'parameter_files' in kwargs:
             self._parameter_files = kwargs['parameter_files']
 
+    @property
+    def contents(self):
+        return self._contents
 
     def __dir__(self):
         return ['set_config']
@@ -210,7 +216,6 @@ class PvDataset(BaseMethods):
 
     Methods:
         get_scan(scan_id): Get a specific scan object by ID.
-        get_reco(scan_id, reco_id): Get a specific reco object by scan ID and reco ID.
 
     Properties:
         path (str): The path of the object.
@@ -338,7 +343,7 @@ class PvDataset(BaseMethods):
 
     @property
     def contents(self):
-        for _, contents in self._contents.items():
+        for _, contents in super().contents.items():
             if 'subject' in contents['files']:
                 return contents
 
@@ -439,6 +444,8 @@ class PvScan(BaseMethods):
         Returns:
             None
         """
+        if contents:
+            self.is_compressed = True if contents.get('file_indexes') else False
         self._contents = contents
     
     def set_reco(self, path, reco_id, contents, **kwargs):
@@ -492,7 +499,10 @@ class PvScan(BaseMethods):
         Returns:
             str: The path.
         """
-        return self._path
+        path = (self._rootpath, self._path)
+        if self.is_compressed:
+            return path
+        return os.path.join(*path)
     
     @property
     def avail(self):
@@ -545,7 +555,8 @@ class PvReco(BaseMethods):
         self._reco_id = reco_id
         self._rootpath, self._path = pathes
         self._contents = contents
-        
+        self.is_compressed = True if contents.get('file_indexes') else False
+            
     @property
     def path(self):
         """
@@ -554,7 +565,10 @@ class PvReco(BaseMethods):
         Returns:
             str: The path.
         """
-        return self._path
+        path = (self._rootpath, self._path)
+        if self.is_compressed:
+            return path
+        return os.path.join(*path)
         
     def __dir__(self):
         return super().__dir__() + ['path']
