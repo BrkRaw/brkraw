@@ -71,19 +71,24 @@ class ScanObj(PvScan):
     def set_info(self):
         self.info = self.get_info(self.reco_id)
                 
-    def get_info(self, reco_id):
+    def get_info(self, reco_id, get_analyzer:bool=False):
         infoobj = ScanInfo()
         
         pvscan = self.retrieve_pvscan()
         analysed = ScanInfoAnalyzer(pvscan, reco_id)
+        if get_analyzer:
+            return analysed
         for attr_name in dir(analysed):
             if 'info_' in attr_name:
                 attr_vals = getattr(analysed, attr_name)
                 setattr(infoobj, attr_name.replace('info_', ''), attr_vals)
         return infoobj
     
-    def get_affine(self, subj_type:str|None = None, subj_position:str|None = None, get_analyzer=False):
-        info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
+    def get_affine(self, reco_id:int|None = None, subj_type:str|None = None, subj_position:str|None = None, get_analyzer=False):
+        if reco_id:
+            info = self.get_info(reco_id)
+        else:
+            info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
         analyzer = AffineAnalyzer(info)
         return analyzer if get_analyzer else analyzer.get_affine(subj_type, subj_position)
     
