@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .analyzer import ScanInfoAnalyzer, ScanInfo
+    from .analyzer import ScanInfoAnalyzer
 import re
 import math
 import warnings
@@ -65,6 +65,7 @@ def rotate_affine(affine, rad_x=0, rad_y=0, rad_z=0):
     rotated_mat = rmat['z'].dot(rmat['y'].dot(rmat['x'].dot(af_mat)))
     rotated_vec = rmat['z'].dot(rmat['y'].dot(rmat['x'].dot(af_vec)))
     return from_matvec(rotated_mat, rotated_vec)
+
 
 class BaseHelper:
     def __init__(self):
