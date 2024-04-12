@@ -2,6 +2,7 @@ from __future__ import annotations
 import re
 from brkraw.api import helper
 import numpy as np
+from copy import copy
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .pvobj import PvScan
@@ -101,11 +102,12 @@ class ScanInfoAnalyzer:
     
 class AffineAnalyzer:
     def __init__(self, infoobj: 'ScanInfo'):
+        infoobj = copy(infoobj)
         if infoobj.image['dim'] == 2:
             xr, yr = infoobj.image['resolution']
             self.resolution = [(xr, yr, zr) for zr in infoobj.slicepack['slice_distances_each_pack']]
         elif self.info.image['dim'] == 3:
-            self.resolution = infoobj.image['resolution']
+            self.resolution = infoobj.image['resolution'][:]
         else:
             raise NotImplementedError
         if infoobj.slicepack['num_slice_packs'] > 1:
@@ -199,14 +201,17 @@ class AffineAnalyzer:
     
     @staticmethod
     def _inspect_subj_info(subj_pose, subj_type):
-        part, side = subj_pose.split('_')
-        assert part in SUBJPOSE['part'], 'Invalid subject position'
-        assert side in SUBJPOSE['side'], 'Invalid subject position'
-        assert subj_type in SUBJTYPE, 'Invalid subject type'
+        if subj_pose:
+            part, side = subj_pose.split('_')
+            assert part in SUBJPOSE['part'], 'Invalid subject position'
+            assert side in SUBJPOSE['side'], 'Invalid subject position'
+        if subj_type:
+            assert subj_type in SUBJTYPE, 'Invalid subject type'
 
 
 class DataArrayAnalyzer:
     def __init__(self, infoobj: 'ScanInfo', fileobj: BufferedReader|ZipExtFile):
+        infoobj = copy(infoobj)
         self._parse_info(infoobj)
         self.buffer = fileobj
 
@@ -216,13 +221,13 @@ class DataArrayAnalyzer:
         self.slope = infoobj.dataarray['2dseq_slope']
         self.offset = infoobj.dataarray['2dseq_offset']
         self.dtype = infoobj.dataarray['2dseq_dtype']
-        self.shape = infoobj.image['shape']
-        self.shape_desc = infoobj.image['dim_desc']
+        self.shape = infoobj.image['shape'][:]
+        self.shape_desc = infoobj.image['dim_desc'][:]
         if infoobj.frame_group and infoobj.frame_group['type']:
             self._calc_array_shape(infoobj)
             
     def _calc_array_shape(self, infoobj: 'ScanInfo'):
-        self.shape.extend(infoobj.frame_group['shape'])
+        self.shape.extend(infoobj.frame_group['shape'][:])
         self.shape_desc.extend([fgid.replace('FG_', '').lower() for fgid in infoobj.frame_group['id']])
     
     def get_dataarray(self):
