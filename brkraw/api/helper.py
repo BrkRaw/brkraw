@@ -125,7 +125,79 @@ class DataArray(BaseHelper):
             'warns': self.warns
         }
 
+
+class FrameGroup(BaseHelper):
+    def __init__(self, analobj: 'ScanInfoAnalyzer'):
+        super().__init__()
+        if hasattr(analobj, 'visu_fg_order_desc_dim'):
+            self.exists = True
+            self.type = getattr(analobj, 'visu_core_frame_type') \
+                if hasattr(analobj, 'visu_core_frame_type') else None
+            self.shape = []
+            self.id = []
+            self.comment = []
+            self.dependent_vals = []
+            for (shape, fgid, comment, vals_start, vals_cnt) in getattr(analobj, 'visu_fg_order_desc'):
+                self.shape.append(shape)
+                self.id.append(fgid)
+                self.comment.append(comment)
+                self.dependent_vals.append([
+                    getattr(analobj, 'visu_group_dep_vals')[vals_start + count]
+                        for count in range(vals_cnt)
+                    ] if vals_cnt else [])
+            self.size = reduce(lambda x, y: x * y, self.shape)
+        else:
+            self.exists = False
+            self._warn('frame group information')
+            
+    def get_info(self):
+        if not self.exists:
+            return None
+        return {
+            'type': self.type,
+            'size': self.size,
+            'shape': self.shape,
+            'id': self.id,
+            'comment': self.comment,
+            'dependent_vals': self.dependent_vals,
+            'warns': self.warns
+            }
+        
+        
+class Image(BaseHelper):
+    def __init__(self, analobj: 'ScanInfoAnalyzer'):
+        super().__init__()
+        self.dim = getattr(analobj, 'visu_core_dim')
+        self.dim_desc = getattr(analobj, 'visu_core_dim_desc')
+        fov = getattr(analobj, 'visu_core_extent') if hasattr(analobj, 'visu_core_extent') else None
+        shape = getattr(analobj, 'visu_core_size') if hasattr(analobj, 'visu_core_size') else None
+        self.resolusion = np.divide(fov, shape).tolist() if (fov and shape) else None
+        self.field_of_view = fov
+        self.shape = shape
+        
+        if self.dim > 3:
+            self._warn('Image dimension larger than 3')
+        message = lambda x: f'image contains {x} dimension'
+        if isinstance(self.dim_desc, list):
+            for d in self.dim_desc:
+                if d != 'spatial':
+                    self._warn(message(d))
+        elif isinstance(self.dim_desc, str):
+            if self.dim_desc != 'spatial':
+                self._warn(message(self.dim_desc)) 
     
+    def get_info(self):
+        return {
+            'dim': self.dim,
+            'dim_desc': self.dim_desc,
+            'shape': self.shape,
+            'resolution': self.resolusion,
+            'field_of_view': self.field_of_view,
+            'unit': 'mm',
+            'warns': self.warns
+        }
+        
+        
 class SlicePack(BaseHelper):
     def __init__(self, analobj: 'ScanInfoAnalyzer'):
         super().__init__()
@@ -235,44 +307,6 @@ class SlicePack(BaseHelper):
         }       
 
 
-class FrameGroup(BaseHelper):
-    def __init__(self, analobj: 'ScanInfoAnalyzer'):
-        super().__init__()
-        if hasattr(analobj, 'visu_fg_order_desc_dim'):
-            self.exists = True
-            self.type = getattr(analobj, 'visu_core_frame_type') \
-                if hasattr(analobj, 'visu_core_frame_type') else None
-            self.shape = []
-            self.id = []
-            self.comment = []
-            self.dependent_vals = []
-            for (shape, fgid, comment, vals_start, vals_cnt) in getattr(analobj, 'visu_fg_order_desc'):
-                self.shape.append(shape)
-                self.id.append(fgid)
-                self.comment.append(comment)
-                self.dependent_vals.append([
-                    getattr(analobj, 'visu_group_dep_vals')[vals_start + count]
-                        for count in range(vals_cnt)
-                    ] if vals_cnt else [])
-            self.size = reduce(lambda x, y: x * y, self.shape)
-        else:
-            self.exists = False
-            self._warn('frame group information')
-            
-    def get_info(self):
-        if not self.exists:
-            return None
-        return {
-            'type': self.type,
-            'size': self.size,
-            'shape': self.shape,
-            'id': self.id,
-            'comment': self.comment,
-            'dependent_vals': self.dependent_vals,
-            'warns': self.warns
-            }
-
-
 class Cycle(BaseHelper):
     def __init__(self, analobj: 'ScanInfoAnalyzer'):
         super().__init__()
@@ -292,40 +326,6 @@ class Cycle(BaseHelper):
             "unit": 'msec',
             'warns': self.warns
             }
-        
-
-class Image(BaseHelper):
-    def __init__(self, analobj: 'ScanInfoAnalyzer'):
-        super().__init__()
-        self.dim = getattr(analobj, 'visu_core_dim')
-        self.dim_desc = getattr(analobj, 'visu_core_dim_desc')
-        fov = getattr(analobj, 'visu_core_extent') if hasattr(analobj, 'visu_core_extent') else None
-        shape = getattr(analobj, 'visu_core_size') if hasattr(analobj, 'visu_core_size') else None
-        self.resolusion = np.divide(fov, shape).tolist() if (fov and shape) else None
-        self.field_of_view = fov
-        self.shape = shape
-        
-        if self.dim > 3:
-            self._warn('Image dimension larger than 3')
-        message = lambda x: f'image contains {x} dimension'
-        if isinstance(self.dim_desc, list):
-            for d in self.dim_desc:
-                if d != 'spatial':
-                    self._warn(message(d))
-        elif isinstance(self.dim_desc, str):
-            if self.dim_desc != 'spatial':
-                self._warn(message(self.dim_desc)) 
-    
-    def get_info(self):
-        return {
-            'dim': self.dim,
-            'dim_desc': self.dim_desc,
-            'shape': self.shape,
-            'resolution': self.resolusion,
-            'field_of_view': self.field_of_view,
-            'unit': 'mm',
-            'warns': self.warns
-        }
     
         
 class Orientation(BaseHelper):
