@@ -153,6 +153,29 @@ class BaseMethods:
             return Parameter(self._open_as_string(key), name=key, scan_id=self._scan_id, reco_id=self._reco_id)
         else:
             return self._open_as_fileobject(key)
+        
+    def __getattr__(self, key):
+        """
+        Get attribute by name.
+
+        Args:
+            key (str): The name of the attribute to retrieve.
+
+        Returns:
+            Parameter or file object: The parameter object if the key is found in parameter files, otherwise the file object.
+
+        Examples:
+            obj = Dataset()
+            param = obj.some_key  # Returns a Parameter object or file object.
+        """
+        if any(param_key == key or param_key.replace('.', '_') == key for param_key in self._parameter_files):
+            return Parameter(self._open_as_string(key), name=key, scan_id=self._scan_id, reco_id=self._reco_id)
+        elif any(binary_key == key or binary_key.replace('.', '_') == key for binary_key in self._binary_files):
+            return self._open_as_fileobject(key)
+        elif any(file_key == key or file_key.replace('.', '_') == key for file_key in self._contents['files']):
+            return self._open_as_fileobject(key)
+        else:
+            raise AttributeError
 
     def config(self, **kwargs):
         """
@@ -361,24 +384,8 @@ class PvDataset(BaseMethods):
         """
         return self._scans[scan_id]
     
-    def get_reco(self, scan_id, reco_id):
-        """
-        Get a specific reco object by scan ID and reco ID.
-
-        Args:
-            scan_id (int): The ID of the scan.
-            reco_id (int): The ID of the reco object to retrieve.
-
-        Returns:
-            object: The specified reco object.
-
-        Raises:
-            KeyError: If the specified scan ID or reco ID does not exist.
-        """
-        return self.get_scan(scan_id).get_reco(reco_id)
-    
     def __dir__(self):
-        return super().__dir__() + ['path', 'avail', 'get_scan', 'get_reco']
+        return super().__dir__() + ['path', 'avail', 'get_scan']
     
 
 
@@ -462,6 +469,20 @@ class PvScan(BaseMethods):
             KeyError: If the specified reco ID does not exist.
         """
         return self._recos[reco_id]
+
+    def get_visu_pars(self, reco_id=None):
+        if reco_id:
+            return getattr(self.get_reco(reco_id), 'visu_pars')
+        elif 'visu_pars' in self._contents['files']:
+            return getattr(self, 'visu_pars')
+        elif len(self.avail):
+            recoobj = self.get_reco(self.avail[0])
+            if 'visu_pars' not in recoobj._contents['files']:
+                raise FileNotFoundError
+            else:
+                return getattr(recoobj, 'visu_pars')
+        else:
+            raise FileNotFoundError
     
     @property
     def path(self):
@@ -484,7 +505,7 @@ class PvScan(BaseMethods):
         return sorted(list(self._recos))
     
     def __dir__(self):
-        return super().__dir__() + ['path', 'avail', 'get_reco']
+        return super().__dir__() + ['path', 'avail', 'get_reco', 'get_visu_pars']
     
     
 class PvReco(BaseMethods):

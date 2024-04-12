@@ -120,7 +120,7 @@ class Parser:
         return data
 
     @staticmethod
-    def process_bisarray(elements):
+    def process_bisarray(elements, shape):
         """Determines the case of an array with BIS prefix by converting each element to a specific data type.
 
         Args:
@@ -130,7 +130,10 @@ class Parser:
             float, int, or list: The converted elements of the bisarray. If there is only one element, it is returned as is, otherwise a list of converted elements is returned.
         """
         elements = [Parser.convert_string_to(c) for c in elements]
-        return elements.pop() if len(elements) == 1 else elements
+        elements = elements.pop() if len(elements) == 1 else elements
+        if isinstance(shape, list) and shape[0] == len(elements):
+            elements = [e.split(',') for e in elements]
+        return elements
 
     @staticmethod
     def process_complexarray(data):
@@ -182,18 +185,19 @@ class Parser:
             >>> process_string(data, shape)
             'Hello, World!'
         """
-        if elements := re.findall(ptrn_bisstring, data):
-            return Parser.process_bisarray(elements)
-        
-        data = Parser.clean_up_elements_in_array(data)
-        if re.match(ptrn_complex_array, data):
-            return Parser.process_complexarray(data)
-        elif re.match(ptrn_string, data):
-            return re.sub(ptrn_string, r'\g<string>', data)
-        
         shape = Parser.parse_shape(shape)
-        data = Parser.parse_data(data)
-        return data
+        if elements := re.findall(ptrn_bisstring, data):
+            data = Parser.process_bisarray(elements, shape)
+            return data, -1
+        else:
+            data = Parser.clean_up_elements_in_array(data)
+        if re.match(ptrn_complex_array, data):
+            data = Parser.process_complexarray(data)
+        elif re.match(ptrn_string, data):
+            data = re.sub(ptrn_string, r'\g<string>', data)
+        else:
+            data = Parser.parse_data(data)
+        return data, shape
 
     @staticmethod
     def parse_shape(shape):
@@ -302,7 +306,7 @@ class Parser:
             This method is intended to be called internally within the class and does not have direct usage examples.
         """
         if isinstance(data, str):
-            data = Parser.process_string(data, shape)
+            data, shape = Parser.process_string(data, shape)
         if isinstance(data, list):
             if (
                 isinstance(shape, list)
@@ -438,7 +442,6 @@ class Parameter:
         for index, addr in enumerate(param_addr[:-1]):
             dtype, key, value = params[addr]
             data, shape = self._process_contents(contents, addr, addr_diff, index, value)
-
             if dtype is PARAMETER:
                 self._parameters[key] = Parser.convert_data_to(data, shape)
             elif dtype is HEADER:
@@ -447,6 +450,9 @@ class Parameter:
                 raise ValueError("Invalid dtype encountered in _set_param")
 
     def __getitem__(self, key):
+        return self.parameters[key]
+    
+    def __getattr__(self, key):
         return self.parameters[key]
     
     def __repr__(self):
