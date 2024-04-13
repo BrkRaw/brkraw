@@ -1,4 +1,4 @@
-from .loader import BrukerLoader
+from .loader import BrkrawLoader
 from ..config import ConfigManager
 
-__all__ = ['BrukerLoader', 'ConfigManager']
+__all__ = [BrkrawLoader, ConfigManager]
