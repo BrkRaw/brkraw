@@ -1,13 +1,12 @@
 from __future__ import annotations
 from brkraw.api import helper
+from .base import BaseAnalyzer
 import numpy as np
 from copy import copy
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from .pvobj import PvScan
-    from .loader import ScanInfo
-    from io import BufferedReader
-    from zipfile import ZipExtFile
+    from ..loader import ScanInfo
+
 
 SLICEORIENT = {
     0: 'sagital', 
@@ -22,51 +21,7 @@ SUBJPOSE = {
 }
 
 
-class BaseAnalyzer:
-    def vars(self):
-        return self.__dict__
-
-
-class ScanInfoAnalyzer(BaseAnalyzer):
-    """Helps parse metadata from multiple parameter files to make it more human-readable.
-
-    Args:
-        pvscan (PvScan): The PvScan object containing acquisition and method parameters.
-        reco_id (int, optional): The reconstruction ID. Defaults to None.
-
-    Raises:
-        NotImplementedError: If an operation is not implemented.
-    """
-    def __init__(self, pvscan: 'PvScan', reco_id:int|None = None):
-        self._set_pars(pvscan, reco_id)
-        self.info_protocol = helper.Protocol(self).get_info()
-        if self.visu_pars:
-            self.info_dataarray = helper.DataArray(self).get_info()
-            self.info_frame_group = helper.FrameGroup(self).get_info()
-            self.info_image = helper.Image(self).get_info()
-            self.info_slicepack = helper.SlicePack(self).get_info()
-            self.info_cycle = helper.Cycle(self).get_info()
-            if self.info_image['dim'] > 1:
-                self.info_orientation = helper.Orientation(self).get_info()
-    
-    def _set_pars(self, pvscan: 'PvScan', reco_id: int|None):
-        for p in ['acqp', 'method']:
-            vals = getattr(pvscan, p)
-            setattr(self, p, vals)
-        try:
-            visu_pars = pvscan.get_visu_pars(reco_id)
-        except FileNotFoundError:
-            visu_pars = None
-        setattr(self, 'visu_pars', visu_pars)
-    
-    def __dir__(self):
-        return [attr for attr in self.__dict__.keys() if 'info_' in attr]
-    
-    def get(self, key):
-        return getattr(self, key) if key in self.__dir__() else None
-    
-    
-class AffineAnalyzer:
+class AffineAnalyzer(BaseAnalyzer):
     def __init__(self, infoobj: 'ScanInfo'):
         infoobj = copy(infoobj)
         if infoobj.image['dim'] == 2:
@@ -173,29 +128,3 @@ class AffineAnalyzer:
             assert side in SUBJPOSE['side'], 'Invalid subject position'
         if subj_type:
             assert subj_type in SUBJTYPE, 'Invalid subject type'
-
-
-class DataArrayAnalyzer(BaseAnalyzer):
-    def __init__(self, infoobj: 'ScanInfo', fileobj: BufferedReader|ZipExtFile):
-        infoobj = copy(infoobj)
-        self._parse_info(infoobj)
-        self.buffer = fileobj
-
-    def _parse_info(self, infoobj: 'ScanInfo'):
-        if not hasattr(infoobj, 'dataarray'):
-            raise AttributeError
-        self.slope = infoobj.dataarray['2dseq_slope']
-        self.offset = infoobj.dataarray['2dseq_offset']
-        self.dtype = infoobj.dataarray['2dseq_dtype']
-        self.shape = infoobj.image['shape'][:]
-        self.shape_desc = infoobj.image['dim_desc'][:]
-        if infoobj.frame_group and infoobj.frame_group['type']:
-            self._calc_array_shape(infoobj)
-            
-    def _calc_array_shape(self, infoobj: 'ScanInfo'):
-        self.shape.extend(infoobj.frame_group['shape'][:])
-        self.shape_desc.extend([fgid.replace('FG_', '').lower() for fgid in infoobj.frame_group['id']])
-    
-    def get_dataarray(self):
-        self.buffer.seek(0)
-        return np.frombuffer(self.buffer.read(), self.dtype).reshape(self.shape, order='F')
