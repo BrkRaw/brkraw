@@ -23,7 +23,7 @@ class SlicePack(BaseHelper):
         
         fg_info = analobj.get("info_frame_group") or FrameGroup(analobj).get_info()
         img_info = analobj.get("info_image") or Image(analobj).get_info()
-        if fg_info is None or fg_info['type'] is None:
+        if fg_info['type'] is None:
             num_slice_packs = 1
             num_slices_each_pack = [visu_pars.get("VisuCoreFrameCount")]
             slice_distances_each_pack = [visu_pars.get("VisuCoreFrameThickness")] \

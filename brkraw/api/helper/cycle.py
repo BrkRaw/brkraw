@@ -22,7 +22,7 @@ class Cycle(BaseHelper):
         scan_time = analobj.visu_pars.get("VisuAcqScanTime") or 0
         fg_info = analobj.get('info_frame_group') or FrameGroup(analobj).get_info()
         fg_not_slice = []
-        if fg_info != None and fg_info['type'] != None:
+        if fg_info['type'] != None:
             fg_not_slice.extend([fg_info['shape'][id] for id, fg in enumerate(fg_info['id'])
                             if not re.search('slice', fg, re.IGNORECASE)])
         self.num_frames = np.prod(fg_not_slice) if len(fg_not_slice) else 1
