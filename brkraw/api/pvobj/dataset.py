@@ -3,11 +3,8 @@ import re
 import zipfile
 from collections import OrderedDict
 from collections import defaultdict
-try:
-    from .parser import Parameter
-except ImportError:
-    # case for debugging
-    from brkraw.api.pvobj.parser import Parameter
+from .parser import Parameter
+
 
 class BaseMethods:
     """
@@ -28,21 +25,6 @@ class BaseMethods:
     _path = None
     _rootpath = None
     _contents = None
-    _parameter_files = None
-    _binary_files = None
-    
-    def __init__(self, **kwargs):
-        """
-        Initialize the object.
-
-        Args:
-            **kwargs: Keyword arguments for configuration options.
-
-        Returns:
-            None
-        """
-        if kwargs:
-            self.config(**kwargs)
     
     @staticmethod
     def _fetch_dir(path):
@@ -152,10 +134,7 @@ class BaseMethods:
         Raises:
             KeyError: If the key is not found.
         """
-        if key in self._parameter_files:
-            return Parameter(self._open_as_string(key), name=key, scan_id=self._scan_id, reco_id=self._reco_id)
-        else:
-            return self._open_as_fileobject(key)
+        return self.__getattr__(key)
         
     def __getattr__(self, key):
         """
@@ -171,38 +150,26 @@ class BaseMethods:
             obj = Dataset()
             param = obj.some_key  # Returns a Parameter object or file object.
         """
-        if any(param_key == key or param_key.replace('.', '_') == key for param_key in self._parameter_files):
-            return Parameter(self._open_as_string(key), name=key, scan_id=self._scan_id, reco_id=self._reco_id)
-        elif any(binary_key == key or binary_key.replace('.', '_') == key for binary_key in self._binary_files):
-            return self._open_as_fileobject(key)
-        elif any(file_key == key or file_key.replace('.', '_') == key for file_key in self.contents['files']):
-            return self._open_as_fileobject(key)
-        else:
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
-
-    def config(self, **kwargs):
-        """
-        Set the configuration options for the object.
-
-        Args:
-            **kwargs: Keyword arguments for the configuration options.
-                binary_files (list): A list of binary file names.
-                parameter_files (list): A list of parameter file names.
-
-        Returns:
-            None
-        """
-        if 'binary_files' in kwargs:
-            self._binary_files = kwargs['binary_files']
-        if 'parameter_files' in kwargs:
-            self._parameter_files = kwargs['parameter_files']
+        key = key[1:] if key.startswith('_') else key #new code
+        
+        if file := [f for f in self.contents['files'] if (f == key or f.replace('.', '_') == key)]:
+            fileobj = self._open_as_fileobject(file.pop())
+            if self._is_binary(fileobj):
+                return fileobj
+            par = Parameter(fileobj.read().decode('UTF-8').split('\n'), 
+                            name=key, scan_id=self._scan_id, reco_id=self._reco_id)
+            return par if par.header else fileobj.read().decode('UTF-8').split('\n')
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     @property
     def contents(self):
         return self._contents
 
-    def __dir__(self):
-        return ['set_config']
+    @staticmethod
+    def _is_binary(fileobj, bytes=512):
+        block = fileobj.read(bytes)
+        fileobj.seek(0)
+        return b'\x00' in block
 
 
 class PvDataset(BaseMethods):
@@ -222,7 +189,7 @@ class PvDataset(BaseMethods):
         avail (list): A list of available scans.
         contents (dict): A dictionary of pvdataset contents.
     """
-    def __init__(self, path, debug=False, **kwargs):
+    def __init__(self, path, debug=False):
         """
         Initialize the object with the given path and optional debug flag.
 
@@ -241,11 +208,9 @@ class PvDataset(BaseMethods):
             obj = ClassName(path='/path/to/dataset', debug=True)
         """
 
-        if 'pvdataset' in kwargs:
-            super().__init__(**kwargs['pvdataset'])
         if not debug:    
             self._check_dataset_validity(path)
-            self._construct(**kwargs)
+            self._construct()
     
     # internal method
     def _check_dataset_validity(self, path):
@@ -277,7 +242,7 @@ class PvDataset(BaseMethods):
         else:
             raise ValueError(f"The path '{self._path}' does not meet the required criteria.")
     
-    def _construct(self, **kwargs):    # sourcery skip: low-code-quality
+    def _construct(self):    # sourcery skip: low-code-quality
         """
         Constructs the object by organizing the contents.
 
@@ -302,10 +267,10 @@ class PvDataset(BaseMethods):
             elif not contents['files']:
                 to_remove.append(path)
             elif matched := re.match(r'(?:.*/)?(\d+)/(\D+)/(\d+)$', path) or re.match(r'(?:.*/)?(\d+)$', path):
-                to_remove.append(self._process_childobj(matched, (path, contents), **kwargs))
+                to_remove.append(self._process_childobj(matched, (path, contents)))
         self._clear_contents(to_remove)
 
-    def _process_childobj(self, matched, item, **kwargs):
+    def _process_childobj(self, matched, item):
         """
         The `_process_childobj` method processes a child object based on the provided arguments and updates the internal state of the object.
 
@@ -329,14 +294,12 @@ class PvDataset(BaseMethods):
         path, contents = item
         scan_id = int(matched.group(1))
         if scan_id not in self._scans:
-            pvscan_kwargs = kwargs.get('pvscan') or {}
-            self._scans[scan_id] = PvScan(scan_id, (self.path, path), **pvscan_kwargs)
+            self._scans[scan_id] = PvScan(scan_id, (self.path, path))
         if len(matched.groups()) == 1 and 'pdata' in contents['dirs']:
             self._scans[scan_id].update(contents)
         elif len(matched.groups()) == 3 and matched.group(2) == 'pdata':
             reco_id = int(matched.group(3))
-            pvreco_kwargs = kwargs.get('pvreco') or {} 
-            self._scans[scan_id].set_reco(path, reco_id, contents, **pvreco_kwargs)
+            self._scans[scan_id].set_reco(path, reco_id, contents)
         else:
             self._backup[path] = contents
         return path
@@ -400,6 +363,9 @@ class PvScan(BaseMethods):
 
     Inherits from BaseMethods.
 
+    Attributes:
+        is_compressed (bool): Indicates if the dataset is compressed.
+
     Methods:
         update(contents): Update the contents of the dataset.
         set_reco(path, reco_id, contents): Set a reco object with the specified path, ID, and contents.
@@ -408,8 +374,9 @@ class PvScan(BaseMethods):
     Properties:
         path (str): The path.
         avail (list): A list of available items.
+        contents (dict): A dictionary of pvscan contents.
     """
-    def __init__(self, scan_id, pathes, contents=None, recos=None, **kwargs):
+    def __init__(self, scan_id, pathes, contents=None, recos=None):
         """
         Initialize a Dataset object.
 
@@ -428,7 +395,6 @@ class PvScan(BaseMethods):
         Methods:
             update(contents): Update the contents of the dataset.
         """
-        super().__init__(**kwargs)
         self._scan_id = scan_id
         self._rootpath, self._path = pathes
         self.update(contents)
@@ -448,7 +414,7 @@ class PvScan(BaseMethods):
             self.is_compressed = True if contents.get('file_indexes') else False
         self._contents = contents
     
-    def set_reco(self, path, reco_id, contents, **kwargs):
+    def set_reco(self, path, reco_id, contents):
         """
         Set a reco object with the specified path, ID, and contents.
 
@@ -460,7 +426,7 @@ class PvScan(BaseMethods):
         Returns:
             None
         """
-        self._recos[reco_id] = PvReco(self._scan_id, reco_id, (self._rootpath, path), contents, **kwargs)
+        self._recos[reco_id] = PvReco(self._scan_id, reco_id, (self._rootpath, path), contents)
     
     def get_reco(self, reco_id):
         """
@@ -480,11 +446,11 @@ class PvScan(BaseMethods):
     def get_visu_pars(self, reco_id=None):
         if reco_id:
             return getattr(self.get_reco(reco_id), 'visu_pars')
-        elif 'visu_pars' in self._contents['files']:
+        elif 'visu_pars' in self.contents['files']:
             return getattr(self, 'visu_pars')
         elif len(self.avail):
             recoobj = self.get_reco(self.avail[0])
-            if 'visu_pars' not in recoobj._contents['files']:
+            if 'visu_pars' not in recoobj.contents['files']:
                 raise FileNotFoundError
             else:
                 return getattr(recoobj, 'visu_pars')
@@ -514,15 +480,15 @@ class PvScan(BaseMethods):
         """
         return sorted(list(self._recos))
     
-    def __dir__(self):
-        return super().__dir__() + ['path', 'avail', 'get_reco', 'get_visu_pars']
-    
     
 class PvReco(BaseMethods):
     """
     A class representing a PvReco object.
 
     Inherits from BaseMethods.
+    
+    Attributes:
+        is_compressed (bool): Indicates if the dataset is compressed.
 
     Args:
         scan_id (int): The ID of the scan.
@@ -533,7 +499,7 @@ class PvReco(BaseMethods):
     Properties:
         path (str): The path.
     """
-    def __init__(self, scan_id, reco_id, pathes, contents, **kwargs):
+    def __init__(self, scan_id, reco_id, pathes, contents):
         """
         Initialize a Dataset object.
 
@@ -550,7 +516,6 @@ class PvReco(BaseMethods):
             _path (str): The path.
             _contents (list): The list of contents.
         """
-        super().__init__(**kwargs)
         self._scan_id = scan_id
         self._reco_id = reco_id
         self._rootpath, self._path = pathes
@@ -569,6 +534,3 @@ class PvReco(BaseMethods):
         if self.is_compressed:
             return path
         return os.path.join(*path)
-        
-    def __dir__(self):
-        return super().__dir__() + ['path']
