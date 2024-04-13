@@ -1,7 +1,7 @@
 import warnings
 import numpy as np
 from enum import Enum
-from brkraw.api.loader import BrkrawLoader
+from brkraw.api.brkobj import StudyObj
 
 
 XYZT_UNITS = \
@@ -14,7 +14,7 @@ class ScaleMode(Enum):
     HEADER = 2
 
 
-class BrkrawToNifti1(BrkrawLoader):
+class BrkrawToNifti1(StudyObj):
     def __init__(self, path):
         super().__init__(path)
         self._cache = {}

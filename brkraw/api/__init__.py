@@ -1,4 +1,4 @@
-from .loader import BrkrawLoader
+from .brkobj import StudyObj
 from ..config import ConfigManager
 
-__all__ = [BrkrawLoader, ConfigManager]
+__all__ = [StudyObj, ConfigManager]

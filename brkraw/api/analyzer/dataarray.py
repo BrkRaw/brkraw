@@ -4,7 +4,7 @@ import numpy as np
 from copy import copy
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from ..loader import ScanInfo
+    from ..brkobj import ScanInfo
     from io import BufferedReader
     from zipfile import ZipExtFile
 
