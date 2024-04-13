@@ -1,15 +1,12 @@
 from __future__ import annotations
-import sys
 import ctypes
 from typing import Dict
-from .analyzer import ScanInfoAnalyzer, AffineAnalyzer, DataArrayAnalyzer
-from ..config import ConfigManager
+from .analyzer import ScanInfoAnalyzer, AffineAnalyzer, DataArrayAnalyzer, BaseAnalyzer
 from .pvobj import PvDataset, PvScan
 
-
-class BrukerLoader(PvDataset):
+class BrkrawLoader(PvDataset):
     def __init__(self, path):
-        super().__init__(path, **ConfigManager().get('spec'))
+        super().__init__(path)
         self._parse_header()
         
     def get_scan(self, scan_id, reco_id=None, analyze=True):
@@ -21,36 +18,40 @@ class BrukerLoader(PvDataset):
                        loader_address=id(self), analyze=analyze)
     
     def _parse_header(self) -> (Dict | None):
-        if not len(self._contents.keys()):
+        if not self.contents or 'subject' not in self.contents['files']:
             self.header = None
             return
-        contents = self._contents if 'files' in self._contents else self._contents[list(self._contents.keys())[0]]
-        if subj := getattr(self, 'subject') if 'subject' in contents['files'] else None:
-            subj_header = getattr(subj, 'header') if subj else None
-            if title := subj_header['TITLE'] if subj_header else None:
-                pvspec = title.split(',')[-1].strip() if 'ParaVision' in title else "ParaVision < 6"
-                if "360" in title:
-                    entry, position = getattr(subj, "SUBJECT_study_instrument_position").split('_')[:2]
-                else:
-                    entry = getattr(subj, "SUBJECT_entry").split('_')[-1]
-                    position = getattr(subj, "SUBJECT_position").split('_')[-1]
+        subj = self.subject
+        subj_header = getattr(subj, 'header') if subj.is_parameter() else None
+        if title := subj_header['TITLE'] if subj_header else None:
+            self.header = {k.replace("SUBJECT_",""):v for k, v in subj.parameters.items() if k.startswith("SUBJECT")}
+            self.header['sw_version'] = title.split(',')[-1].strip() if 'ParaVision' in title else "ParaVision < 6"
+    @property
+    def avail(self):
+        return super().avail
 
-            self.header = {
-                'version': pvspec,
-                'user_account': subj_header['OWNER'],
-                'subject_entry': entry,
-                'subject_position': position,
-            }
-        else:
-            self.header = None
-    
-    def info(self, io_handler=None):
-        io_handler = io_handler or sys.stdout
-        
+    def info(self):
+        """output all analyzed information"""
+        info = {'header': None,
+                'scans': {}}
+        if header := self.header:
+            info['header'] = header
+        for scan_id in self.avail:
+            info['scans'][scan_id] = {}
+            scanobj = self.get_scan(scan_id)
+            for reco_id in scanobj.avail:
+                info['scans'][scan_id][reco_id] = scanobj.get_info(reco_id).vars()
+        return info
 
-class ScanInfo:
+
+class ScanInfo(BaseAnalyzer):
     def __init__(self):
-        pass
+        self.warns = []
+        
+    @property
+    def num_warns(self):
+        return len(self.warns)
+
 
 class ScanObj(PvScan):
     def __init__(self, pvscan: 'PvScan', reco_id: int|None = None,
@@ -58,9 +59,7 @@ class ScanObj(PvScan):
         super().__init__(pvscan._scan_id, 
                          (pvscan._rootpath, pvscan._path), 
                          pvscan._contents, 
-                         pvscan._recos, 
-                         binary_files = pvscan._binary_files, 
-                         parameter_files = pvscan._parameter_files)
+                         pvscan._recos)
         
         self.reco_id = reco_id
         self._loader_address = loader_address
@@ -82,26 +81,34 @@ class ScanObj(PvScan):
             if 'info_' in attr_name:
                 attr_vals = getattr(analysed, attr_name)
                 setattr(infoobj, attr_name.replace('info_', ''), attr_vals)
+                if attr_vals and attr_vals['warns']:
+                    infoobj.warns.extend(attr_vals['warns'])
         return infoobj
     
-    def get_affine(self, reco_id:int|None = None, subj_type:str|None = None, subj_position:str|None = None, get_analyzer=False):
+    def get_affine_info(self, reco_id:int|None = None):
         if reco_id:
             info = self.get_info(reco_id)
         else:
             info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
-        analyzer = AffineAnalyzer(info)
-        return analyzer if get_analyzer else analyzer.get_affine(subj_type, subj_position)
+        return AffineAnalyzer(info)
     
-    def get_dataarray(self, reco_id: int|None = None, get_analyzer=False):
+    def get_data_info(self, reco_id: int|None = None):
         reco_id = reco_id or self.avail[0]
         recoobj = self.get_reco(reco_id)
-        datafiles = [f for f in recoobj._contents['files'] if f in recoobj._binary_files]
+        datafiles = [f for f in recoobj._contents['files'] if f == '2dseq']
         if not len(datafiles):
-            raise FileNotFoundError('no binary file')
+            raise FileNotFoundError("The required file '2dseq' does not exist. "
+                                    "Please check the dataset and ensure the file is in the expected location.")
         fileobj = recoobj._open_as_fileobject(datafiles.pop())
         info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
-        analyzer = DataArrayAnalyzer(info, fileobj)
-        return analyzer if get_analyzer else analyzer.get_dataarray()
+        return DataArrayAnalyzer(info, fileobj)
+    
+    def get_affine(self, reco_id:int|None = None, 
+                   subj_type:str|None = None, subj_position:str|None = None):
+        return self.get_affine_info(reco_id).get_affine(subj_type, subj_position)
+    
+    def get_dataarray(self, reco_id: int|None = None):
+        return self.get_data_info(reco_id).get_dataarray()
     
     def retrieve_pvscan(self):
         if self._pvscan_address:

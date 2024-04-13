@@ -1,5 +1,4 @@
 from __future__ import annotations
-import re
 from brkraw.api import helper
 import numpy as np
 from copy import copy
@@ -22,11 +21,13 @@ SUBJPOSE = {
     'side': ['Supine', 'Prone', 'Left', 'Right']
 }
 
-class Pars:
-    def __init__(self):
-        pass
-    
-class ScanInfoAnalyzer:
+
+class BaseAnalyzer:
+    def vars(self):
+        return self.__dict__
+
+
+class ScanInfoAnalyzer(BaseAnalyzer):
     """Helps parse metadata from multiple parameter files to make it more human-readable.
 
     Args:
@@ -37,10 +38,9 @@ class ScanInfoAnalyzer:
         NotImplementedError: If an operation is not implemented.
     """
     def __init__(self, pvscan: 'PvScan', reco_id:int|None = None):
-        self.pars = self.get_pars(pvscan, reco_id)
+        self._set_pars(pvscan, reco_id)
         self.info_protocol = helper.Protocol(self).get_info()
-        if self.pars.visu:
-            self._set_attrs()
+        if self.visu_pars:
             self.info_dataarray = helper.DataArray(self).get_info()
             self.info_frame_group = helper.FrameGroup(self).get_info()
             self.info_image = helper.Image(self).get_info()
@@ -49,55 +49,21 @@ class ScanInfoAnalyzer:
             if self.info_image['dim'] > 1:
                 self.info_orientation = helper.Orientation(self).get_info()
     
-    @staticmethod
-    def get_pars(pvscan: 'PvScan', reco_id: int|None):
-        pars = Pars()
+    def _set_pars(self, pvscan: 'PvScan', reco_id: int|None):
         for p in ['acqp', 'method']:
             vals = getattr(pvscan, p)
-            setattr(pars, p, vals)
+            setattr(self, p, vals)
         try:
-            visu = pvscan.get_visu_pars(reco_id)
+            visu_pars = pvscan.get_visu_pars(reco_id)
         except FileNotFoundError:
-            visu = None
-        setattr(pars, 'visu', visu)
-        return pars
-    
-    def _set_attrs(self):
-        """
-        Parse parameters and set attributes from acqp, method, and visu_pars files.
-        This function parses parameters from different objects (acqp, method, visu_pars) and sets corresponding attributes in the instance.
-        Only attributes with prefixes 'Visu', 'PVM_', 'ACQ_' are set as object attributes in snake case to follow Pythonic naming conventions.
-
-        Args:
-            pvscan: The pvscan parameter.
-            reco_id: The reco_id parameter.
-        """
-        for prefix, pars_obj in {'Visu': self.pars.visu, 
-                                 'PVM_': self.pars.method, 
-                                 'ACQ_': self.pars.acqp}.items():
-            for key in pars_obj.keys():
-                if prefix in key:
-                    attr = self._camel_to_snake_case(key.replace(prefix, ''))
-                    value = getattr(pars_obj, key)
-                    attr = f'{prefix.lower()}{attr}' if '_' in prefix else f'{prefix.lower()}_{attr}'
-                    setattr(self, attr, value)
-        
-    @staticmethod
-    def _camel_to_snake_case(input_string: str):
-        matches = re.finditer(r'[A-Z]+[^A-Z]*', input_string)
-        output_string = []
-        for m in matches:
-            string = m.group()
-            is_upper = [bool(char.isupper()) for char in string]
-            if sum(is_upper) > 1 and not all(is_upper):
-                idx_for_space = is_upper.index(False)
-                output_string.append(f'{string[:idx_for_space-1]}_{string[idx_for_space-1:]}'.lower())
-            else:
-                output_string.append(string.lower())
-        return '_'.join(output_string)
+            visu_pars = None
+        setattr(self, 'visu_pars', visu_pars)
     
     def __dir__(self):
         return [attr for attr in self.__dict__.keys() if 'info_' in attr]
+    
+    def get(self, key):
+        return getattr(self, key) if key in self.__dir__() else None
     
     
 class AffineAnalyzer:
@@ -106,7 +72,7 @@ class AffineAnalyzer:
         if infoobj.image['dim'] == 2:
             xr, yr = infoobj.image['resolution']
             self.resolution = [(xr, yr, zr) for zr in infoobj.slicepack['slice_distances_each_pack']]
-        elif self.info.image['dim'] == 3:
+        elif infoobj.image['dim'] == 3:
             self.resolution = infoobj.image['resolution'][:]
         else:
             raise NotImplementedError
@@ -209,7 +175,7 @@ class AffineAnalyzer:
             assert subj_type in SUBJTYPE, 'Invalid subject type'
 
 
-class DataArrayAnalyzer:
+class DataArrayAnalyzer(BaseAnalyzer):
     def __init__(self, infoobj: 'ScanInfo', fileobj: BufferedReader|ZipExtFile):
         infoobj = copy(infoobj)
         self._parse_info(infoobj)
