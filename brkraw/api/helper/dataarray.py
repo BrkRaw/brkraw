@@ -32,19 +32,25 @@ class DataArray(BaseHelper):
         acqp = analobj.acqp
         visu_pars = analobj.visu_pars
         
-        fid_word_type = f'_{"".join(acqp["ACQ_word_size"].split("_"))}_SGN_INT'
-        fid_byte_order = f'{acqp["BYTORDA"]}Endian'
-        self.fid_dtype = np.dtype(f'{BYTEORDER[fid_byte_order]}{WORDTYPE[fid_word_type]}')
-        
+        if acqp:
+            fid_word_type = f'_{"".join(acqp["ACQ_word_size"].split("_"))}_SGN_INT'
+            fid_byte_order = f'{acqp["BYTORDA"]}Endian'
+            self.fid_dtype = np.dtype(f'{BYTEORDER[fid_byte_order]}{WORDTYPE[fid_word_type]}')
+        else:
+            self.fid_dtype = None
+            self._warn("Failed to fetch 'fid_dtype' information because the 'acqp' file is missing from 'analobj'.")
+            
         byte_order = visu_pars["VisuCoreByteOrder"]
         word_type = visu_pars["VisuCoreWordType"]
         self.data_dtype = np.dtype(f'{BYTEORDER[byte_order]}{WORDTYPE[word_type]}')
+        
         data_slope = visu_pars["VisuCoreDataSlope"]
         data_offset = visu_pars["VisuCoreDataOffs"]
         self.data_slope = data_slope[0] \
             if isinstance(data_slope, list) and is_all_element_same(data_slope) else data_slope
         self.data_offset = data_offset[0] \
             if isinstance(data_offset, list) and is_all_element_same(data_offset) else data_offset
+            
         if isinstance(self.data_slope, list) or isinstance(self.data_offset, list):
             self._warn("Data slope and data offset values are unusual. "
                        "They are expected to be either a list containing the same elements or a single float value.")

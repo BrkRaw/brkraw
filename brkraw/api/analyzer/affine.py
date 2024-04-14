@@ -5,7 +5,7 @@ import numpy as np
 from copy import copy
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from ..brkobj import ScanInfo
+    from ..brkobj.scan import ScanInfo
 
 
 SLICEORIENT = {
@@ -28,7 +28,7 @@ class AffineAnalyzer(BaseAnalyzer):
             xr, yr = infoobj.image['resolution']
             self.resolution = [(xr, yr, zr) for zr in infoobj.slicepack['slice_distances_each_pack']]
         elif infoobj.image['dim'] == 3:
-            self.resolution = infoobj.image['resolution'][:]
+            self.resolution = [infoobj.image['resolution'][:]]
         else:
             raise NotImplementedError
         if infoobj.slicepack['num_slice_packs'] > 1:

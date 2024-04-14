@@ -4,6 +4,7 @@ from .base import BaseAnalyzer
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..pvobj import PvScan
+    from brkraw.app.tonifti.reco import RecoToNifti
 
 
 class ScanInfoAnalyzer(BaseAnalyzer):
@@ -16,17 +17,29 @@ class ScanInfoAnalyzer(BaseAnalyzer):
     Raises:
         NotImplementedError: If an operation is not implemented.
     """
-    def __init__(self, pvscan: 'PvScan', reco_id:int|None = None):
-        self._set_pars(pvscan, reco_id)
-        self.info_protocol = helper.Protocol(self).get_info()
-        if self.visu_pars:
-            self.info_dataarray = helper.DataArray(self).get_info()
-            self.info_frame_group = helper.FrameGroup(self).get_info()
-            self.info_image = helper.Image(self).get_info()
-            self.info_slicepack = helper.SlicePack(self).get_info()
-            self.info_cycle = helper.Cycle(self).get_info()
-            if self.info_image['dim'] > 1:
-                self.info_orientation = helper.Orientation(self).get_info()
+    def __init__(self, pvscan: 'PvScan'|'RecoToNifti', reco_id:int|None = None):
+        if hasattr(pvscan, 'is_recotonifti') and pvscan.is_recotonifti:
+            self._set_reco(pvscan)
+        else:
+            self._set_pars(pvscan, reco_id)
+            self.info_protocol = helper.Protocol(self).get_info()
+            if self.visu_pars:
+                self._parse_info()
+                
+    def _parse_info(self):
+        self.info_dataarray = helper.DataArray(self).get_info()
+        self.info_frame_group = helper.FrameGroup(self).get_info()
+        self.info_image = helper.Image(self).get_info()
+        self.info_slicepack = helper.SlicePack(self).get_info()
+        self.info_cycle = helper.Cycle(self).get_info()
+        if self.info_image['dim'] > 1:
+            self.info_orientation = helper.Orientation(self).get_info()
+    
+    def _set_reco(self, pvscan: 'RecoToNifti'):
+        setattr(self, 'visu_pars', pvscan.visu_pars)
+        setattr(self, 'method', pvscan.method)
+        setattr(self, 'acqp', None)
+        self._parse_info()
     
     def _set_pars(self, pvscan: 'PvScan', reco_id: int|None):
         for p in ['acqp', 'method']:

@@ -69,9 +69,10 @@ class Orientation(BaseHelper):
         self.subject_position = visu_pars.get("VisuSubjectPosition")
         self._orient = visu_pars["VisuCoreOrientation"].tolist()
         self._position = visu_pars["VisuCorePosition"]
-        self.gradient_orient = analobj.method["PVM_SPackArrGradOrient"]
+        self._set_gradient_orient(analobj)
         self.num_slice_packs = info_slicepack['num_slice_packs']
         self.gradient_encoding_dir = self._get_gradient_encoding_dir(visu_pars)
+        
         self.orientation = []
         self.orientation_desc = []
         self.volume_origin = []
@@ -80,6 +81,9 @@ class Orientation(BaseHelper):
             self._case_multi_slicepacks()
         else:
             self._case_single_slicepack()
+    
+    def _set_gradient_orient(self, analobj):
+        self.gradient_orient = analobj.method["PVM_SPackArrGradOrient"] if analobj.method else None
     
     def get_info(self):
         return {
