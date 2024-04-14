@@ -16,8 +16,7 @@ class BrkrawToNifti(StudyObj, BaseMethods):
         """
 
         super().__init__(path)
-        if scale_mode:
-            self.set_scale_mode(scale_mode)
+        self.set_scale_mode(scale_mode)
         self._cache = {}
     
     def get_scan(self, scan_id:int):
@@ -66,7 +65,7 @@ class BrkrawToNifti(StudyObj, BaseMethods):
         Args:
             scan_id (int): _description_
             reco_id (int | None, optional): _description_. Defaults to None.
-            scale_mode (ScaleMode&#39; | None, optional): _description_. Defaults to None.
+            scale_mode (ScaleMode; | None, optional): _description_. Defaults to None.
 
         Raises:
             ValueError: _description_
@@ -75,11 +74,9 @@ class BrkrawToNifti(StudyObj, BaseMethods):
             _type_: _description_
         """
         scale_mode = scale_mode or self.scale_mode
-        if scale_mode == ScaleMode.HEADER:
-            raise ValueError("The 'HEADER' option for scale_mode is not supported in this context. Only 'NONE' or 'APPLY' options are available. "
-                             "To use the 'HEADER' option, please switch to the 'get_nifti1image' method, which supports storing scales in the header.")
+        scale_correction = False if scale_mode == ScaleMode.HEADER else True
         scanobj = self.get_scan(scan_id)
-        return super().get_dataobj(scanobj=scanobj, fileobj=None, reco_id=reco_id, scale_correction=bool(scale_mode))
+        return super().get_dataobj(scanobj=scanobj, fileobj=None, reco_id=reco_id, scale_correction=scale_correction)
     
     def get_data_dict(self, scan_id:int, reco_id:int|None=None):
         """_summary_
@@ -116,7 +113,7 @@ class BrkrawToNifti(StudyObj, BaseMethods):
         Args:
             scan_id (int): _description_
             reco_id (int | None, optional): _description_. Defaults to None.
-            scale_mode (ScaleMode&#39; | None, optional): _description_. Defaults to None.
+            scale_mode (ScaleMode | None, optional): _description_. Defaults to None.
 
         Returns:
             _type_: _description_

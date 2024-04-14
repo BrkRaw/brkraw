@@ -25,9 +25,12 @@ class ScaleMode(Enum):
 class BaseMethods:
     info, fileobj = (None, None)
     
-    def set_scale_mode(self, scale_mode:ScaleMode):
-        self.scale_mode = scale_mode
-    
+    def set_scale_mode(self, scale_mode:ScaleMode|None):
+        if scale_mode:
+            self.scale_mode = scale_mode
+        else:
+            self.scale_mode = ScaleMode.HEADER
+            
     def _set_info(self):
         analysed = ScanInfoAnalyzer(self)
         infoobj = ScanInfo()
