@@ -21,16 +21,16 @@ class Cycle(BaseHelper):
         super().__init__()
         scan_time = analobj.visu_pars.get("VisuAcqScanTime") or 0
         fg_info = analobj.get('info_frame_group') or FrameGroup(analobj).get_info()
-        fg_not_slice = []
+        fg_cycle = []
         if fg_info['type'] != None:
-            fg_not_slice.extend([fg_info['shape'][id] for id, fg in enumerate(fg_info['id'])
-                            if not re.search('slice', fg, re.IGNORECASE)])
-        self.num_frames = np.prod(fg_not_slice) if len(fg_not_slice) else 1
-        self.time_step = (scan_time / self.num_frames)
+            fg_cycle.extend([fg_info['shape'][id] for id, fg in enumerate(fg_info['id']) \
+                             if re.search('cycle', fg, re.IGNORECASE)])
+        self.num_cycles = fg_cycle.pop() if len(fg_cycle) else 1
+        self.time_step = (scan_time / self.num_cycles)
     
     def get_info(self):
         return {
-            "num_frames": self.num_frames,
+            "num_cycles": self.num_cycles,
             "time_step": self.time_step,
             "unit": 'msec',
             'warns': self.warns

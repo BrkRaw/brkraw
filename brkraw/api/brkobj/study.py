@@ -30,6 +30,7 @@ class StudyObj(PvDataset):
     def avail(self):
         return super().avail
 
+    @property
     def info(self):
         """output all analyzed information"""
         info = {'header': None,

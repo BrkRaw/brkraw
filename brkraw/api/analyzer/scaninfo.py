@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import OrderedDict
 from brkraw.api import helper
 from .base import BaseAnalyzer
 from typing import TYPE_CHECKING
@@ -27,12 +28,12 @@ class ScanInfoAnalyzer(BaseAnalyzer):
             try:
                 vals = getattr(pvobj, p)
             except AttributeError:
-                vals = None
+                vals = OrderedDict()
             setattr(self, p, vals)
         try:
             visu_pars = pvobj.get_visu_pars(reco_id)
         except FileNotFoundError:
-            visu_pars = None
+            visu_pars = OrderedDict()
         setattr(self, 'visu_pars', visu_pars)
            
     def _parse_info(self):

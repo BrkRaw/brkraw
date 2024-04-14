@@ -17,15 +17,15 @@ class Protocol(BaseHelper):
         acqp = analobj.acqp
         if not acqp:
             self._warn("Failed to fetch all Protocol information because the 'acqp' file is missing from 'analobj'.")
-        self.sw_version = str(acqp.get('ACQ_sw_version')) if acqp else None
-        self.operator = acqp.get('ACQ_operator') if acqp else None
-        self.pulse_program = acqp.get('PULPROG') if acqp else None
-        self.nucleus = acqp.get('NUCLEUS') if acqp else None
-        self.protocol_name = acqp.get('ACQ_protocol_name') or acqp.get('ACQ_scan_name') if acqp else None
-        self.scan_method = acqp.get('ACQ_method') if acqp else None
-        self.subject_pos = acqp.get('ACQ_patient_pos') if acqp else None
-        self.institution = acqp.get('ACQ_institution') if acqp else None
-        self.device = acqp.get('ACQ_station') if acqp else None
+        self.sw_version = str(acqp.get('ACQ_sw_version'))
+        self.operator = acqp.get('ACQ_operator')
+        self.pulse_program = acqp.get('PULPROG')
+        self.nucleus = acqp.get('NUCLEUS')
+        self.protocol_name = acqp.get('ACQ_protocol_name') or acqp.get('ACQ_scan_name')
+        self.scan_method = acqp.get('ACQ_method')
+        self.subject_pos = acqp.get('ACQ_patient_pos')
+        self.institution = acqp.get('ACQ_institution')
+        self.device = acqp.get('ACQ_station')
             
     def get_info(self):
         return {
