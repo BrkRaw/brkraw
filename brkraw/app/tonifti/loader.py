@@ -1,3 +1,4 @@
+from __future__ import annotations
 from .brkraw import BrkrawToNifti
 from .pvscan import PvScanToNifti
 from .pvreco import PvRecoToNifti

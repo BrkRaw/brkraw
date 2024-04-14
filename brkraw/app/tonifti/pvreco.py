@@ -1,11 +1,12 @@
+from __future__ import annotations
 import os
 from pathlib import Path
 from brkraw.api.pvobj import PvReco
-from .base import BaseMethods, ScaleMode
+from .base import BaseMethods
 
 
 class PvRecoToNifti(PvReco, BaseMethods):
-    def __init__(self, path):
+    def __init__(self, path: 'Path'):
         """_summary_
 
         Args:

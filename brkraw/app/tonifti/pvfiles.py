@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path
 from brkraw.api.pvobj import PvFiles
 from .base import BaseMethods, ScaleMode
