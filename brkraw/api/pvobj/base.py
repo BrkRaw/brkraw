@@ -83,11 +83,11 @@ class BaseMethods:
             file object: The opened file object.
 
         Raises:
-            ValueError: If the key does not exist in the files.
+            KeyError: If the key does not exist in the files.
         """
         rootpath = self._rootpath or self._path
         if not self.contents:
-            raise ValueError(f'file not exists in "{rel_path}".')
+            raise KeyError(f'Failed to load contents list from "{rootpath}".')
         files = self.contents.get('files')
         path_list = [*([str(self._scan_id)] if self._scan_id else []), *(['pdata', str(self._reco_id)] if self._reco_id else []), key]
 
@@ -96,7 +96,7 @@ class BaseMethods:
                 rel_path = self._path
             else:
                 rel_path = os.path.join(*path_list)
-            raise ValueError(f'file not exists in "{rel_path}".\n [{", ".join(files)}]')
+            raise KeyError(f'Failed to load filename "{key}" from folder "{rel_path}".\n [{", ".join(files)}]')
 
         if file_indexes := self.contents.get('file_indexes'):
             with zipfile.ZipFile(rootpath) as zf:
@@ -148,7 +148,7 @@ class BaseMethods:
             obj = Dataset()
             param = obj.some_key  # Returns a Parameter object or file object.
         """
-        key = key[1:] if key.startswith('_') else key #new code
+        key = key[1:] if key.startswith('_') else key 
         
         if file := [f for f in self.contents['files'] if (f == key or f.replace('.', '_') == key)]:
             fileobj = self._open_as_fileobject(file.pop())

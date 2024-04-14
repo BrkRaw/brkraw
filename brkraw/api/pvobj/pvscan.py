@@ -22,7 +22,7 @@ class PvScan(BaseMethods):
         avail (list): A list of available items.
         contents (dict): A dictionary of pvscan contents.
     """
-    def __init__(self, scan_id, pathes, contents=None, recos=None):
+    def __init__(self, scan_id: int|None, pathes, contents=None, recos=None):
         """
         Initialize a Dataset object.
 
@@ -95,13 +95,11 @@ class PvScan(BaseMethods):
         elif 'visu_pars' in self.contents['files']:
             return getattr(self, 'visu_pars')
         elif len(self.avail):
-            recoobj = self.get_reco(self.avail[0])
-            if 'visu_pars' not in recoobj.contents['files']:
-                raise FileNotFoundError
-            else:
-                return getattr(recoobj, 'visu_pars')
-        else:
-            raise FileNotFoundError
+            recoobjs = [self.get_reco(rid) for rid in self.avail]
+            for recoobj in recoobjs:
+                if 'visu_pars' in recoobj.contents['files']:
+                    return getattr(recoobj, 'visu_pars')
+        raise FileNotFoundError
     
     @property
     def path(self):
