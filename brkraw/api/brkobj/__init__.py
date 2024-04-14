@@ -1,4 +1,4 @@
 from .study import StudyObj
-from .scan import ScanObj
+from .scan import ScanObj, ScanInfo
 
-__all__ = [StudyObj, ScanObj]
+__all__ = [StudyObj, ScanObj, ScanInfo]
