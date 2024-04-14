@@ -8,13 +8,13 @@ class StudyObj(PvDataset):
         super().__init__(path)
         self._parse_header()
         
-    def get_scan(self, scan_id, reco_id=None, analyze=True):
+    def get_scan(self, scan_id, reco_id=None, debug=False):
         """
         Get a scan object by scan ID.
         """
         pvscan = super().get_scan(scan_id)
         return ScanObj(pvscan=pvscan, reco_id=reco_id, 
-                       loader_address=id(self), analyze=analyze)
+                       loader_address=id(self), debug=debug)
     
     def _parse_header(self) -> (Dict | None):
         if not self.contents or 'subject' not in self.contents['files']:

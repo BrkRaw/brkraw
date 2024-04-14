@@ -17,11 +17,16 @@ class ScanInfoAnalyzer(BaseAnalyzer):
     Raises:
         NotImplementedError: If an operation is not implemented.
     """
-    def __init__(self, pvobj: 'PvScan'|'PvReco'|'PvFiles', reco_id:int|None = None):
+    def __init__(self, 
+                 pvobj: 'PvScan'|'PvReco'|'PvFiles', 
+                 reco_id:int|None = None, 
+                 debug:bool = False):
+        
         self._set_pars(pvobj, reco_id)
-        self.info_protocol = helper.Protocol(self).get_info()
-        if self.visu_pars:
-            self._parse_info()
+        if not debug:
+            self.info_protocol = helper.Protocol(self).get_info()
+            if self.visu_pars:
+                self._parse_info()
     
     def _set_pars(self, pvobj: 'PvScan'|'PvReco'|'PvFiles', reco_id: int|None):
         for p in ['acqp', 'method']:

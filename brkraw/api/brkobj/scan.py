@@ -15,7 +15,7 @@ class ScanInfo(BaseAnalyzer):
 
 class ScanObj(PvScan):
     def __init__(self, pvscan: 'PvScan', reco_id: int|None = None,
-                 loader_address: int|None = None, analyze: bool=True):
+                 loader_address: int|None = None, debug: bool=False):
         super().__init__(pvscan._scan_id, 
                          (pvscan._rootpath, pvscan._path), 
                          pvscan._contents, 
@@ -24,17 +24,17 @@ class ScanObj(PvScan):
         self.reco_id = reco_id
         self._loader_address = loader_address
         self._pvscan_address = id(pvscan)
-        if analyze:
-            self.set_info()
+        self.is_debug = debug
+        self.set_info()
     
     def set_info(self):
         self.info = self.get_info(self.reco_id)
                 
-    def get_info(self, reco_id, get_analyzer:bool=False):
+    def get_info(self, reco_id:int, get_analyzer:bool = False):
         infoobj = ScanInfo()
-        
         pvscan = self.retrieve_pvscan()
-        analysed = ScanInfoAnalyzer(pvscan, reco_id)
+        analysed = ScanInfoAnalyzer(pvscan, reco_id, self.is_debug)
+        
         if get_analyzer:
             return analysed
         for attr_name in dir(analysed):
