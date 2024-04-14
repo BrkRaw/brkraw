@@ -163,6 +163,41 @@ class BaseMethods:
     def contents(self):
         return self._contents
 
+    def get_fid(self, scan_id:int|None = None):
+        try:
+            pvobj = self.get_scan(scan_id) if hasattr(self, 'get_scan') else self
+        except KeyError:
+            raise TypeError("Missing required argument: 'scan_id must be provided for {self.__class__.__name__}.")
+        fid_files = ['fid', 'rawdata.job0']
+        for fid in ['fid', 'rawdata.job0']:
+            if fid in pvobj.contents['files']:
+                return getattr(pvobj, fid)
+        raise FileNotFoundError(f"The required file '{' or '.join(fid_files)}' does not exist. "
+                                "Please check the dataset and ensure the file is in the expected location.")
+    
+    def get_2dseq(self, scan_id:int|None = None, reco_id:int|None = None):
+        try:
+            if scan_id and hasattr(self, 'get_scan'):
+                pvobj = self.get_scan(scan_id).get_reco(reco_id)
+            elif reco_id and hasattr(self, 'get_reco'):
+                pvobj = self.get_reco(reco_id)
+            else:
+                pvobj = self
+        except KeyError:
+            message = "Missing required argument: "
+            if hasattr(self, 'get_scan'):
+                message = f"{message} 'scan_id' and 'reco_id' "
+            elif hasattr(self, 'get_reco'):
+                message = f"{message} 'reco_id' "
+            message = f"{message} must be provided for {self.__class__.__name__}."
+            raise TypeError(message)
+        try:
+            return getattr(pvobj, '2dseq')
+        except AttributeError:
+            raise FileNotFoundError("The required file '2dseq' does not exist. "
+                                    "Please check the dataset and ensure the file is in the expected location.")
+        
+
     @staticmethod
     def _is_binary(fileobj, bytes=512):
         block = fileobj.read(bytes)

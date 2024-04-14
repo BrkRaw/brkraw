@@ -55,11 +55,7 @@ class ScanObj(PvScan):
     def get_data_info(self, reco_id: int|None = None):
         reco_id = reco_id or self.avail[0]
         recoobj = self.get_reco(reco_id)
-        datafiles = [f for f in recoobj._contents['files'] if f == '2dseq']
-        if not len(datafiles):
-            raise FileNotFoundError("The required file '2dseq' does not exist. "
-                                    "Please check the dataset and ensure the file is in the expected location.")
-        fileobj = recoobj._open_as_fileobject(datafiles.pop())
+        fileobj = recoobj.get_2dseq()
         info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
         return DataArrayAnalyzer(info, fileobj)
     
