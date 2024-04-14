@@ -43,5 +43,6 @@ class PvFiles(BaseMethods):
         """ Mock function of PvScan """
         return getattr(self, 'visu_pars')
         
+    @property
     def path(self):
         return self._path
