@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from brkraw.api import helper
 from .base import BaseAnalyzer
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 if TYPE_CHECKING:
     from ..pvobj import PvScan, PvReco, PvFiles
 
@@ -18,8 +18,8 @@ class ScanInfoAnalyzer(BaseAnalyzer):
         NotImplementedError: If an operation is not implemented.
     """
     def __init__(self, 
-                 pvobj: 'PvScan'|'PvReco'|'PvFiles', 
-                 reco_id:int|None = None, 
+                 pvobj: Union['PvScan', 'PvReco', 'PvFiles'], 
+                 reco_id:Optional[int] = None, 
                  debug:bool = False):
         
         self._set_pars(pvobj, reco_id)
@@ -28,7 +28,7 @@ class ScanInfoAnalyzer(BaseAnalyzer):
             if self.visu_pars:
                 self._parse_info()
     
-    def _set_pars(self, pvobj: 'PvScan'|'PvReco'|'PvFiles', reco_id: int|None):
+    def _set_pars(self, pvobj: Union['PvScan', 'PvReco', 'PvFiles'], reco_id: Optional[int]):
         for p in ['acqp', 'method']:
             try:
                 vals = getattr(pvobj, p)

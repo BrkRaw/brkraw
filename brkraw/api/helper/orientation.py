@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 import numpy as np
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from .base import BaseHelper, is_all_element_same
 from .slicepack import SlicePack
 if TYPE_CHECKING:
@@ -137,7 +137,7 @@ class Orientation(BaseHelper):
         self._orient = orientation
         self._position = positions
     
-    def _est_volume_origin(self, id: int|None =None):
+    def _est_volume_origin(self, id: Optional[int] =None):
         """Estimate the origin coordinates of the Volume matrix.
 
         Notes:

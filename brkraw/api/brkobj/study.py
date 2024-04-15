@@ -16,7 +16,7 @@ class StudyObj(PvDataset):
         return ScanObj(pvscan=pvscan, reco_id=reco_id, 
                        loader_address=id(self), debug=debug)
     
-    def _parse_header(self) -> (Dict | None):
+    def _parse_header(self):
         if not self.contents or 'subject' not in self.contents['files']:
             self.header = None
             return

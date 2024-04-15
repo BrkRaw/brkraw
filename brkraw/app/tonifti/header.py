@@ -1,14 +1,14 @@
 from __future__ import annotations
 import warnings
 from nibabel.nifti1 import Nifti1Header
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     from brkraw.api.brkobj import ScanInfo
     from .base import ScaleMode
 
 
 class Header:
-    def __init__(self, scaninfo:'ScanInfo', scale_mode:'ScaleMode'|int):
+    def __init__(self, scaninfo:'ScanInfo', scale_mode:Union['ScaleMode', int]):
         self.info = scaninfo
         self.scale_mode = int(scale_mode)
         self.nifti1header = Nifti1Header()
