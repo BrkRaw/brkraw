@@ -1,5 +1,6 @@
 import toml
 from pathlib import Path
+from brkraw import __version__
 
 class ConfigManager:
     """
@@ -45,20 +46,7 @@ class ConfigManager:
         """
         if not self.config_file.exists():
             default_config = {
-                'spec': {
-                    'pvdataset': {
-                        'binary_files': [],
-                        'parameter_files': ['subject', 'ResultState', 'AdjStatePerStudy', 'study.MR']
-                    },
-                    'pvscan': {
-                        'binary_files': ['fid', 'rawdata.job0'],
-                        'parameter_files': ['method', 'acqp', 'configscan', 'visu_pars', 'AdjStatePerScan']
-                    },
-                    'pvreco': {
-                        'binary_files': ['2dseq'],
-                        'parameter_files': ['reco', 'visu_pars', 'procs', 'methreco', 'id']
-                    }
-                }
+                'version': __version__
             }
             with open(self.config_file, 'w') as f:
                 toml.dump(default_config, f)
