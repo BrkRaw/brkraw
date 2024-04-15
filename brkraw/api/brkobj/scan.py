@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Optional
 import ctypes
 from ..pvobj import PvScan
 from ..analyzer import ScanInfoAnalyzer, AffineAnalyzer, DataArrayAnalyzer, BaseAnalyzer
@@ -14,8 +15,8 @@ class ScanInfo(BaseAnalyzer):
 
 
 class ScanObj(PvScan):
-    def __init__(self, pvscan: 'PvScan', reco_id: int|None = None,
-                 loader_address: int|None = None, debug: bool=False):
+    def __init__(self, pvscan: 'PvScan', reco_id: Optional[int] = None,
+                 loader_address: Optional[int] = None, debug: bool=False):
         super().__init__(pvscan._scan_id, 
                          (pvscan._rootpath, pvscan._path), 
                          pvscan._contents, 
@@ -45,25 +46,25 @@ class ScanObj(PvScan):
                     infoobj.warns.extend(attr_vals['warns'])
         return infoobj
     
-    def get_affine_info(self, reco_id:int|None = None):
+    def get_affine_info(self, reco_id:Optional[int] = None):
         if reco_id:
             info = self.get_info(reco_id)
         else:
             info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
         return AffineAnalyzer(info)
     
-    def get_data_info(self, reco_id: int|None = None):
+    def get_data_info(self, reco_id: Optional[int] = None):
         reco_id = reco_id or self.avail[0]
         recoobj = self.get_reco(reco_id)
         fileobj = recoobj.get_2dseq()
         info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
         return DataArrayAnalyzer(info, fileobj)
     
-    def get_affine(self, reco_id:int|None = None, 
-                   subj_type:str|None = None, subj_position:str|None = None):
+    def get_affine(self, reco_id:Optional[int] = None, 
+                   subj_type:Optional[str] = None, subj_position:Optional[str] = None):
         return self.get_affine_info(reco_id).get_affine(subj_type, subj_position)
     
-    def get_dataarray(self, reco_id: int|None = None):
+    def get_dataarray(self, reco_id: Optional[int] = None):
         return self.get_data_info(reco_id).get_dataarray()
     
     def retrieve_pvscan(self):

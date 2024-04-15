@@ -3,7 +3,7 @@ from brkraw.api import helper
 from .base import BaseAnalyzer
 import numpy as np
 from copy import copy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from ..brkobj.scan import ScanInfo
 
@@ -42,7 +42,7 @@ class AffineAnalyzer(BaseAnalyzer):
         self.subj_type = infoobj.orientation['subject_type'] if hasattr(infoobj, 'orientation') else None
         self.subj_position = infoobj.orientation['subject_position'] if hasattr(infoobj, 'orientation') else None
         
-    def get_affine(self, subj_type:str|None=None, subj_position:str|None=None):
+    def get_affine(self, subj_type: Optional[str] = None, subj_position: Optional[str] = None):
         subj_type = subj_type or self.subj_type
         subj_position = subj_position or self.subj_position
         if isinstance(self.affine, list):
@@ -51,7 +51,7 @@ class AffineAnalyzer(BaseAnalyzer):
             affine = self._correct_orientation(self.affine, subj_position, subj_type)
         return affine
             
-    def _calculate_affine(self, infoobj: 'ScanInfo', slicepack_id:int|None = None):
+    def _calculate_affine(self, infoobj: 'ScanInfo', slicepack_id: Optional[int] = None):
         sidx = infoobj.orientation['orientation_desc'][slicepack_id].index(2) \
             if slicepack_id else infoobj.orientation['orientation_desc'].index(2)
         slice_orient = SLICEORIENT[sidx]

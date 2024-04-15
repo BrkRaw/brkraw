@@ -2,7 +2,7 @@ from __future__ import annotations
 from .base import BaseAnalyzer
 import numpy as np
 from copy import copy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
     from ..brkobj import ScanInfo
     from io import BufferedReader
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class DataArrayAnalyzer(BaseAnalyzer):
-    def __init__(self, infoobj: 'ScanInfo', fileobj: BufferedReader|ZipExtFile):
+    def __init__(self, infoobj: 'ScanInfo', fileobj: Union[BufferedReader, ZipExtFile]):
         infoobj = copy(infoobj)
         self._parse_info(infoobj)
         self.buffer = fileobj
