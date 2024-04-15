@@ -12,3 +12,6 @@ build
 *.egg-info/*
 .DS_Store
 tests/tutorials
+_test*.py
+_*.ipynb
+_*.log

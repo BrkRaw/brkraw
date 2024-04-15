@@ -1,7 +1,7 @@
 from .lib import *
 
 __version__ = '0.3.11'
-__all__ = ['BrukerLoader', '__version__']
+__all__ = ['BrukerLoader', '__version__', 'config']
 
 
 def load(path):
