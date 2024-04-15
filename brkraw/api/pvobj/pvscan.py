@@ -1,5 +1,7 @@
+from __future__ import annotations
 import os
 from collections import OrderedDict
+from typing import Optional
 from .base import BaseMethods
 from .pvreco import PvReco
 
@@ -22,7 +24,7 @@ class PvScan(BaseMethods):
         avail (list): A list of available items.
         contents (dict): A dictionary of pvscan contents.
     """
-    def __init__(self, scan_id: int|None, pathes, contents=None, recos=None):
+    def __init__(self, scan_id: Optional[int], pathes, contents=None, recos=None):
         """
         Initialize a Dataset object.
 

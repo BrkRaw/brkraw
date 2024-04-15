@@ -1,8 +1,10 @@
+from __future__ import annotations
 import os
 import zipfile
 from collections import OrderedDict
 from collections import defaultdict
 from .parameters import Parameter
+from typing import Optional
 
 class BaseMethods:
     """
@@ -163,7 +165,7 @@ class BaseMethods:
     def contents(self):
         return self._contents
 
-    def get_fid(self, scan_id:int|None = None):
+    def get_fid(self, scan_id:Optional[int] = None):
         try:
             pvobj = self.get_scan(scan_id) if hasattr(self, 'get_scan') else self
         except KeyError:
@@ -175,7 +177,7 @@ class BaseMethods:
         raise FileNotFoundError(f"The required file '{' or '.join(fid_files)}' does not exist. "
                                 "Please check the dataset and ensure the file is in the expected location.")
     
-    def get_2dseq(self, scan_id:int|None = None, reco_id:int|None = None):
+    def get_2dseq(self, scan_id:Optional[int] = None, reco_id:Optional[int] = None):
         try:
             if scan_id and hasattr(self, 'get_scan'):
                 pvobj = self.get_scan(scan_id).get_reco(reco_id)
