@@ -73,7 +73,7 @@ class Reconstruction:
 
         else:
             # METAdata Versions Before 360        
-            self.NRecs = self.acqp['ACQ_ReceiverSelect'].count('Yes') if self.acqp['ACQ_ReceiverSelect'] != None else 1
+            self.NRecs = self.acqp.get('ACQ_ReceiverSelect').count('Yes') if self.acqp.get('ACQ_ReceiverSelect') != None else 1
             ACQ_size = self.acqp['ACQ_size'] if isinstance(self.acqp['ACQ_size'],int) else self.acqp['ACQ_size']
             scanSize = ACQ_size[0]
             if self.acqp['GO_block_size'] == 'Standard_KBlock_Format':
