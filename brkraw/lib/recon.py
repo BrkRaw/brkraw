@@ -199,7 +199,7 @@ class Reconstruction:
             return kspace # zero padded kspace
         
         # Always FT and correct Phase
-        image = np.fft.fftshift(np.fft.ifftn(kspace, axes=(0,1,2)))
+        image = np.fft.fftshift(np.fft.ifftn(kspace, axes=(0,1,2)), axes=(0,1,2))
         image *= np.tile(phase_corr(image)[:,:,:,np.newaxis,np.newaxis,np.newaxis],
                                           [1,1,1,self.NRecs,self.NI,self.NR])
         if rms:
