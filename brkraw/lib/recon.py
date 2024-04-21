@@ -82,7 +82,7 @@ class Reconstruction:
                 blocksize = int(ACQ_size[0]*self.NRecs)
 
             # CHECK SIZE
-            if fid.size != blocksize*np.prod(ACQ_size[1:])*self.self.NI*self.self.NR:
+            if fid.size != blocksize*np.prod(ACQ_size[1:])*self.NI*self.NR:
                 raise ValueError('Error FID size dont match')
 
             # Convert to Complex
