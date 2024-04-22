@@ -5,8 +5,8 @@
  in recon.py
 """
 
-from .utils import get_value
 import numpy as np
+import warnings
     
 def phase_rotate(frame, RECO_rotate, framenumber):
     
@@ -41,7 +41,8 @@ def zero_filling(frame, RECO_ft_size, signal_position=np.array([0.5,0.5,0.5])):
     not_Equal = any([(i != j) for i,j in zip(frame.shape,RECO_ft_size)])
     if not_Equal:
         if any(signal_position > 1) or any(signal_position < 0):
-            raise ValueError('signal_position has to be a vector between 0 and 1')
+            warnings.warn('Signal needs to be between 0 and 1\nDefaulting to 0.5')
+            signal_position=np.array([0.5,0.5,0.5])
 
         # calculate additional variables
         dims = (frame.shape[0], frame.shape[1], frame.shape[2])
