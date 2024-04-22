@@ -24,6 +24,21 @@ import warnings
 SUPPORTED_PROTOCOLS = ['rare','localizer' ,'gre', 'msme',      
                        'mge','dess', 'fisp', 'flash']
 
+def reconstruction(scanobj,process='image', **kwargs):
+    # Ensure Scans are Image Based
+    ACQ_dim_desc = [scanobj.acqp.get('ACQ_dim_desc')] if isinstance(scanobj.acqp.get('ACQ_dim_desc'), str) else scanobj.acqp.get('ACQ_dim_desc')
+    if 'Spectroscopic' in ACQ_dim_desc:
+        warnings.warn('Scan is spectroscopic')
+        process = 'readout' 
+    
+    # Reconstruction Processing
+    recoObj = Reconstruction(scanobj)
+    if process == 'readout':
+        return recoObj.sort_fid()
+    elif process == 'kspace':
+        return recoObj.process_kspace()
+    return recoObj.reconstruct(rms=kwargs['rms'] if 'rms' in kwargs.keys() else True) 
+
 class Reconstruction:
     def __init__(self, scanobj:'ScanObj', reco_id:'int'=1) -> None: 
         self.acqp       = scanobj.acqp
@@ -177,9 +192,9 @@ class Reconstruction:
                                                               map_index[(NI+1)*(NR+1)-1])[:,:,:,np.newaxis],
                                                  [1,1,1,self.NRecs])
         
-        # Zeropad KSPACE
-        newdata_dims=[1, 1, 1]
+        # Zeropad KSPACE 
         RECO_ft_size = self.reco.get('RECO_ft_size')
+        newdata_dims=[1, 1, 1]
         newdata_dims[0:len(RECO_ft_size)] = RECO_ft_size
         newdata = np.zeros(shape=newdata_dims+[self.NRecs, self.NI, self.NR], dtype=complex)
         for NR in range(self.NR):
@@ -206,17 +221,3 @@ class Reconstruction:
             image = np.sqrt(np.mean(np.square(np.abs(image)), axis=3))
         return image
     
-def reconstruction(scanobj,process='image', **kwargs):
-    # Ensure Scans are Image Based
-    ACQ_dim_desc = [scanobj.acqp.get('ACQ_dim_desc')] if isinstance(scanobj.acqp.get('ACQ_dim_desc'), str) else scanobj.acqp.get('ACQ_dim_desc')
-    if 'Spectroscopic' in ACQ_dim_desc:
-        warnings.warn('Scan is spectroscopic')
-        process = 'readout' 
-    
-    # Reconstruction Processing
-    recoObj = Reconstruction(scanobj)
-    if process == 'readout':
-        return recoObj.sort_fid()
-    elif process == 'kspace':
-        return recoObj.process_kspace()
-    return recoObj.reconstruct(rms=kwargs['rms'] if 'rms' in kwargs.keys() else True) 
