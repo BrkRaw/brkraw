@@ -71,16 +71,6 @@ class SlicePack(BaseHelper):
                 num_slices_each_pack = [int(shape[slice_fid]/num_slice_packs) for _ in range(num_slice_packs)]
             else:
                 num_slices_each_pack = [shape[slice_fid]]
-
-        slice_fg = [fg for fg in fg_info['id'] if 'slice' in fg.lower()]
-        if len(slice_fg):
-            if num_slice_packs > 1:
-                num_slices_each_pack.extend(
-                    int(shape[0] / num_slice_packs)
-                    for _ in range(num_slice_packs)
-                )
-            else:
-                num_slices_each_pack.append(shape[0])
         slice_distances_each_pack = [visu_pars["VisuCoreFrameThickness"] for _ in range(num_slice_packs)]
         return num_slice_packs, num_slices_each_pack, slice_distances_each_pack
     
