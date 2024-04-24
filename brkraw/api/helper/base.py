@@ -1,6 +1,17 @@
 import warnings
 from functools import partial
 
+WORDTYPE = \
+    dict(_32BIT_SGN_INT     = 'i',
+         _16BIT_SGN_INT     = 'h',
+         _8BIT_UNSGN_INT    = 'B',
+         _32BIT_FLOAT       = 'f')
+    
+BYTEORDER = \
+    dict(littleEndian       = '<',
+         bigEndian          = '>')
+
+
 def is_all_element_same(listobj):
     if listobj is None:
         return True

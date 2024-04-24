@@ -18,9 +18,9 @@ class DataArrayAnalyzer(BaseAnalyzer):
     def _parse_info(self, infoobj: 'ScanInfo'):
         if not hasattr(infoobj, 'dataarray'):
             raise AttributeError
-        self.slope = infoobj.dataarray['2dseq_slope']
-        self.offset = infoobj.dataarray['2dseq_offset']
-        self.dtype = infoobj.dataarray['2dseq_dtype']
+        self.slope = infoobj.dataarray['slope']
+        self.offset = infoobj.dataarray['offset']
+        self.dtype = infoobj.dataarray['dtype']
         self.shape = infoobj.image['shape'][:]
         self.shape_desc = infoobj.image['dim_desc'][:]
         if infoobj.frame_group and infoobj.frame_group['type']:

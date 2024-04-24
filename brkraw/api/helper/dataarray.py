@@ -1,20 +1,9 @@
 from __future__ import annotations
 import numpy as np
 from typing import TYPE_CHECKING
-from .base import BaseHelper, is_all_element_same
+from .base import BaseHelper, is_all_element_same, BYTEORDER, WORDTYPE
 if TYPE_CHECKING:
     from ..analyzer import ScanInfoAnalyzer
-
-
-WORDTYPE = \
-    dict(_32BIT_SGN_INT     = 'i',
-         _16BIT_SGN_INT     = 'h',
-         _8BIT_UNSGN_INT    = 'B',
-         _32BIT_FLOAT       = 'f')
-    
-BYTEORDER = \
-    dict(littleEndian       = '<',
-         bigEndian          = '>')
 
 
 class DataArray(BaseHelper):
@@ -29,17 +18,8 @@ class DataArray(BaseHelper):
     """
     def __init__(self, analobj: 'ScanInfoAnalyzer'):
         super().__init__()
-        acqp = analobj.acqp
         visu_pars = analobj.visu_pars
         
-        if acqp:
-            fid_word_type = f'_{"".join(acqp["ACQ_word_size"].split("_"))}_SGN_INT'
-            fid_byte_order = f'{acqp["BYTORDA"]}Endian'
-            self.fid_dtype = np.dtype(f'{BYTEORDER[fid_byte_order]}{WORDTYPE[fid_word_type]}')
-        else:
-            self.fid_dtype = None
-            self._warn("Failed to fetch 'fid_dtype' information because the 'acqp' file is missing from 'analobj'.")
-            
         byte_order = visu_pars["VisuCoreByteOrder"]
         word_type = visu_pars["VisuCoreWordType"]
         self.data_dtype = np.dtype(f'{BYTEORDER[byte_order]}{WORDTYPE[word_type]}')
@@ -53,13 +33,13 @@ class DataArray(BaseHelper):
             
         if isinstance(self.data_slope, list) or isinstance(self.data_offset, list):
             self._warn("Data slope and data offset values are unusual. "
-                       "They are expected to be either a list containing the same elements or a single float value.")
+                    "They are expected to be either a list containing the same elements or a single float value.")
+
 
     def get_info(self):
         return {
-            'fid_dtype': self.fid_dtype,
-            '2dseq_dtype': self.data_dtype,
-            '2dseq_slope': self.data_slope,
-            '2dseq_offset': self.data_offset,
+            'dtype': self.data_dtype,
+            'slope': self.data_slope,
+            'offset': self.data_offset,
             'warns': self.warns
         }
