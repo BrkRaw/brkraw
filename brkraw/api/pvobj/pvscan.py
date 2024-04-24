@@ -1,9 +1,11 @@
 from __future__ import annotations
 import os
 from collections import OrderedDict
-from typing import Optional
+from typing import Optional, Tuple, Dict, TYPE_CHECKING
 from .base import BaseMethods
 from .pvreco import PvReco
+if TYPE_CHECKING:
+    from pathlib import Path
 
 class PvScan(BaseMethods):
     """
@@ -24,14 +26,18 @@ class PvScan(BaseMethods):
         avail (list): A list of available items.
         contents (dict): A dictionary of pvscan contents.
     """
-    def __init__(self, scan_id: Optional[int], pathes, contents=None, recos=None):
+    def __init__(self, 
+                 scan_id: Optional[int], 
+                 pathes: Tuple[Path, Path], 
+                 contents: Optional[Dict]=None, 
+                 recos: Optional[OrderedDict]=None):
         """
         Initialize a Dataset object.
 
         Args:
             scan_id (int): The ID of the scan.
             pathes (tuple): A tuple containing the root path and the path.
-            contents (list, optional): The initial contents of the dataset. Defaults to None.
+            contents (dict, optional): The initial contents of the dataset. Defaults to None.
             recos (dict, optional): A dictionary of reco objects. Defaults to None.
 
         Attributes:
@@ -48,12 +54,12 @@ class PvScan(BaseMethods):
         self.update(contents)
         self._recos = OrderedDict(recos) if recos else OrderedDict()
     
-    def update(self, contents):
+    def update(self, contents: Dict):
         """
         Update the contents of the dataset.
 
         Args:
-            contents (list): The new contents of the dataset.
+            contents (dict): The new contents of the dataset.
 
         Returns:
             None
@@ -62,7 +68,7 @@ class PvScan(BaseMethods):
             self.is_compressed = True if contents.get('file_indexes') else False
         self._contents = contents
     
-    def set_reco(self, path, reco_id, contents):
+    def set_reco(self, path: Path, reco_id: int, contents: Dict):
         """
         Set a reco object with the specified path, ID, and contents.
 
@@ -76,7 +82,7 @@ class PvScan(BaseMethods):
         """
         self._recos[reco_id] = PvReco(self._scan_id, reco_id, (self._rootpath, path), contents)
     
-    def get_reco(self, reco_id):
+    def get_reco(self, reco_id: int):
         """
         Get a specific reco object by ID.
 
@@ -91,7 +97,7 @@ class PvScan(BaseMethods):
         """
         return self._recos[reco_id]
 
-    def get_visu_pars(self, reco_id=None):
+    def get_visu_pars(self, reco_id: Optional[int] = None):
         if reco_id:
             return getattr(self.get_reco(reco_id), 'visu_pars')
         elif 'visu_pars' in self.contents['files']:

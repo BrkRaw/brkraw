@@ -171,7 +171,7 @@ class BaseMethods:
         except KeyError:
             raise TypeError("Missing required argument: 'scan_id must be provided for {self.__class__.__name__}.")
         fid_files = ['fid', 'rawdata.job0']
-        for fid in ['fid', 'rawdata.job0']:
+        for fid in fid_files:
             if fid in pvobj.contents['files']:
                 return getattr(pvobj, fid)
         raise FileNotFoundError(f"The required file '{' or '.join(fid_files)}' does not exist. "
