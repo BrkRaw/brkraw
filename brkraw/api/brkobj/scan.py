@@ -31,7 +31,7 @@ class ScanObj(PvScan):
     def set_info(self):
         self.info = self.get_info(self.reco_id)
                 
-    def get_info(self, reco_id:int, get_analyzer:bool = False):
+    def get_info(self, reco_id:Optional[int] = None, get_analyzer:bool = False):
         infoobj = ScanInfo()
         pvscan = self.retrieve_pvscan()
         analysed = ScanInfoAnalyzer(pvscan, reco_id, self.is_debug)

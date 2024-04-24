@@ -245,6 +245,7 @@ class Orientation(BaseHelper):
     def _get_gradient_encoding_dir(cls, visu_pars):
         if visu_pars["VisuVersion"] != 1:
             return visu_pars["VisuAcqGradEncoding"]
+        # routine for PV version < 6
         phase_enc = visu_pars["VisuAcqImagePhaseEncDir"]
         phase_enc = phase_enc[0] if is_all_element_same(phase_enc) else phase_enc
         return (

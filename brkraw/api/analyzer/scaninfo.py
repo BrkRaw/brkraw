@@ -25,6 +25,7 @@ class ScanInfoAnalyzer(BaseAnalyzer):
         self._set_pars(pvobj, reco_id)
         if not debug:
             self.info_protocol = helper.Protocol(self).get_info()
+            self.info_fid = helper.FID(self).get_info()
             if self.visu_pars:
                 self._parse_info()
     
