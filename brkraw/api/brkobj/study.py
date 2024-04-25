@@ -38,8 +38,7 @@ class StudyObj(PvDataset):
         if header := self.header:
             info['header'] = header
         for scan_id in self.avail:
-            info['scans'][scan_id] = {}
             scanobj = self.get_scan(scan_id)
-            for reco_id in scanobj.avail:
-                info['scans'][scan_id][reco_id] = scanobj.get_info(reco_id).vars()
+            info['scans'][scan_id] = scanobj.info.vars()
+            info['scans'][scan_id]['recos'] = scanobj.avail # TODO: update reco
         return info
