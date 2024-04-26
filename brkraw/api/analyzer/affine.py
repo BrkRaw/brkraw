@@ -5,7 +5,7 @@ import numpy as np
 from copy import copy
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
-    from ..brkobj.scan import ScanInfo
+    from ..data.scan import ScanInfo
 
 
 SLICEORIENT = {

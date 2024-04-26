@@ -3,7 +3,7 @@ import warnings
 from nibabel.nifti1 import Nifti1Header
 from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
-    from brkraw.api.brkobj import ScanInfo
+    from brkraw.api.data import ScanInfo
     from .base import ScaleMode
 
 
@@ -18,8 +18,7 @@ class Header:
         self._set_time_step()
         
     def _set_sliceorder(self):
-        self.info.slicepack
-        slice_order_scheme = self.info.method.get("PVM_ObjOrderScheme")
+        slice_order_scheme = self.info.slicepack['slice_order_scheme']
         if slice_order_scheme == 'User_defined_slice_scheme' or slice_order_scheme:
             slice_code = 0
         elif slice_order_scheme == 'Sequential':

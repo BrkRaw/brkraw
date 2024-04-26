@@ -4,7 +4,7 @@ import numpy as np
 from copy import copy
 from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
-    from ..brkobj import ScanInfo
+    from ..data import ScanInfo
     from io import BufferedReader
     from zipfile import ZipExtFile
 
@@ -33,3 +33,4 @@ class DataArrayAnalyzer(BaseAnalyzer):
     def get_dataarray(self):
         self.buffer.seek(0)
         return np.frombuffer(self.buffer.read(), self.dtype).reshape(self.shape, order='F')
+

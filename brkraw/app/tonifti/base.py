@@ -4,12 +4,13 @@ import warnings
 import numpy as np
 from io import BufferedReader
 from zipfile import ZipExtFile
-from brkraw.api.brkobj import ScanObj, ScanInfo
+from brkraw.api.data import Scan, ScanInfo
 from brkraw.api.analyzer import ScanInfoAnalyzer, DataArrayAnalyzer, AffineAnalyzer
 from .header import Header
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Optional, Union
     
     
 XYZT_UNITS = \
@@ -45,7 +46,7 @@ class BaseMethods:
         self.analysed = analysed
     
     @staticmethod
-    def get_dataobj(scanobj:Union['ScanInfo','ScanObj'], 
+    def get_dataobj(scanobj:Union['ScanInfo','Scan'], 
                     fileobj:Union['BufferedReader', 'ZipExtFile', None] = None, 
                     reco_id:Optional[int] = None,
                     scale_correction:bool = False):
@@ -62,17 +63,17 @@ class BaseMethods:
         return dataobj
     
     @staticmethod
-    def get_affine(scanobj:Union['ScanInfo', 'ScanObj'], reco_id:Optional[int] = None, 
+    def get_affine(scanobj:Union['ScanInfo', 'Scan'], reco_id:Optional[int] = None, 
                    subj_type:Optional[str]=None, subj_position:Optional[str]=None):
         return BaseMethods.get_affine_dict(scanobj, reco_id, subj_type, subj_position)['affine']
     
     @staticmethod
-    def get_data_dict(scanobj:Union['ScanInfo', 'ScanObj'], 
+    def get_data_dict(scanobj:Union['ScanInfo', 'Scan'], 
                       fileobj:Union['BufferedReader', 'ZipExtFile'] = None, 
                       reco_id:Optional[int] = None):
-        if isinstance(scanobj, ScanObj):
+        if isinstance(scanobj, Scan):
             data_info = scanobj.get_data_info(reco_id)
-        elif isinstance(scanobj, ScanInfo) and isinstance(scanobj, Union[BufferedReader, ZipExtFile]):
+        elif isinstance(scanobj, ScanInfo) and isinstance(fileobj, Union[BufferedReader, ZipExtFile]):
             data_info = DataArrayAnalyzer(scanobj, fileobj)
         else:
             raise TypeError(
@@ -94,9 +95,9 @@ class BaseMethods:
         }
     
     @staticmethod
-    def get_affine_dict(scanobj:Union['ScanInfo','ScanObj'], reco_id:Optional[int] = None,
+    def get_affine_dict(scanobj:Union['ScanInfo','Scan'], reco_id:Optional[int] = None,
                         subj_type:Optional[str] = None, subj_position:Optional[str] = None):
-        if isinstance(scanobj, ScanObj):
+        if isinstance(scanobj, Scan):
             affine_info = scanobj.get_affine_info(reco_id)
         elif isinstance(scanobj, ScanInfo):
             affine_info = AffineAnalyzer(scanobj)
@@ -114,25 +115,6 @@ class BaseMethods:
             "subj_type": subj_type,
             "subj_position": subj_position
         }
-    
-    @staticmethod
-    def get_bdata(analobj:'ScanInfoAnalyzer'):
-        """Extract, format, and return diffusion bval and bvec"""
-        bvals = np.array(analobj.method.get('PVM_DwEffBval'))
-        bvecs = np.array(analobj.method.get('PVM_DwGradVec').T)
-        # Correct for single b-vals
-        if np.size(bvals) < 2:
-            bvals = np.array([bvals])
-        # Normalize bvecs
-        bvecs_axis = 0
-        bvecs_L2_norm = np.atleast_1d(np.linalg.norm(bvecs, 2, bvecs_axis))
-        bvecs_L2_norm[bvecs_L2_norm < 1e-15] = 1
-        bvecs = bvecs / np.expand_dims(bvecs_L2_norm, bvecs_axis)
-        return bvals, bvecs
-    
-    @staticmethod
-    def get_bids_metadata(scaninfo:'ScanInfo', bids_recipe:Optional['Path']=None):
-        print(isinstance(scaninfo, ScanInfo), bids_recipe)
         
     @staticmethod
     def get_nifti1header(scaninfo:'ScanInfo', scale_mode:Optional['ScaleMode']=None):

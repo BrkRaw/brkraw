@@ -1,13 +1,13 @@
 from __future__ import annotations
 import numpy as np
 from typing import TYPE_CHECKING
-from .base import BaseHelper, is_all_element_same, BYTEORDER, WORDTYPE
+from .base import BaseHelper, BYTEORDER, WORDTYPE
 if TYPE_CHECKING:
     from ..analyzer import ScanInfoAnalyzer
 
 
 class FID(BaseHelper):
-    """requires visu_pars and aqcp to pars parameter related to the dtype of binary files
+    """requires visu_pars and aqcp to parse parameter related to the dtype of binary files
 
     Dependencies:
         acqp

@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Dict
 from ..pvobj import PvDataset
-from .scan import ScanObj
+from .scan import Scan
 
-class StudyObj(PvDataset):
+class Study(PvDataset):
     def __init__(self, path):
         super().__init__(path)
         self._parse_header()
@@ -13,8 +13,8 @@ class StudyObj(PvDataset):
         Get a scan object by scan ID.
         """
         pvscan = super().get_scan(scan_id)
-        return ScanObj(pvscan=pvscan, reco_id=reco_id, 
-                       loader_address=id(self), debug=debug)
+        return Scan(pvobj=pvscan, reco_id=reco_id, 
+                    loader_address=id(self), debug=debug)
     
     def _parse_header(self):
         if not self.contents or 'subject' not in self.contents['files']:

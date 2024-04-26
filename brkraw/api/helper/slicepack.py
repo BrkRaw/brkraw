@@ -12,6 +12,7 @@ class SlicePack(BaseHelper):
     Dependencies:
         FrameGroup
         Image
+        method
         visu_pars
 
     Args:
@@ -19,6 +20,7 @@ class SlicePack(BaseHelper):
     """
     def __init__(self, analobj: 'ScanInfoAnalyzer'):
         super().__init__()
+        method = analobj.method
         visu_pars = analobj.visu_pars
         
         fg_info = analobj.get("info_frame_group") or FrameGroup(analobj).get_info()
@@ -45,6 +47,7 @@ class SlicePack(BaseHelper):
         self.num_slice_packs = num_slice_packs
         self.num_slices_each_pack = num_slices_each_pack
         self.slice_distances_each_pack = slice_distances_each_pack
+        self.slice_order_scheme = method.get("PVM_ObjOrderScheme")
         
         disk_slice_order = visu_pars.get("VisuCoreDiskSliceOrder") or 'normal'
         self.is_reverse = 'reverse' in disk_slice_order
@@ -109,6 +112,7 @@ class SlicePack(BaseHelper):
             'num_slices_each_pack': self.num_slices_each_pack,
             'slice_distances_each_pack': self.slice_distances_each_pack,
             'slice_distance_unit': 'mm',
+            'slice_order_scheme': self.slice_order_scheme,
             'reverse_slice_order': self.is_reverse,
             'warns': self.warns
         }       

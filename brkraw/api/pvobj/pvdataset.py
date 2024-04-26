@@ -76,7 +76,7 @@ class PvDataset(BaseMethods):
         else:
             raise ValueError(f"The path '{self._path}' does not meet the required criteria.")
     
-    def _construct(self):    # sourcery skip: low-code-quality
+    def _construct(self):
         """
         Constructs the object by organizing the contents.
 

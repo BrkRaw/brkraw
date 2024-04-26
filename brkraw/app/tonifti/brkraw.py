@@ -1,12 +1,12 @@
 from __future__ import annotations
-from brkraw.api.brkobj import StudyObj
+from brkraw.api.data import Study
 from .base import BaseMethods, ScaleMode
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class BrkrawToNifti(StudyObj, BaseMethods):
+class BrkrawToNifti(Study, BaseMethods):
     def __init__(self, path:'Path', scale_mode: Optional['ScaleMode'] = None):
         """_summary_
 
@@ -121,30 +121,3 @@ class BrkrawToNifti(StudyObj, BaseMethods):
         scale_mode = scale_mode or self.scale_mode
         scaninfo = self.get_scan(scan_id).get_info(reco_id)
         return super().get_nifti1header(scaninfo, scale_mode).get()
-    
-    def get_bdata(self, scan_id:int):
-        """_summary_
-
-        Args:
-            scan_id (int): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        analobj = self.get_scan_analyzer(scan_id)
-        return super().get_bdata(analobj)
-
-    def get_bids_metadata(self, scan_id:int, reco_id:Optional[int]=None, bids_recipe=None):
-        """_summary_
-
-        Args:
-            scan_id (int): _description_
-            reco_id (int , None, optional): _description_. Defaults to None.
-            bids_recipe (_type_, optional): _description_. Defaults to None.
-
-        Returns:
-            _type_: _description_
-        """
-        analobj = self.get_scan_analyzer(scan_id, reco_id)
-        return super().get_bids_metadata(analobj, bids_recipe)    
-    

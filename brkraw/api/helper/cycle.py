@@ -1,6 +1,5 @@
 from __future__ import annotations
 import re
-import numpy as np
 from typing import TYPE_CHECKING
 from .base import BaseHelper
 from .frame_group import FrameGroup
