@@ -25,9 +25,8 @@ class FID(BaseHelper):
             byte_order = f'{acqp["BYTORDA"]}Endian'
             self.dtype = np.dtype(f'{BYTEORDER[byte_order]}{WORDTYPE[word_type]}')
         else:
-            self.fid_dtype = None
+            self.dtype = None
             self._warn("Failed to fetch 'fid_dtype' information because the 'acqp' file is missing from 'analobj'.")
-
 
     def get_info(self):
         return {

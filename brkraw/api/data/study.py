@@ -2,9 +2,10 @@ from __future__ import annotations
 from typing import Dict
 from ..pvobj import PvDataset
 from .scan import Scan
+from pathlib import Path
 
 class Study(PvDataset):
-    def __init__(self, path):
+    def __init__(self, path: Path):
         super().__init__(path)
         self._parse_header()
         
@@ -14,7 +15,7 @@ class Study(PvDataset):
         """
         pvscan = super().get_scan(scan_id)
         return Scan(pvobj=pvscan, reco_id=reco_id, 
-                    loader_address=id(self), debug=debug)
+                    study_address=id(self), debug=debug)
     
     def _parse_header(self):
         if not self.contents or 'subject' not in self.contents['files']:
@@ -30,15 +31,17 @@ class Study(PvDataset):
     def avail(self):
         return super().avail
 
-    @property
+    @property #TODO
     def info(self):
         """output all analyzed information"""
         info = {'header': None,
                 'scans': {}}
         if header := self.header:
             info['header'] = header
-        for scan_id in self.avail:
-            scanobj = self.get_scan(scan_id)
-            info['scans'][scan_id] = scanobj.info.vars()
-            info['scans'][scan_id]['recos'] = scanobj.avail # TODO: update reco
+        # for scan_id in self.avail:
+        #     scanobj = self.get_scan(scan_id)
+        #     info['scans'][scan_id] = {'protocol_name': scanobj.info.protocol['protocol_name'],
+        #                               'recos': {}}
+        #     for reco_id in scanobj.avail:
+        #         info['scans'][scan_id]['recos'][reco_id] = scanobj.get_info(reco_id).frame_group
         return info

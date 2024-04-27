@@ -3,8 +3,10 @@ import os
 import zipfile
 from collections import OrderedDict
 from collections import defaultdict
-from .parameters import Parameter
 from typing import Optional
+from pathlib import Path
+from .parameters import Parameter
+
 
 class BaseMethods:
     """
@@ -27,7 +29,7 @@ class BaseMethods:
     _contents = None
     
     @staticmethod
-    def _fetch_dir(path):
+    def _fetch_dir(path: 'Path'):
         """Searches for directories and files in a given directory and returns the directory structure.
 
         Args:
@@ -41,7 +43,7 @@ class BaseMethods:
                 - 'file_indexes': An empty list.
         """
         contents = OrderedDict()
-        abspath = os.path.abspath(path)
+        abspath = path.absolute()
         for dirpath, dirnames, filenames in os.walk(abspath):
             normalized_dirpath = os.path.normpath(dirpath)
             relative_path = os.path.relpath(normalized_dirpath, abspath)
@@ -49,7 +51,7 @@ class BaseMethods:
         return contents
     
     @staticmethod
-    def _fetch_zip(path):
+    def _fetch_zip(path: 'Path'):
         """Searches for files in a zip file and returns the directory structure and file information.
 
         Args:
@@ -199,7 +201,6 @@ class BaseMethods:
             raise FileNotFoundError("The required file '2dseq' does not exist. "
                                     "Please check the dataset and ensure the file is in the expected location.")
         
-
     @staticmethod
     def _is_binary(fileobj, bytes=512):
         block = fileobj.read(bytes)

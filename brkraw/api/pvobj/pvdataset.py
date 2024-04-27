@@ -1,7 +1,7 @@
-import os
 import re
 import zipfile
 from collections import OrderedDict
+from pathlib import Path
 from .base import BaseMethods
 from .pvscan import PvScan
 
@@ -23,7 +23,7 @@ class PvDataset(BaseMethods):
         avail (list): A list of available scans.
         contents (dict): A dictionary of pvdataset contents.
     """
-    def __init__(self, path, debug=False):
+    def __init__(self, path: Path, debug: bool=False):
         """
         Initialize the object with the given path and optional debug flag.
 
@@ -47,7 +47,7 @@ class PvDataset(BaseMethods):
             self._construct()
     
     # internal method
-    def _check_dataset_validity(self, path):
+    def _check_dataset_validity(self, path: Path):
         """
         Checks the validity of a given dataset path.
 
@@ -64,13 +64,14 @@ class PvDataset(BaseMethods):
         Returns:
             None
         """
-        self._path = os.path.abspath(path)
-        if not os.path.exists(self._path):
+        path = Path(path) if isinstance(path, str) else path
+        self._path = path.absolute()
+        if not self._path.exists():
             raise FileNotFoundError(f"The path '{self._path}' does not exist.")
-        if os.path.isdir(self._path):
+        if self._path.is_dir():
             self._contents = self._fetch_dir(self._path)
             self.is_compressed = False
-        elif os.path.isfile(self._path) and zipfile.is_zipfile(self._path):
+        elif self._path.is_file() and zipfile.is_zipfile(self._path):
             self._contents = self._fetch_zip(self._path)
             self.is_compressed = True
         else:

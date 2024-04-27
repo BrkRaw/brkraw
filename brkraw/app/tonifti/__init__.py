@@ -4,14 +4,6 @@ dependency:
 """
 import argparse
 from brkraw import __version__
-from .loader import Loader
-
-__all__ = [Loader]
-
-def load(*args, **kwargs):
-    """Load data in Facade design pattern
-    """
-    Loader()
 
 def main():
     """main script allows convert brkraw

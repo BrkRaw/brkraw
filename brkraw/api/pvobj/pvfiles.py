@@ -1,8 +1,9 @@
 import os
 from .base import BaseMethods
+from pathlib import Path
 
 class PvFiles(BaseMethods):
-    def __init__(self, *files):
+    def __init__(self, *files: Path):
         """_summary_
 
         Args:
@@ -11,7 +12,7 @@ class PvFiles(BaseMethods):
         """
         self.update(*files)
     
-    def update(self, *files):
+    def update(self, *files: Path):
         self._path = [os.path.abspath(f) for f in files if os.path.exists(f)]
         self._contents = {"files": [os.path.basename(f) for f in self._path],
                           "dirs": [],

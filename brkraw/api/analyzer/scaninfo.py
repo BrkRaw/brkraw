@@ -37,6 +37,12 @@ class ScanInfoAnalyzer(BaseAnalyzer):
                 vals = OrderedDict()
             setattr(self, p, vals)
         try:
+            fid_buffer = pvobj.get_fid()
+        except (FileNotFoundError, AttributeError):
+            fid_buffer = None
+        setattr(self, 'fid_buffer', fid_buffer)
+
+        try:
             visu_pars = pvobj.get_visu_pars(reco_id)
         except (FileNotFoundError, AttributeError):
             visu_pars = OrderedDict()

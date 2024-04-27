@@ -1,4 +1,4 @@
-from .brkobj import StudyObj
+from .data import Study
 from ..config import ConfigManager
 
-__all__ = [StudyObj, ConfigManager]
+__all__ = [Study, ConfigManager]

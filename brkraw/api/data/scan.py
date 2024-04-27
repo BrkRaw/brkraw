@@ -21,25 +21,25 @@ class Scan:
         pvobj (_type_): _description_
     """
     def __init__(self, pvobj: Union['PvScan', 'PvReco', 'PvFiles'], reco_id: Optional[int] = None,
-                 loader_address: Optional[int] = None, debug: bool=False):
+                 study_address: Optional[int] = None, debug: bool=False):
         self.reco_id = reco_id
-        self._loader_address = loader_address
+        self._study_address = study_address
         self._pvobj_address = id(pvobj)
         self.is_debug = debug
-        self._set_info()
+        self.set_scaninfo()
     
     def retrieve_pvobj(self):
         if self._pvobj_address:
             return ctypes.cast(self._pvobj_address, ctypes.py_object).value
     
-    def retrieve_loader(self):
-        if self._loader_address:
-            return ctypes.cast(self._loader_address, ctypes.py_object).value
+    def retrieve_study(self):
+        if self._study_address:
+            return ctypes.cast(self._study_address, ctypes.py_object).value
     
-    def _set_info(self):
-        self.info = self.get_info(self.reco_id)
+    def set_scaninfo(self):
+        self.info = self.get_scaninfo(self.reco_id)
                 
-    def get_info(self, reco_id:Optional[int] = None, get_analyzer:bool = False):
+    def get_scaninfo(self, reco_id:Optional[int] = None, get_analyzer:bool = False):
         infoobj = ScanInfo()
         pvobj = self.retrieve_pvobj()
         analysed = ScanInfoAnalyzer(pvobj, reco_id, self.is_debug)
@@ -56,28 +56,21 @@ class Scan:
     
     def get_affine_analyzer(self, reco_id:Optional[int] = None):
         if reco_id:
-            info = self.get_info(reco_id)
+            info = self.get_scaninfo(reco_id)
         else:
-            info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
+            info = self.info if hasattr(self, 'info') else self.get_scaninfo(self.reco_id)
         return AffineAnalyzer(info)
     
     def get_datarray_analyzer(self, reco_id: Optional[int] = None):
+        reco_id = reco_id if reco_id else self.reco_id
         pvobj = self.retrieve_pvobj()
-        if isinstance(pvobj, PvScan):
-            reco_id = reco_id or pvobj.avail[0]
-            recoobj = pvobj.get_reco(reco_id)
-            fileobj = recoobj.get_2dseq()
-        else:
-            fileobj = pvobj.get_2dseq()
-        info = self.info if hasattr(self, 'info') else self.get_info(self.reco_id)
+        fileobj = pvobj.get_2dseq(reco_id=reco_id)
+        info = self.info if hasattr(self, 'info') else self.get_scaninfo(reco_id)
         return DataArrayAnalyzer(info, fileobj)
     
-    def get_affine(self, reco_id:Optional[int] = None, 
-                   subj_type:Optional[str] = None, subj_position:Optional[str] = None):
-        return self.get_affine_analyzer(reco_id).get_affine(subj_type, subj_position)
-    
-    def get_dataarray(self, reco_id: Optional[int] = None):
-        return self.get_datarray_analyzer(reco_id).get_dataarray()
+    @property
+    def avail(self):
+        return self.pvobj.avail
     
     @property
     def pvobj(self):
