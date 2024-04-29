@@ -1,0 +1,50 @@
+name: sordino
+
+version: 24.4.27
+
+authors:
+- Sung-Ho Lee (shlee@unc.edu)
+
+license: MIT
+description: "This plugin converts SORDINO-MRI (acquired in radial trajectory) to NIfTI format."
+documentation_url: "https://github.com/sordino"
+
+app:
+  target: tonifti
+  src: sordino.py::Sordino
+
+dependencies:
+- numpy: ">=1.18"
+- scipy: ">=1.11.1"
+- sigpy: ">=0.1.26"
+
+script:
+  name: "sordino"
+  help: "plugin function for SORDINO-MRI reconstruction"
+  arguments:
+    - name: "-e"
+      long_name: "--extention"
+      help: "Extension factors for FOV regridding (LR AP SI)"
+      nargs: "+"
+      type: "list, int"
+      default: [1,1,1]
+    - name: "--offset"
+      help: "Index of offset frame (start point of reconstruction)"
+      type: "int"
+      default: null
+    - name: "--num-frames"
+      help: "Specify number of frames from offset."
+      type: "int"
+      default: null
+    - name: "--tmpdir"
+      help: "Specify number of frames from offset."
+      type: "int"
+      default: null
+    - name: "--spoketiming"
+      help: "apply spoke timing correction."
+      action: "store_true"
+      default: false
+    - name: "--mem-limit"
+      help: "set limit of memory size when loading data (in GB)."
+      type: "float"
+      default: 0.5
