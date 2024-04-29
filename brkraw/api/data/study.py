@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Dict
 from ..pvobj import PvDataset
 from .scan import Scan
 from pathlib import Path

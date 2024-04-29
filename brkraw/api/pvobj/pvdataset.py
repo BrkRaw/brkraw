@@ -65,7 +65,7 @@ class PvDataset(BaseMethods):
             None
         """
         path = Path(path) if isinstance(path, str) else path
-        self._path = path.absolute()
+        self._path: Path = path.absolute()
         if not self._path.exists():
             raise FileNotFoundError(f"The path '{self._path}' does not exist.")
         if self._path.is_dir():

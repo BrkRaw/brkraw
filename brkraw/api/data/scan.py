@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Optional, Union
 import ctypes
 from ..pvobj import PvScan, PvReco, PvFiles
+from ..pvobj.base import BaseBufferHandler
 from ..analyzer import ScanInfoAnalyzer, AffineAnalyzer, DataArrayAnalyzer, BaseAnalyzer
 
 
@@ -14,7 +15,7 @@ class ScanInfo(BaseAnalyzer):
         return len(self.warns)
     
 
-class Scan:
+class Scan(BaseBufferHandler):
     """The Scan class design to interface with analyzer, 
 
     Args:
@@ -36,8 +37,9 @@ class Scan:
         if self._study_address:
             return ctypes.cast(self._study_address, ctypes.py_object).value
     
-    def set_scaninfo(self):
-        self.info = self.get_scaninfo(self.reco_id)
+    def set_scaninfo(self, reco_id:Optional[int] = None):
+        reco_id = reco_id or self.reco_id
+        self.info = self.get_scaninfo(reco_id)
                 
     def get_scaninfo(self, reco_id:Optional[int] = None, get_analyzer:bool = False):
         infoobj = ScanInfo()
@@ -62,9 +64,10 @@ class Scan:
         return AffineAnalyzer(info)
     
     def get_datarray_analyzer(self, reco_id: Optional[int] = None):
-        reco_id = reco_id if reco_id else self.reco_id
+        reco_id = reco_id or self.reco_id
         pvobj = self.retrieve_pvobj()
         fileobj = pvobj.get_2dseq(reco_id=reco_id)
+        self._buffers.append
         info = self.info if hasattr(self, 'info') else self.get_scaninfo(reco_id)
         return DataArrayAnalyzer(info, fileobj)
     
