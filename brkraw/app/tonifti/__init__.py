@@ -2,8 +2,12 @@
 dependency:
     bids, plugin
 """
-import argparse
 from brkraw import __version__
+from .base import BasePlugin, PvScan, PvReco, PvFiles
+from .study import StudyToNifti, ScanToNifti
+import argparse
+
+__all__ = ['BasePlugin', 'StudyToNifti', 'ScanToNifti', 'PvScan', 'PvReco', 'PvFiles']
 
 def main():
     """main script allows convert brkraw
