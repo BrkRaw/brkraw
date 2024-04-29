@@ -23,6 +23,9 @@ class StudyToNifti(Study, BaseMethods):
                                                study_address=id(self))
         return self._cache[scan_id]
     
+    def get_scan_pvobj(self, scan_id:int, reco_id:Optional[int] = None):
+        return super().get_scan(scan_id).retrieve_pvobj()
+    
     def get_scan_analyzer(self, scan_id:int, reco_id:Optional[int]=None):
         return self.get_scan(scan_id).get_scaninfo(reco_id, get_analyzer=True)
     

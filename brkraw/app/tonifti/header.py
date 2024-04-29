@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 class Header:
     def __init__(self, scaninfo:'ScanInfo', scale_mode:Union['ScaleMode', int]):
         self.info = scaninfo
-        self.scale_mode = int(scale_mode)
+        self.scale_mode = int(scale_mode.value)
         self.nifti1header = Nifti1Header()
         self.nifti1header.default_x_flip = False
         self._set_scale_params()
@@ -42,7 +42,7 @@ class Header:
         self.nifti1header['slice_code'] = slice_code
     
     def _set_time_step(self):
-        if self.info.cycle['num_cycle'] > 1:
+        if self.info.cycle['num_cycles'] > 1:
             time_step = self.info.cycle['time_step']
             self.nifti1header['pixdim'][4] = time_step
             num_slices = self.info.slicepack['num_slices_each_pack'][0]
@@ -50,8 +50,8 @@ class Header:
             
     def _set_scale_params(self):
         if self.scale_mode == 2:
-            self.nifti1header['scl_slope'] = self.info.dataarray['2dseq_slope']
-            self.nifti1header['scl_inter'] = self.info.dataarray['2dseq_offset']
+            self.nifti1header['scl_slope'] = self.info.dataarray['slope']
+            self.nifti1header['scl_inter'] = self.info.dataarray['offset']
 
     def get(self):
         return self.nifti1header

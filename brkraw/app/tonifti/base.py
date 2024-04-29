@@ -3,12 +3,14 @@ import warnings
 import numpy as np
 import nibabel as nib
 from enum import Enum
-from typing import TYPE_CHECKING
+from pathlib import Path
 from .header import Header
-
+from brkraw.api.pvobj.base import BaseBufferHandler
+from brkraw.api.pvobj import PvScan, PvReco, PvFiles
+from brkraw.api.data import Scan
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Optional
-    from brkraw.api.data import Scan
+    from typing import Optional, Union
     from brkraw.api.plugin import Plugged
     
     
@@ -22,7 +24,7 @@ class ScaleMode(Enum):
     HEADER = 2
     
 
-class BaseMethods:
+class BaseMethods(BaseBufferHandler):
     def set_scale_mode(self, scale_mode:Optional[ScaleMode]=None):
         if scale_mode:
             self.scale_mode = scale_mode
@@ -95,13 +97,29 @@ class BaseMethods:
                         subj_type:Optional[str] = None, subj_position:Optional[str] = None,
                         plugin:Optional['Plugged']=None, plugin_kws:dict=None):
         if plugin and plugin.type == 'tonifti':
-            with plugin(scanobj, subj_type=subj_type, subj_position=subj_position, **plugin_kws) as p:
-                dataobj = p.get_dataobj()
-                affine = p.get_affine()
+            with plugin(scanobj, **plugin_kws) as p:
+                dataobj = p.get_dataobj(bool(scale_mode))
+                affine = p.get_affine(subj_type=subj_type, subj_position=subj_position)
                 header = p.get_nifti1header()
         else:
             scale_mode = scale_mode or ScaleMode.HEADER
             dataobj = BaseMethods.get_dataobj(scanobj, reco_id, bool(scale_mode))
             affine = BaseMethods.get_affine(scanobj, reco_id, subj_type, subj_position)
-            header = BaseMethods.get_nifti1header(scanobj, scale_mode)
+            header = BaseMethods.get_nifti1header(scanobj, reco_id, scale_mode)
         return nib.Nifti1Image(dataobj, affine, header)
+    
+    
+class BasePlugin(Scan, BaseMethods):
+    def __init__(self, pvobj: Union['PvScan', 'PvReco', 'PvFiles'], verbose: bool=False, **kwargs):
+        super().__init__(pvobj, **kwargs)
+        self.verbose = verbose
+    
+    def close(self):
+        super().close()
+        self.clear_cache()
+                
+    def clear_cache(self):
+        for buffer in self._buffers:
+            file_path = Path(buffer.name)
+            if file_path.exists():
+                file_path.unlink()

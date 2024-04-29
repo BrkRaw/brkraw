@@ -11,24 +11,29 @@ if TYPE_CHECKING:
     
 
 class ScanToNifti(Scan, BaseMethods):
-    def __init__(self, *paths: Path, **kwargs):
+    def __init__(self, *paths: Path, scale_mode: Optional[ScaleMode]=None, **kwargs):
         """_summary_
 
         Args:
             data_path (str): path of '2dseq' file in reco_dir
             pars_path (str): path of 'visu_pars' file in reco_dir
         """
+        self.scale_mode = scale_mode
         if len(paths) == 0:
             super().__init__(**kwargs)
-        if len(paths) == 1 and paths[0].is_dir():
-            abspath = paths[0].absolute()
-            if contents := self._is_pvscan(abspath):
-                pvobj = self._construct_pvscan(abspath, contents)                
-            elif contents := self._is_pvreco(abspath):
-                pvobj = self._construct_pvreco(abspath, contents)
         else:
-            pvobj = PvFiles(*paths)
-        super().__init__(pvobj=pvobj, reco_id=pvobj._reco_id)
+                
+            if len(paths) == 1 and paths[0].is_dir():
+                abspath = paths[0].absolute()
+                if contents := self._is_pvscan(abspath):
+                    pvobj = self._construct_pvscan(abspath, contents)                
+                elif contents := self._is_pvreco(abspath):
+                    pvobj = self._construct_pvreco(abspath, contents)
+            else:
+                pvobj = PvFiles(*paths)
+            # self.scanobj = Scan(pvobj=pvobj, reco_id=pvobj._reco_id)
+            super().__init__(pvobj=pvobj, reco_id=pvobj._reco_id)
+
     
     @staticmethod
     def _construct_pvscan(path: 'Path', contents: 'OrderedDict') -> 'PvScan':
@@ -80,29 +85,26 @@ class ScanToNifti(Scan, BaseMethods):
         scale_mode = scale_mode or self.scale_mode
         scale_correction = False if scale_mode == ScaleMode.HEADER else True
         if reco_id:
-            self._set_scaninfo(reco_id)
+            self.set_scaninfo(reco_id)
         return super().get_dataobj(scanobj=self, reco_id=reco_id, scale_correction=scale_correction)
     
     def get_data_dict(self, reco_id:Optional[int]=None):
         if reco_id:
-            self._set_scaninfo(reco_id)
+            self.set_scaninfo(reco_id)
         return super().get_data_dict(scanobj=self, reco_id=reco_id)
 
     def get_affine_dict(self, reco_id:Optional[int]=None, subj_type:Optional[str]=None, subj_position:Optional[str]=None):
         if reco_id:
-            self._set_scaninfo(reco_id)
+            self.set_scaninfo(reco_id)
         return super().get_affine_dict(scanobj=self, reco_id=reco_id,
                                        subj_type=subj_type, subj_position=subj_position)
 
     def get_nifti1header(self, reco_id:Optional[int]=None, scale_mode:Optional['ScaleMode'] = None):
         scale_mode = scale_mode or self.scale_mode
-        if reco_id:
-            self._set_scaninfo(reco_id)
-        return super().get_nifti1header(self, scale_mode).get()
+        return super().get_nifti1header(self, reco_id, scale_mode).get()
 
-    def get_nifti1image(self, scan_id:int, reco_id:Optional[int]=None, scale_mode:Optional['ScaleMode']=None,
+    def get_nifti1image(self, reco_id:Optional[int]=None, scale_mode:Optional['ScaleMode']=None,
                         subj_type:Optional[str]=None, subj_position:Optional[str]=None,
                         plugin:Optional['Plugged']=None, plugin_kws:dict=None):
         scale_mode = scale_mode or self.scale_mode
-        scanobj = self.get_scan(scan_id, reco_id)
-        return super().get_nifti1image(scanobj, reco_id, scale_mode, subj_type, subj_position, plugin, plugin_kws)
+        return super().get_nifti1image(self, reco_id, scale_mode, subj_type, subj_position, plugin, plugin_kws)
