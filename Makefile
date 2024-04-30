@@ -2,7 +2,7 @@ clean:
 	rm -rf tests/tutorials
 
 tests/tutorials:
-	git clone https://github.com/BrkRaw/tutorials.git tests/tutorials
+	git clone https://github.com/BrkRaw/brkraw-tutorial.git tests/tutorials
 
 tests/tutorials/SampleData/20190724_114946_BRKRAW_1_1: tests/tutorials
 	unzip -uq tests/tutorials/SampleData/20190724_114946_BRKRAW_1_1.zip -d tests/tutorials/SampleData/
