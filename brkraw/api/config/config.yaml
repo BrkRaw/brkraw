@@ -1,0 +1,24 @@
+# default configuration for brkraw
+plugin:
+  repo: 
+  - https://github.com/brkraw/brkraw-plugin.git/plugin
+  template:
+  - boilerplate
+
+preset:
+  repo:
+  - https://github.com/brkraw/brkraw-plugin.git/preset
+  template:
+  - boilerplate
+
+bids:
+  spec:
+    repo:
+    - https://github.com/brkraw/brkraw-bids.git/spec
+  recipes:
+    repo:
+    - https://github.com/brkraw/brkraw-bids.git/recipes
+
+app:
+  tonifti:
+    output_format: <study_name>_<scan_name>_<scan_id>_<reco_id>

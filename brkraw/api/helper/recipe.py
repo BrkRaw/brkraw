@@ -69,8 +69,9 @@ class Recipe(BaseHelper):
         
     def _process_dict_case_script(self, dict_obj: Dict, script_cmd: List[str]):
         script = dict_obj.pop(script_cmd)
-        for s in self.startup_scripts:
-            exec(s)
+        if self.startup_scripts:
+            for s in self.startup_scripts:
+                exec(s)
         for key, value in dict_obj.items():
             value = self._eval_value(value)
             if value == None:

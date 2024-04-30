@@ -6,9 +6,8 @@ from .base import BaseMethods
 from .pvscan import PvScan
 
 
-class PvDataset(BaseMethods):
-    """
-    A class representing a PvDataset object.
+class PvStudy(BaseMethods):
+    """A class representing a PvStudy object.
 
     Inherits from BaseMethods.
 
@@ -24,8 +23,7 @@ class PvDataset(BaseMethods):
         contents (dict): A dictionary of pvdataset contents.
     """
     def __init__(self, path: Path, debug: bool=False):
-        """
-        Initialize the object with the given path and optional debug flag.
+        """Initialize the object with the given path and optional debug flag.
 
         Args:
             path: The path to initialize the object with.
@@ -36,7 +34,7 @@ class PvDataset(BaseMethods):
             Any exceptions raised by _check_dataset_validity or _construct methods.
 
         Notes:
-            If 'pvdataset' is present in kwargs, it will be used to initialize the object via super().
+            If 'pvstudy' is present in kwargs, it will be used to initialize the object via super().
 
         Examples:
             obj = ClassName(path='/path/to/dataset', debug=True)
@@ -48,11 +46,10 @@ class PvDataset(BaseMethods):
     
     # internal method
     def _check_dataset_validity(self, path: Path):
-        """
-        Checks the validity of a given dataset path.
+        """Checks the validity of a given dataset path.
 
         Note: This method only checks the validity of the dataset to be fetched using `fetch_dir` and `fetch_zip`,
-        and does not check the validity of a `PvDataset`.
+        and does not check the validity of a `PvStudy`.
 
         Args:
             path (str): The path to check.
@@ -78,8 +75,7 @@ class PvDataset(BaseMethods):
             raise ValueError(f"The path '{self._path}' does not meet the required criteria.")
     
     def _construct(self):
-        """
-        Constructs the object by organizing the contents.
+        """Constructs the object by organizing the contents.
 
         This method constructs the object by organizing the contents based on the provided directory structure.
         It iterates over the sorted contents and updates the `_scans` and `_backup` dictionaries accordingly.
@@ -106,8 +102,7 @@ class PvDataset(BaseMethods):
         self._clear_contents(to_remove)
 
     def _process_childobj(self, matched, item):
-        """
-        The `_process_childobj` method processes a child object based on the provided arguments and updates the internal state of the object.
+        """The `_process_childobj` method processes a child object based on the provided arguments and updates the internal state of the object.
 
         Args:
             matched: A `re.Match` object representing the matched pattern.
@@ -154,8 +149,7 @@ class PvDataset(BaseMethods):
 
     @property
     def path(self):
-        """
-        Gets the path of the object.
+        """Gets the path of the object.
 
         Returns:
             str: The path of the object.
@@ -164,17 +158,15 @@ class PvDataset(BaseMethods):
 
     @property
     def avail(self):
-        """
-        A property representing the available scans.
+        """A property representing the available scans.
 
         Returns:
             list: A list of available scans.
         """
         return sorted(list(self._scans))
     
-    def get_scan(self, scan_id):
-        """
-        Get a specific scan object by ID.
+    def get_scan(self, scan_id: int):
+        """Get a specific scan object by ID.
 
         Args:
             scan_id (int): The ID of the scan object to retrieve.

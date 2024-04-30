@@ -1,16 +1,17 @@
 from __future__ import annotations
 import warnings
 from nibabel.nifti1 import Nifti1Header
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from typing import Optional, Literal
     from brkraw.api.data import ScanInfo
-    from .base import ScaleMode
 
 
 class Header:
-    def __init__(self, scaninfo:'ScanInfo', scale_mode:Union['ScaleMode', int]):
+    def __init__(self, scaninfo: 'ScanInfo', 
+                 scale_mode: Optional[Literal['header', 'apply']] = None):
         self.info = scaninfo
-        self.scale_mode = int(scale_mode.value)
+        self.scale_mode = 1 if scale_mode == 'header' else 0
         self.nifti1header = Nifti1Header()
         self.nifti1header.default_x_flip = False
         self._set_scale_params()
@@ -49,7 +50,7 @@ class Header:
             self.nifti1header['slice_duration'] = time_step / num_slices
             
     def _set_scale_params(self):
-        if self.scale_mode == 2:
+        if self.scale_mode:
             self.nifti1header['scl_slope'] = self.info.dataarray['slope']
             self.nifti1header['scl_inter'] = self.info.dataarray['offset']
 
