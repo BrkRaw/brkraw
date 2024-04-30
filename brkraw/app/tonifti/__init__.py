@@ -2,16 +2,12 @@
 dependency:
     bids, plugin
 """
-import argparse
 from brkraw import __version__
-from .loader import Loader
+from .base import BasePlugin, PvScan, PvReco, PvFiles
+from .study import StudyToNifti, ScanToNifti
+import argparse
 
-__all__ = [Loader]
-
-def load(*args, **kwargs):
-    """Load data in Facade design pattern
-    """
-    Loader()
+__all__ = ['BasePlugin', 'StudyToNifti', 'ScanToNifti', 'PvScan', 'PvReco', 'PvFiles']
 
 def main():
     """main script allows convert brkraw

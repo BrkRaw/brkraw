@@ -1,13 +1,13 @@
 from __future__ import annotations
 import numpy as np
 from typing import TYPE_CHECKING
-from .base import BaseHelper, is_all_element_same, BYTEORDER, WORDTYPE
+from .base import BaseHelper, BYTEORDER, WORDTYPE
 if TYPE_CHECKING:
     from ..analyzer import ScanInfoAnalyzer
 
 
 class FID(BaseHelper):
-    """requires visu_pars and aqcp to pars parameter related to the dtype of binary files
+    """requires visu_pars and aqcp to parse parameter related to the dtype of binary files
 
     Dependencies:
         acqp
@@ -25,9 +25,8 @@ class FID(BaseHelper):
             byte_order = f'{acqp["BYTORDA"]}Endian'
             self.dtype = np.dtype(f'{BYTEORDER[byte_order]}{WORDTYPE[word_type]}')
         else:
-            self.fid_dtype = None
+            self.dtype = None
             self._warn("Failed to fetch 'fid_dtype' information because the 'acqp' file is missing from 'analobj'.")
-
 
     def get_info(self):
         return {

@@ -1,4 +1,5 @@
 import os
+import warnings
 from .base import BaseMethods
 
 
@@ -55,3 +56,7 @@ class PvReco(BaseMethods):
         if self.is_compressed:
             return path
         return os.path.join(*path)
+
+    def get_fid(self):
+        warnings.warn(f'{self.__class__} does not support get_fid method. use Scan- or Study-level object instead')
+        return None

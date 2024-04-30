@@ -3,14 +3,14 @@ import warnings
 from nibabel.nifti1 import Nifti1Header
 from typing import TYPE_CHECKING, Union
 if TYPE_CHECKING:
-    from brkraw.api.brkobj import ScanInfo
+    from brkraw.api.data import ScanInfo
     from .base import ScaleMode
 
 
 class Header:
     def __init__(self, scaninfo:'ScanInfo', scale_mode:Union['ScaleMode', int]):
         self.info = scaninfo
-        self.scale_mode = int(scale_mode)
+        self.scale_mode = int(scale_mode.value)
         self.nifti1header = Nifti1Header()
         self.nifti1header.default_x_flip = False
         self._set_scale_params()
@@ -18,8 +18,7 @@ class Header:
         self._set_time_step()
         
     def _set_sliceorder(self):
-        self.info.slicepack
-        slice_order_scheme = self.info.method.get("PVM_ObjOrderScheme")
+        slice_order_scheme = self.info.slicepack['slice_order_scheme']
         if slice_order_scheme == 'User_defined_slice_scheme' or slice_order_scheme:
             slice_code = 0
         elif slice_order_scheme == 'Sequential':
@@ -43,7 +42,7 @@ class Header:
         self.nifti1header['slice_code'] = slice_code
     
     def _set_time_step(self):
-        if self.info.cycle['num_cycle'] > 1:
+        if self.info.cycle['num_cycles'] > 1:
             time_step = self.info.cycle['time_step']
             self.nifti1header['pixdim'][4] = time_step
             num_slices = self.info.slicepack['num_slices_each_pack'][0]
@@ -51,8 +50,8 @@ class Header:
             
     def _set_scale_params(self):
         if self.scale_mode == 2:
-            self.nifti1header['scl_slope'] = self.info.dataarray['2dseq_slope']
-            self.nifti1header['scl_inter'] = self.info.dataarray['2dseq_offset']
+            self.nifti1header['scl_slope'] = self.info.dataarray['slope']
+            self.nifti1header['scl_inter'] = self.info.dataarray['offset']
 
     def get(self):
         return self.nifti1header

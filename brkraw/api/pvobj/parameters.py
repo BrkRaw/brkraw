@@ -121,6 +121,7 @@ class Parameter:
             This method is intended to be called internally within the class and does not have direct usage examples.
         """
         addr_diff = np.diff(param_addr)
+        self._params_key_struct = params
         self._contents = contents
         self._header = OrderedDict()
         self._parameters = OrderedDict()

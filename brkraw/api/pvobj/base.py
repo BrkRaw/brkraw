@@ -3,8 +3,32 @@ import os
 import zipfile
 from collections import OrderedDict
 from collections import defaultdict
+from typing import TYPE_CHECKING
+from pathlib import Path
 from .parameters import Parameter
-from typing import Optional
+
+if TYPE_CHECKING:
+    from typing import Optional, Union, List
+    from io import BufferedReader
+    from zipfile import ZipExtFile
+
+
+class BaseBufferHandler:
+    _buffers: Union[List[BufferedReader], List[ZipExtFile]] = []
+    def close(self):
+        if self._buffers:
+            for b in self._buffers:
+                if not b.closed:
+                    b.close()
+    
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        # Return False to propagate exceptions, if any
+        return False
+
 
 class BaseMethods:
     """
@@ -26,8 +50,11 @@ class BaseMethods:
     _rootpath = None
     _contents = None
     
+    def isinstance(self, name):
+        return self.__class__.__name__ == name
+    
     @staticmethod
-    def _fetch_dir(path):
+    def _fetch_dir(path: 'Path'):
         """Searches for directories and files in a given directory and returns the directory structure.
 
         Args:
@@ -41,15 +68,17 @@ class BaseMethods:
                 - 'file_indexes': An empty list.
         """
         contents = OrderedDict()
-        abspath = os.path.abspath(path)
+        abspath = path.absolute()
         for dirpath, dirnames, filenames in os.walk(abspath):
             normalized_dirpath = os.path.normpath(dirpath)
             relative_path = os.path.relpath(normalized_dirpath, abspath)
-            contents[relative_path] = {'dirs': dirnames, 'files': filenames, 'file_indexes': []}
+            file_sizes = [os.path.getsize(os.path.join(dirpath, f)) for f in filenames]
+            contents[relative_path] = {'dirs': dirnames, 'files': filenames, 
+                                       'file_indexes': [], 'file_sizes': file_sizes}
         return contents
     
     @staticmethod
-    def _fetch_zip(path):
+    def _fetch_zip(path: 'Path'):
         """Searches for files in a zip file and returns the directory structure and file information.
 
         Args:
@@ -63,12 +92,13 @@ class BaseMethods:
                 - 'file_indexes': A list of file indexes.
         """
         with zipfile.ZipFile(path) as zip_file:
-            contents = defaultdict(lambda: {'dirs': set(), 'files': [], 'file_indexes': []})
+            contents = defaultdict(lambda: {'dirs': set(), 'files': [], 'file_indexes': [], 'file_sizes': []})
             for i, item in enumerate(zip_file.infolist()):
                 if not item.is_dir():
                     dirpath, filename = os.path.split(item.filename)
                     contents[dirpath]['files'].append(filename)
                     contents[dirpath]['file_indexes'].append(i)
+                    contents[dirpath]['file_sizes'].append(item.file_size)
                     while dirpath:
                         dirpath, dirname = os.path.split(dirpath)
                         if dirname:
@@ -156,9 +186,11 @@ class BaseMethods:
             fileobj = self._open_as_fileobject(file.pop())
             if self._is_binary(fileobj):
                 return fileobj
-            par = Parameter(fileobj.read().decode('UTF-8').split('\n'), 
+            string_list = fileobj.read().decode('UTF-8').split('\n')
+            fileobj.close()
+            par = Parameter(string_list, 
                             name=key, scan_id=self._scan_id, reco_id=self._reco_id)
-            return par if par.is_parameter() else fileobj.read().decode('UTF-8').split('\n')
+            return par if par.is_parameter() else string_list
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     @property
@@ -171,7 +203,7 @@ class BaseMethods:
         except KeyError:
             raise TypeError("Missing required argument: 'scan_id must be provided for {self.__class__.__name__}.")
         fid_files = ['fid', 'rawdata.job0']
-        for fid in ['fid', 'rawdata.job0']:
+        for fid in fid_files:
             if fid in pvobj.contents['files']:
                 return getattr(pvobj, fid)
         raise FileNotFoundError(f"The required file '{' or '.join(fid_files)}' does not exist. "
@@ -181,7 +213,8 @@ class BaseMethods:
         try:
             if scan_id and hasattr(self, 'get_scan'):
                 pvobj = self.get_scan(scan_id).get_reco(reco_id)
-            elif reco_id and hasattr(self, 'get_reco'):
+            elif hasattr(self, 'get_reco'):
+                reco_id = reco_id or sorted(self.avail).pop(0)
                 pvobj = self.get_reco(reco_id)
             else:
                 pvobj = self
@@ -199,7 +232,6 @@ class BaseMethods:
             raise FileNotFoundError("The required file '2dseq' does not exist. "
                                     "Please check the dataset and ensure the file is in the expected location.")
         
-
     @staticmethod
     def _is_binary(fileobj, bytes=512):
         block = fileobj.read(bytes)

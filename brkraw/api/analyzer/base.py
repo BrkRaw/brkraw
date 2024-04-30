@@ -1,3 +1,3 @@
 class BaseAnalyzer:
-    def vars(self):
+    def to_dict(self):
         return self.__dict__

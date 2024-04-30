@@ -37,8 +37,14 @@ class ScanInfoAnalyzer(BaseAnalyzer):
                 vals = OrderedDict()
             setattr(self, p, vals)
         try:
+            fid_buffer = pvobj.get_fid()
+        except (FileNotFoundError, AttributeError):
+            fid_buffer = None
+        setattr(self, 'fid_buffer', fid_buffer)
+
+        try:
             visu_pars = pvobj.get_visu_pars(reco_id)
-        except FileNotFoundError:
+        except (FileNotFoundError, AttributeError):
             visu_pars = OrderedDict()
         setattr(self, 'visu_pars', visu_pars)
            
@@ -48,6 +54,7 @@ class ScanInfoAnalyzer(BaseAnalyzer):
         self.info_image = helper.Image(self).get_info()
         self.info_slicepack = helper.SlicePack(self).get_info()
         self.info_cycle = helper.Cycle(self).get_info()
+        self.info_diffusion = helper.Diffusion(self).get_info()
         if self.info_image['dim'] > 1:
             self.info_orientation = helper.Orientation(self).get_info()
     
