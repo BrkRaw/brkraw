@@ -20,9 +20,9 @@ Before creating a pull request, ensure that your code complies with the existing
 
 ### Contributing to Child Repositories
 
-- **[plugin](../brkraw-plugin)**: For new functionalities at the app level, direct your contributions here.
-- **[dataset](../brkraw-dataset)**: To add a new dataset that needs to be tested via BrkRaw CI for data conversion consistency and reliability, please contribute here.
-- **[tutorial](../brkraw-tutorial)**: For new tutorials, tutorial revisions, or documentation that would help other users, please contribute to this repository.
+- **[plugin](https://github.com/brkraw/brkraw-plugin.git)**: For new functionalities at the app level, direct your contributions here.
+- **[dataset](https://github.com/brkraw/brkraw-dataset.git)**: To add a new dataset that needs to be tested via BrkRaw CI for data conversion consistency and reliability, please contribute here.
+- **[tutorial](https://github.com/brkraw/brkraw-tutorial.git)**: For new tutorials, tutorial revisions, or documentation that would help other users, please contribute to this repository.
 
 ## Before You Start
 
