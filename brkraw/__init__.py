@@ -1,6 +1,8 @@
 from .lib import *
+from .api import ConfigManager
 
-__version__ = '0.3.11'
+config = ConfigManager()
+__version__ = '0.4.00'
 __all__ = ['BrukerLoader', '__version__', 'config']
 
 

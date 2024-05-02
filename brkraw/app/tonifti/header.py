@@ -1,3 +1,7 @@
+"""This module create header
+currently not functioning as expected, need to work more
+"""
+
 from __future__ import annotations
 import warnings
 from nibabel.nifti1 import Nifti1Header

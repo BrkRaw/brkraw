@@ -5,9 +5,9 @@ from .base import BaseMethods
 from .scan import ScanToNifti
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Optional, Literal
+    from typing import Optional, Literal, Union
     from pathlib import Path
-    from brkraw.api.plugin import Plugged
+    from brkraw.api import PlugInSnippet
 
 
 class StudyToNifti(Study, BaseMethods):
@@ -84,7 +84,7 @@ class StudyToNifti(Study, BaseMethods):
         scanobj = self.get_scan(scan_id=scan_id, 
                                 reco_id=reco_id)
         return super().get_nifti1header(scanobj=scanobj, 
-                                        scale_mode=scale_mode).get()
+                                        scale_mode=scale_mode)
 
     def get_nifti1image(self, 
                         scan_id: int, 
@@ -92,7 +92,7 @@ class StudyToNifti(Study, BaseMethods):
                         scale_mode: Optional[Literal['header', 'apply']] = None,
                         subj_type: Optional[str] = None, 
                         subj_position: Optional[str] = None,
-                        plugin: Optional['Plugged'] = None, 
+                        plugin: Optional[Union['PlugInSnippet', str]] = None, 
                         plugin_kws: dict = None):
         scale_mode = scale_mode or self.scale_mode
         scanobj = self.get_scan(scan_id=scan_id,

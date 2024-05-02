@@ -7,7 +7,7 @@ from .base import BaseMethods
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Union, Optional, Literal
-    from brkraw.api.plugin import Plugged
+    from brkraw.api import PlugInSnippet
     
 
 class ScanToNifti(Scan, BaseMethods):
@@ -25,16 +25,15 @@ class ScanToNifti(Scan, BaseMethods):
         if len(paths) == 0:
             super().__init__(**kwargs)
         else:
-                
             if len(paths) == 1 and paths[0].is_dir():
                 abspath = paths[0].absolute()
+                print(abspath)
                 if contents := self._is_pvscan(abspath):
                     pvobj = self._construct_pvscan(abspath, contents)                
                 elif contents := self._is_pvreco(abspath):
                     pvobj = self._construct_pvreco(abspath, contents)
             else:
                 pvobj = PvFiles(*paths)
-            # self.scanobj = Scan(pvobj=pvobj, reco_id=pvobj._reco_id)
             super().__init__(pvobj=pvobj, reco_id=pvobj._reco_id)
 
     
@@ -116,14 +115,14 @@ class ScanToNifti(Scan, BaseMethods):
                          reco_id: Optional[int] = None, 
                          scale_mode: Optional[Literal['header', 'apply']] = None):
         scale_mode = scale_mode or self.scale_mode
-        return super().get_nifti1header(self, reco_id, scale_mode).get()
+        return super().get_nifti1header(self, reco_id, scale_mode)
 
     def get_nifti1image(self, 
                         reco_id: Optional[int] = None, 
                         scale_mode: Optional[Literal['header', 'apply']] = None,
                         subj_type: Optional[str] = None, 
                         subj_position: Optional[str] = None,
-                        plugin: Optional['Plugged'] = None, 
+                        plugin: Optional[Union['PlugInSnippet', str]] = None, 
                         plugin_kws: dict = None):
         scale_mode = scale_mode or self.scale_mode
         return super().get_nifti1image(self, 

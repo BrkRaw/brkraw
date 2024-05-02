@@ -4,13 +4,15 @@ import numpy as np
 from pathlib import Path
 from nibabel.nifti1 import Nifti1Image
 from .header import Header
+from brkraw import config
 from brkraw.api.pvobj.base import BaseBufferHandler
 from brkraw.api.pvobj import PvScan, PvReco, PvFiles
 from brkraw.api.data import Scan
+from brkraw.api.config.snippet import PlugInSnippet
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import List, Optional, Union, Literal
-    from brkraw.api.config.snippet import PlugInSnippet
+    from brkraw.api.config.manager import Manager as ConfigManager
     
     
 XYZT_UNITS = \
@@ -18,6 +20,8 @@ XYZT_UNITS = \
 
 
 class BaseMethods(BaseBufferHandler):
+    config: ConfigManager = config
+    
     def set_scale_mode(self, 
                        scale_mode: Optional[Literal['header', 'apply']] = None):
         self.scale_mode = scale_mode or 'header'
@@ -91,16 +95,39 @@ class BaseMethods(BaseBufferHandler):
                         scale_mode: Optional[Literal['header', 'apply']] = None,
                         subj_type: Optional[str] = None, 
                         subj_position: Optional[str] = None,
-                        plugin: Optional['PlugInSnippet'] = None, 
+                        plugin: Optional[Union['PlugInSnippet', str]] = None, 
                         plugin_kws: Optional[dict] = None) -> Union['Nifti1Image', List['Nifti1Image']]:
-        scale_correction = 1 if scale_mode == 'apply' else 0
-        if plugin and plugin.type == 'tonifti':
-            with plugin.set(scanobj, **plugin_kws) as p:
-                dataobj = p.get_dataobj(scale_correction=scale_correction)
-                affine = p.get_affine(subj_type=subj_type, subj_position=subj_position)
-                header = p.get_nifti1header()
+        if plugin:
+            if isinstance(plugin, str):
+                not_available = False
+                fetcher = config.get_fetcher('plugin')
+                # check plugin available on local
+                if fetcher.is_cache:
+                    # No plugin downloaded, check on remote
+                    if available := [p for p in fetcher.remote if p.name == plugin]:
+                        plugin = available.pop()
+                    else:
+                        not_available = True
+                else:
+                    if available := [p for p in fetcher.local if p.name == plugin]:
+                        plugin = available.pop()
+                    else:
+                        not_available = True
+            if isinstance(plugin, PlugInSnippet) and plugin.type == 'tonifti':
+                with plugin.set(pvobj=scanobj.pvobj, **plugin_kws) as p:
+                    dataobj = p.get_dataobj()
+                    affine = p.get_affine(subj_type=subj_type, subj_position=subj_position)
+                    header = p.get_nifti1header()
+            else:
+                not_available = True
+            if not_available:
+                warnings.warn("Failed. Given plugin not available, please install local plugin or use from available on "
+                              f"remote repository. -> {[p.name for p in fetcher.remote]}",
+                              UserWarning)
+                return None
         else:
             scale_mode = scale_mode or 'header'
+            scale_correction = 1 if scale_mode == 'apply' else 0
             dataobj = BaseMethods.get_dataobj(scanobj=scanobj, 
                                               reco_id=reco_id, 
                                               scale_correction=scale_correction)

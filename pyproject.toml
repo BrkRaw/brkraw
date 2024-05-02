@@ -10,14 +10,11 @@ classifiers = [
     'Natural Language :: English',
 ]
 dependencies = [
+    'pyyaml>=6.0.1',
     'nibabel>=3.0.2',
     'numpy>=1.18.0',
-    'pandas>=1.0.0',
-    'pillow>=7.1.1',
     'tqdm>=4.45.0',
-    'openpyxl>=3.0.3',
-    'xlrd>=1.0.0',
-    'toml>=0.10.2'
+    'pillow>=7.1.1',
 ]
 description = "Bruker PvDataset Loader"
 license = {text = "GNLv3"}
@@ -29,16 +26,21 @@ requires-python = ">=3.7"
 keywords = ['bruker', 'data_handler', 'converter', 'administrator_tool']
 
 [project.urls]
-Homepage = "https://github.com/brkraw/brkraw"
+Homepage = "https://brkraw.github.io"
 
 [project.optional-dependencies]
-SimpleITK = [
-    'SimpleITK>=1.2.4'
+legacy = [
+    'pandas>=1.0.0',
+    'openpyxl>=3.0.3',
+    'xlrd>=1.0.0',
+    'SimpleITK>=1.2.4',
 ]
+
 dev = [
     "flake8",
     "pytest",
-    "nbmake"
+    "nbmake",
+    "types-PyYAML"
 ]
 
 [tool.hatch.version]
