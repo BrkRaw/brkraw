@@ -1,16 +1,16 @@
 from __future__ import annotations
 import warnings
 import numpy as np
-import nibabel as nib
 from pathlib import Path
+from nibabel.nifti1 import Nifti1Image
 from .header import Header
 from brkraw.api.pvobj.base import BaseBufferHandler
 from brkraw.api.pvobj import PvScan, PvReco, PvFiles
 from brkraw.api.data import Scan
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Optional, Union, Literal
-    from brkraw.api.plugin import Plugged
+    from typing import List, Optional, Union, Literal
+    from brkraw.api.config.snippet import PlugInSnippet
     
     
 XYZT_UNITS = \
@@ -91,32 +91,74 @@ class BaseMethods(BaseBufferHandler):
                         scale_mode: Optional[Literal['header', 'apply']] = None,
                         subj_type: Optional[str] = None, 
                         subj_position: Optional[str] = None,
-                        plugin: Optional['Plugged'] = None, 
-                        plugin_kws: dict = None):
+                        plugin: Optional['PlugInSnippet'] = None, 
+                        plugin_kws: Optional[dict] = None) -> Union['Nifti1Image', List['Nifti1Image']]:
+        scale_correction = 1 if scale_mode == 'apply' else 0
         if plugin and plugin.type == 'tonifti':
-            with plugin(scanobj, **plugin_kws) as p:
-                dataobj = p.get_dataobj(bool(scale_mode))
+            with plugin.set(scanobj, **plugin_kws) as p:
+                dataobj = p.get_dataobj(scale_correction=scale_correction)
                 affine = p.get_affine(subj_type=subj_type, subj_position=subj_position)
                 header = p.get_nifti1header()
         else:
             scale_mode = scale_mode or 'header'
-            dataobj = BaseMethods.get_dataobj(scanobj, reco_id, bool(scale_mode))
-            affine = BaseMethods.get_affine(scanobj, reco_id, subj_type, subj_position)
-            header = BaseMethods.get_nifti1header(scanobj, reco_id, scale_mode)
-        return nib.Nifti1Image(dataobj, affine, header)
+            dataobj = BaseMethods.get_dataobj(scanobj=scanobj, 
+                                              reco_id=reco_id, 
+                                              scale_correction=scale_correction)
+            affine = BaseMethods.get_affine(scanobj=scanobj,
+                                            reco_id=reco_id,
+                                            subj_type=subj_type,
+                                            subj_position=subj_position)
+            header = BaseMethods.get_nifti1header(scanobj=scanobj,
+                                                  reco_id=reco_id,
+                                                  scale_mode=scale_mode)
+        
+        if isinstance(dataobj, list):
+            # multi-dataobj (e.g. msme)
+            affine = affine if isinstance(affine, list) else [affine for _ in range(len(dataobj))]
+            return [Nifti1Image(dataobj=dobj, affine=affine[i], header=header) for i, dobj in enumerate(dataobj)]
+        if isinstance(affine, list):
+            # multi-slicepacks
+            return [Nifti1Image(dataobj[:,:,i,...], affine=aff, header=header) for i, aff in enumerate(affine)]
+        return Nifti1Image(dataobj=dataobj, affine=affine, header=header)
     
     
 class BasePlugin(Scan, BaseMethods):
+    """Base class for handling plugin operations, integrating scanning and basic method functionalities.
+
+    This class initializes plugin operations with options for verbose output and integrates functionalities
+    from the Scan and BaseMethods classes. It provides methods to close the plugin and clear any cached data.
+
+    Args:
+        pvobj (Union['PvScan', 'PvReco', 'PvFiles']): An object representing the PV (ParaVision) scan, reconstruction, 
+                                                      or file data, which is central to initializing the plugin operations.
+        verbose (bool): Flag to enable verbose output during operations, defaults to False.
+        **kwargs: Additional keyword arguments that are passed to the superclass.
+
+    Attributes:
+        verbose (bool): Enables or disables verbose output.
+    """
     def __init__(self, pvobj: Union['PvScan', 'PvReco', 'PvFiles'], 
                  verbose: bool=False, **kwargs):
+        """Initializes the BasePlugin with a PV object, optional verbosity, and other parameters.
+
+        Args:
+            pvobj (Union['PvScan', 'PvReco', 'PvFiles']): The primary object associated with ParaVision operations.
+            verbose (bool, optional): If True, enables verbose output. Defaults to False.
+            **kwargs: Arbitrary keyword arguments passed to the superclass initialization.
+        """
         super().__init__(pvobj, **kwargs)
         self.verbose = verbose
     
     def close(self):
+        """Closes the plugin and clears any associated caches by invoking the clear_cache method.
+        """
         super().close()
         self.clear_cache()
                 
     def clear_cache(self):
+        """Clears all cached data associated with the plugin. This involves deleting files that have been
+        cached during plugin operations.
+        """
         for buffer in self._buffers:
             file_path = Path(buffer.name)
             if file_path.exists():

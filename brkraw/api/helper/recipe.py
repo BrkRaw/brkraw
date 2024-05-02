@@ -8,19 +8,25 @@ if TYPE_CHECKING:
     from typing import Optional, Dict, List, Any
     from brkraw.api.analyzer import BaseAnalyzer
 
+
 class Recipe(BaseHelper):
     def __init__(self, target: 'BaseAnalyzer', recipe: dict, legacy: bool = False, 
-                 startup_scripts:Optional[List[str]] = None):
+                 startup_scripts: Optional[List[str]] = None):
         self.target = target
         self.recipe = recipe
         self.results = OrderedDict()
         self.backward_comp = legacy
-        self.startup_scripts = startup_scripts
+        self.startup_scripts = startup_scripts or []
         self._parse_recipe()
         
     def _parse_recipe(self):
         for key, value in self.recipe.items():
-            self.results[key] = self._eval_value(value)
+            if key == 'startup':
+                scripts = [s for s in value if s is not None]
+                self.startup_scripts.extend(scripts)
+            else:
+                if value := self._eval_value(value):
+                    self.results[key] = value
     
     def _eval_value(self, value: Any):
         if isinstance(value, str):
@@ -43,8 +49,11 @@ class Recipe(BaseHelper):
             return self._legacy_parser(str_obj)
         ptrn = r'(?P<attr>^[a-zA-Z][a-zA-Z0-9_]*)\.(?P<key>[a-zA-Z][a-zA-Z0-9_]*)'
         if matched := re.match(ptrn, str_obj):
-            attr = getattr(self.target, matched['attr'])
-            return attr.get(matched['key'], None)
+            if hasattr(self.target, matched['attr']):
+                attr = getattr(self.target, matched['attr'])
+                return attr.get(matched['key'], None)
+            else:
+                return None
         else:
             return str_obj
     
@@ -64,20 +73,25 @@ class Recipe(BaseHelper):
         else:
             processed = {}
             for key, value in dict_obj.items():
-                processed[key] = self._eval_value(value)
-            return processed
+                if value := self._eval_value(value):
+                    processed[key] = value
+            return processed if len(processed) else None
         
     def _process_dict_case_script(self, dict_obj: Dict, script_cmd: List[str]):
-        script = dict_obj.pop(script_cmd)
+        script = dict_obj[script_cmd]
         if self.startup_scripts:
             for s in self.startup_scripts:
                 exec(s)
         for key, value in dict_obj.items():
-            value = self._eval_value(value)
-            if value == None:
-                return None
-            exec(f'global {key}')
-            exec(f'{key} = {value}')
+            if key != script_cmd:
+                value = self._eval_value(value)
+                if value == None:
+                    return None
+                exec(f'global {key}')
+                try:
+                    exec(f'{key} = {value}')
+                except NameError:
+                    exec(f"{key} = '{value}'")
         exec(f"output = {script}", globals(), locals())
         return locals()['output']
     
