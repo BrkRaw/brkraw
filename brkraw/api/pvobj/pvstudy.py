@@ -1,68 +1,67 @@
+"""Provides the PvStudy class, which serves as a comprehensive handler for entire Paravision study datasets.
+
+This module includes the PvStudy class, derived from BaseMethods, to manage and interact with datasets that may
+include multiple scans and various data types, both compressed and uncompressed. It facilitates the organization,
+retrieval, and processing of study-specific information and individual scans, enhancing the handling of complex
+imaging data.
+
+Classes:
+    PvStudy: Manages an entire study's dataset, organizing scans and handling specific data retrieval efficiently.
+"""
+
+from __future__ import annotations
 import re
 import zipfile
 from collections import OrderedDict
-from pathlib import Path
 from .base import BaseMethods
 from .pvscan import PvScan
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class PvStudy(BaseMethods):
-    """A class representing a PvStudy object.
+    """Represents and manages an entire Paravision study dataset.
 
-    Inherits from BaseMethods.
+    Inherits from BaseMethods to utilize general methods for file handling and dataset validation.
+    Manages multiple scans and their respective data, supporting both compressed and uncompressed formats.
 
     Attributes:
-        is_compressed (bool): Indicates if the dataset is compressed.
+        is_compressed (bool): Indicates whether the dataset is compressed, affecting how files are accessed and processed.
+        path (str): The file system path to the study dataset.
+        avail (list): A list of IDs representing the available scans within the dataset.
+        contents (dict): A structured dictionary representing the organized contents of the dataset.
 
     Methods:
-        get_scan(scan_id): Get a specific scan object by ID.
-
-    Properties:
-        path (str): The path of the object.
-        avail (list): A list of available scans.
-        contents (dict): A dictionary of pvdataset contents.
+        get_scan(scan_id): Retrieves a PvScan object for a given scan ID, facilitating detailed access to specific scans.
     """
     def __init__(self, path: Path, debug: bool=False):
-        """Initialize the object with the given path and optional debug flag.
+        """Initializes a PvStudy object with the specified path and debug settings.
 
         Args:
-            path: The path to initialize the object with.
-            debug: A flag indicating whether debug mode is enabled.
-            **kwargs: Additional keyword arguments.
+            path (Path): The filesystem path to the dataset.
+            debug (bool, optional): If set to True, enables debug mode which may affect logging and error reporting.
 
         Raises:
-            Any exceptions raised by _check_dataset_validity or _construct methods.
-
-        Notes:
-            If 'pvstudy' is present in kwargs, it will be used to initialize the object via super().
-
-        Examples:
-            obj = ClassName(path='/path/to/dataset', debug=True)
+            FileNotFoundError: If the path does not exist or is invalid.
+            ValueError: If the path is neither a directory nor a recognizable compressed file format.
         """
-
         if not debug:    
-            self._check_dataset_validity(path)
+            self._check_dataset_validity(self._resolve(path))
             self._construct()
     
     # internal method
     def _check_dataset_validity(self, path: Path):
-        """Checks the validity of a given dataset path.
-
-        Note: This method only checks the validity of the dataset to be fetched using `fetch_dir` and `fetch_zip`,
-        and does not check the validity of a `PvStudy`.
+        """Validates the provided path to ensure it points to a viable dataset.
 
         Args:
-            path (str): The path to check.
+            path (Path): The path to validate.
 
         Raises:
             FileNotFoundError: If the path does not exist.
-            ValueError: If the path is not a directory or a file, or if it does not meet the required criteria.
-
-        Returns:
-            None
+            ValueError: If the path is neither a directory nor a valid compressed file.
         """
-        path = Path(path) if isinstance(path, str) else path
-        self._path: Path = path.absolute()
+        self._path = path
         if not self._path.exists():
             raise FileNotFoundError(f"The path '{self._path}' does not exist.")
         if self._path.is_dir():
@@ -75,17 +74,9 @@ class PvStudy(BaseMethods):
             raise ValueError(f"The path '{self._path}' does not meet the required criteria.")
     
     def _construct(self):
-        """Constructs the object by organizing the contents.
+        """Organizes the dataset contents by parsing directories and files, structuring them for easy access.
 
-        This method constructs the object by organizing the contents based on the provided directory structure.
-        It iterates over the sorted contents and updates the `_scans` and `_backup` dictionaries accordingly.
-        After processing, it removes the processed paths from the `_contents` dictionary.
-
-        Args:
-            **kwargs: keyword argument for datatype specification.
-        
-        Returns:
-            None
+        Processes directories to segregate scans and their respective data, handling both uncompressed and compressed datasets.
         """
         self._scans = OrderedDict()
         self._backup = OrderedDict()
@@ -111,15 +102,6 @@ class PvStudy(BaseMethods):
 
         Returns:
             str: The path of the processed child object.
-
-        Raises:
-            None.
-
-        Examples:
-            # Example usage of _process_childobj
-            matched = re.match(pattern, input_string)
-            item = ('path/to/child', {'dirs': set(), 'files': [], 'file_indexes': []})
-            result = obj._process_childobj(matched, item, pvscan={'binary_files': [], 'parameter_files': ['method', 'acqp', 'visu_pars']})
         """
         path, contents = item
         scan_id = int(matched.group(1))
@@ -136,11 +118,34 @@ class PvStudy(BaseMethods):
 
     @property
     def contents(self):
+        """Retrieves the contents of the study that include 'subject' in their files list.
+
+        This property filters the study's dataset contents, returning only those parts of the dataset
+        where the 'subject' file is present, which is typically critical for study-specific information.
+
+        Returns:
+            dict: The dictionary of contents that includes 'subject' among its files.
+        """
         for _, contents in super().contents.items():
             if 'subject' in contents['files']:
                 return contents
 
     def _clear_contents(self, to_be_removed):
+        """Clears specified contents from the dataset's memory structure.
+
+        This method attempts to remove paths listed in `to_be_removed` from the dataset's content dictionary.
+        If a path cannot be found (i.e., it's already been removed or never existed), it logs the path to `_dummy`
+        for further debugging or inspection.
+
+        Args:
+            to_be_removed (list): A list of paths to be removed from the dataset's contents.
+
+        Returns:
+            None
+        
+        Notes:
+            The `_dummy` list can be used to track removal errors or inconsistencies in the dataset's path management.
+        """
         for path in to_be_removed:
             try:
                 del self._contents[path]
@@ -149,35 +154,40 @@ class PvStudy(BaseMethods):
 
     @property
     def path(self):
-        """Gets the path of the object.
+        """Returns the filesystem path of the study dataset.
 
         Returns:
-            str: The path of the object.
+            str: The path to the dataset.
         """
         return self._path
 
     @property
     def avail(self):
-        """A property representing the available scans.
+        """Provides a list of available scan IDs within the dataset.
 
         Returns:
-            list: A list of available scans.
+            list: A sorted list of available scan IDs.
         """
         return sorted(list(self._scans))
     
     def get_scan(self, scan_id: int):
-        """Get a specific scan object by ID.
+        """Retrieves the scan object associated with the specified scan ID.
 
         Args:
-            scan_id (int): The ID of the scan object to retrieve.
+            scan_id (int): The unique identifier for the scan.
 
         Returns:
-            object: The specified scan object.
+            PvScan: The scan object associated with the given ID.
 
         Raises:
-            KeyError: If the specified scan ID does not exist.
+            KeyError: If there is no scan associated with the provided ID.
         """
         return self._scans[scan_id]
     
     def __dir__(self):
+        """Customizes the directory listing to include specific attributes and methods.
+
+        Returns:
+            list: A list of attribute names and methods available in this object.
+        """
         return super().__dir__() + ['path', 'avail', 'get_scan']
