@@ -13,7 +13,7 @@ The `__init__.py` module ensures that these classes are readily accessible when 
 making the package easier to use and integrate into larger projects or applications.
 
 Example:
-    from your_package_name import Study, Scan, ScanInfo
+    from brkraw.api.data import Study, Scan, ScanInfo
 
 This enables straightforward access to these classes for further development and deployment in MRI data analysis tasks.
 """

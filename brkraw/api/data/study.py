@@ -76,7 +76,7 @@ class Study(PvStudy, BaseAnalyzer):
         Args:
             path (Path): The file system path to the study data.
         """
-        super().__init__(path)
+        super().__init__(self._resolve(path))
         self._parse_header()
         
     def get_scan(self,
@@ -126,14 +126,14 @@ class Study(PvStudy, BaseAnalyzer):
 
     @property
     def info(self) -> dict:
-        if hasattr(self, '_info'):
-            return self._stream_info()
-        else:
+        if not hasattr(self, '_info'):
             self._process_header()
-            return self._stream_info()
+        if not hasattr(self, '_streamed_info'): 
+            self._streamed_info = self._stream_info() 
+        return self._streamed_info
     
     def _stream_info(self):
-        stream = self._info.__dict__
+        stream = copy(self._info.__dict__)
         scans = {}
         for s in self._info.scans:
             scans[s.scan_id] = s.header
