@@ -38,8 +38,8 @@ class Snippets(Fetcher):
     _fetched: bool = False
     _template: List[Snippet] = []
     _remote_snippets: List[Snippet] = []
-    _local_snippets: List = [Snippet]
-    _template_snippets: List = [Snippet]
+    _local_snippets: List[Snippet] = []
+    _template_snippets: List[Snippet] = []
     
     def __init__(self, 
                  repos: dict,
