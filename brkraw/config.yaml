@@ -1,26 +1,20 @@
-# default configuration for brkraw
-snippets:
+plugin:
   repo:
   - name: brkraw-snippets
     url: https://github.com/brkraw/brkraw-snippets.git
-    plugin:
-      path: plugin
-      template: 
-      - myplugin
+    path: plugin
     preset:
       path: preset
-      template: 
-      - mypreset
     spec:
       path: spec
     recipe:
       path: recipe
-
-studyinfo:
-  recipe: default
-
+  
 app:
   tonifti:
-    output_filename: 
+    output_filename:
+      recipy: "@brkraw-snippets,better-tonifti:studyinfo"
       format: <id>_<method>_<scan_id>_<reco_id>
-      filter:
+      spec: null
+    studyinfo:
+      recipe: brkraw-snippets:studyinfo #<repo name>:<recipe name>:<recipe version>

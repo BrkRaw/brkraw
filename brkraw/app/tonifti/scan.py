@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Union, Optional, Literal
     from brkraw.api import PlugInSnippet
+    from nibabel.nifti1 import Nifti1Image
     
 
 class ScanToNifti(Scan, BaseMethods):
@@ -36,7 +37,6 @@ class ScanToNifti(Scan, BaseMethods):
                 pvobj = PvFiles(*paths)
             super().__init__(pvobj=pvobj, reco_id=pvobj._reco_id)
 
-    
     @staticmethod
     def _construct_pvscan(path: 'Path', contents: 'OrderedDict') -> 'PvScan':
         ref_paths = (path.parent, path.name)
@@ -111,11 +111,12 @@ class ScanToNifti(Scan, BaseMethods):
                                        subj_type = subj_type, 
                                        subj_position = subj_position)
 
-    def get_nifti1header(self, 
-                         reco_id: Optional[int] = None, 
-                         scale_mode: Optional[Literal['header', 'apply']] = None):
+    def update_nifti1header(self,
+                            nifti1obj: 'Nifti1Image',
+                            reco_id: Optional[int] = None, 
+                            scale_mode: Optional[Literal['header', 'apply']] = None):
         scale_mode = scale_mode or self.scale_mode
-        return super().get_nifti1header(self, reco_id, scale_mode)
+        return super().update_nifti1header(self, nifti1obj, reco_id, scale_mode)
 
     def get_nifti1image(self, 
                         reco_id: Optional[int] = None, 

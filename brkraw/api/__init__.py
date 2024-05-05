@@ -1,5 +1,6 @@
-from .data import Study
-from .config import Manager as ConfigManager
-from .config.snippet.plugin import PlugIn as PlugInSnippet
+# from .data import Study
+from xnippy.snippet.plugin import PlugIn as PlugInSnippet
+from xnippy.formatter import PathFormatter
 
-__all__ = ['Study', 'ConfigManager', 'PlugInSnippet']
+
+__all__ = ['Study', 'PlugInSnippet', 'PathFormatter']

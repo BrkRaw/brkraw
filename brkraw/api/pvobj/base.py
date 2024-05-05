@@ -12,19 +12,18 @@ Classes:
 
 from __future__ import annotations
 import os
-import zipfile
+from zipfile import ZipFile
 from collections import OrderedDict, defaultdict
 from pathlib import Path
 from .parameters import Parameter
-from brkraw.api.util.package import PathResolver
+from xnippy.formatter import PathFormatter
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Optional, Union, List
-    from zipfile import ZipExtFile
-    from io import BufferedReader
+    from typing import Optional, List
+    from .types import PvFileBuffer
 
 
-class BaseBufferHandler(PathResolver):
+class BaseBufferHandler(PathFormatter):
     """Handles buffer management for file operations, ensuring all file streams are properly managed.
 
     This class provides context management for file buffers, allowing for easy and safe opening and closing 
@@ -33,7 +32,7 @@ class BaseBufferHandler(PathResolver):
     Attributes:
         _buffers (Union[List[BufferedReader], List[ZipExtFile]]): A list of file buffer objects.
     """
-    _buffers: Union[List[BufferedReader], List[ZipExtFile]] = []
+    _buffers: List[PvFileBuffer] = []
     def close(self):
         """Closes all open file buffers managed by this handler."""
         if self._buffers:
@@ -122,7 +121,7 @@ class BaseMethods(BaseBufferHandler):
                 - 'files': A list of file names.
                 - 'file_indexes': A list of file indexes.
         """
-        with zipfile.ZipFile(path) as zip_file:
+        with ZipFile(path) as zip_file:
             contents = defaultdict(lambda: {'dirs': set(), 'files': [], 'file_indexes': [], 'file_sizes': []})
             for i, item in enumerate(zip_file.infolist()):
                 if not item.is_dir():
@@ -162,7 +161,7 @@ class BaseMethods(BaseBufferHandler):
             raise KeyError(f'Failed to load filename "{key}" from folder "{rel_path}".\n [{", ".join(files)}]')
 
         if file_indexes := self.contents.get('file_indexes'):
-            with zipfile.ZipFile(rootpath) as zf:
+            with ZipFile(rootpath) as zf:
                 idx = file_indexes[files.index(key)]
                 return zf.open(zf.namelist()[idx])
         else:
@@ -302,7 +301,7 @@ class BaseMethods(BaseBufferHandler):
                                     "Please check the dataset and ensure the file is in the expected location.")
         
     @staticmethod
-    def _is_binary(fileobj: BufferedReader, bytes: int = 512):
+    def _is_binary(fileobj: PvFileBuffer, bytes: int = 512):
         """Determine if a file is binary by reading a block of data.
 
         Args:

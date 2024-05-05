@@ -11,7 +11,10 @@ build
 *.egg-info
 *.egg-info/*
 .DS_Store
+.mypy_cache
+.pytest_cache
+
+tests/.brkraw
+tests/_*.ipynb
 tests/tutorials
-_test*.py
-_*.ipynb
-_*.log
+tests/_datasets

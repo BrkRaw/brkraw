@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from typing import Optional, Literal, Union
     from pathlib import Path
     from brkraw.api import PlugInSnippet
+    from nibabel.nifti1 import Nifti1Header
 
 
 class StudyToNifti(Study, BaseMethods):
@@ -76,15 +77,17 @@ class StudyToNifti(Study, BaseMethods):
                                        subj_type=subj_type,
                                        subj_position=subj_position)
 
-    def get_nifti1header(self, 
-                         scan_id: int, 
-                         reco_id: Optional[int] = None, 
-                         scale_mode: Optional[Literal['header', 'apply']] = None):
+    def update_nifti1header(self,
+                            nifti1image: 'Nifti1Header',
+                            scan_id: int, 
+                            reco_id: Optional[int] = None, 
+                            scale_mode: Optional[Literal['header', 'apply']] = None):
         scale_mode = scale_mode or self.scale_mode
         scanobj = self.get_scan(scan_id=scan_id, 
                                 reco_id=reco_id)
-        return super().get_nifti1header(scanobj=scanobj, 
-                                        scale_mode=scale_mode)
+        return super().update_nifti1header(scanobj=scanobj,
+                                           nifti1image=nifti1image, 
+                                           scale_mode=scale_mode)
 
     def get_nifti1image(self, 
                         scan_id: int, 
@@ -105,3 +108,23 @@ class StudyToNifti(Study, BaseMethods):
                                        plugin=plugin, 
                                        plugin_kws=plugin_kws)
         
+    @property
+    def info(self):
+        # scan cycle
+        header = super().info['header']
+        scans = super().info['scans']
+        title = header['sw_version']
+        date = header['date']
+        print(title)
+        print('-' * len(title))
+        print('date: {date}')
+        for key, value in header.items():
+            if key not in ['date', 'sw_version']:
+                print(f'{key}:\t{value}')
+        print('\n[ScanID]\tMethod::Protocol')
+        max_size = len(str(max(scans.keys())))
+        
+        for scan_id, value in scans.items():
+            print(f"[{str(scan_id).zfill(max_size)}]\t{value['method']}::{value['protocol']}")
+            if 'recos' in value and value['recos']:
+                print('\tRECO:', list(value['recos'].keys()))

@@ -1,26 +1,22 @@
 from __future__ import annotations
 import warnings
 import numpy as np
-from pathlib import Path
+from brkraw import config
 from nibabel.nifti1 import Nifti1Image
 from .header import Header
-from brkraw import config
 from brkraw.api.pvobj.base import BaseBufferHandler
-from brkraw.api.pvobj import PvScan, PvReco, PvFiles
 from brkraw.api.data import Scan
-from brkraw.api.config.snippet import PlugInSnippet
+from xnippy.snippet import PlugInSnippet
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import List, Optional, Union, Literal
-    from brkraw.api.config.manager import Manager as ConfigManager
-    
-    
-XYZT_UNITS = \
-    dict(EPI=('mm', 'sec'))
+    from typing import Optional, Union, Literal
+    from typing import List
+    from numpy.typing import NDArray
+    from xnippy.types import ConfigManagerType
 
 
 class BaseMethods(BaseBufferHandler):
-    config: ConfigManager = config
+    config: ConfigManagerType = config
     
     def set_scale_mode(self, 
                        scale_mode: Optional[Literal['header', 'apply']] = None):
@@ -82,12 +78,14 @@ class BaseMethods(BaseBufferHandler):
         }
         
     @staticmethod
-    def get_nifti1header(scanobj: 'Scan', reco_id: Optional[int] = None, 
-                         scale_mode: Optional[Literal['header', 'apply']] = None):
+    def update_nifti1header(scanobj: 'Scan', 
+                            nifti1image: 'Nifti1Image', 
+                            reco_id: Optional[int] = None, 
+                            scale_mode: Optional[Literal['header', 'apply']] = None):
         if reco_id:
             scanobj.set_scaninfo(reco_id)
         scale_mode = scale_mode or 'header'
-        return Header(scanobj.info, scale_mode).get()
+        return Header(scaninfo=scanobj.info, nifti1image=nifti1image, scale_mode=scale_mode).get()
 
     @staticmethod
     def get_nifti1image(scanobj: 'Scan', 
@@ -96,34 +94,13 @@ class BaseMethods(BaseBufferHandler):
                         subj_type: Optional[str] = None, 
                         subj_position: Optional[str] = None,
                         plugin: Optional[Union['PlugInSnippet', str]] = None, 
-                        plugin_kws: Optional[dict] = None) -> Union['Nifti1Image', List['Nifti1Image']]:
+                        plugin_kws: Optional[dict] = None) -> Optional[Union['Nifti1Image', List['Nifti1Image']]]:
         if plugin:
-            if isinstance(plugin, str):
-                not_available = False
-                fetcher = config.get_fetcher('plugin')
-                # check plugin available on local
-                if fetcher.is_cache:
-                    # No plugin downloaded, check on remote
-                    if available := [p for p in fetcher.remote if p.name == plugin]:
-                        plugin = available.pop()
-                    else:
-                        not_available = True
-                else:
-                    if available := [p for p in fetcher.local if p.name == plugin]:
-                        plugin = available.pop()
-                    else:
-                        not_available = True
-            if isinstance(plugin, PlugInSnippet) and plugin.type == 'tonifti':
-                with plugin.set(pvobj=scanobj.pvobj, **plugin_kws) as p:
-                    dataobj = p.get_dataobj()
-                    affine = p.get_affine(subj_type=subj_type, subj_position=subj_position)
-                    header = p.get_nifti1header()
+            if nifti1image := BaseMethods._bypass_method_via_plugin(scanobj=scanobj,
+                                                                    subj_type=subj_type, subj_position=subj_position,
+                                                                    plugin=plugin, plugin_kws=plugin_kws):
+                return nifti1image
             else:
-                not_available = True
-            if not_available:
-                warnings.warn("Failed. Given plugin not available, please install local plugin or use from available on "
-                              f"remote repository. -> {[p.name for p in fetcher.remote]}",
-                              UserWarning)
                 return None
         else:
             scale_mode = scale_mode or 'header'
@@ -135,58 +112,75 @@ class BaseMethods(BaseBufferHandler):
                                             reco_id=reco_id,
                                             subj_type=subj_type,
                                             subj_position=subj_position)
-            header = BaseMethods.get_nifti1header(scanobj=scanobj,
-                                                  reco_id=reco_id,
-                                                  scale_mode=scale_mode)
+        return BaseMethods._assemble_nifti1image(dataobj, affine)
         
+    @staticmethod
+    def _bypass_method_via_plugin(scanobj: 'Scan', 
+                                  subj_type: Optional[str] = None, 
+                                  subj_position: Optional[str] = None,
+                                  plugin: Optional[Union['PlugInSnippet', str]] = None, 
+                                  plugin_kws: Optional[dict] = None) -> Optional[Nifti1Image]:
+        if isinstance(plugin, str):
+            plugin = BaseMethods._get_plugin_snippets_by_name(plugin)
+        if isinstance(plugin, PlugInSnippet) and plugin.type == 'tonifti':
+            print(f'++ Installed PlugIn: {plugin}')
+            with plugin.set(pvobj=scanobj.pvobj, **plugin_kws) as p:
+                nifti1image = p.get_nifti1image(subj_type=subj_type, subj_position=subj_position)
+            return nifti1image
+        else:
+            fetcher = config.get_fetcher('plugin')
+            warnings.warn("Failed. Given plugin not available, "
+                          "please install local plugin or use from available on "
+                          f"remote repository. -> {[p.name for p in fetcher.remote]}",
+                          UserWarning)
+            return None
+    
+    @staticmethod
+    def _get_plugin_snippets_by_name(plugin: str):
+        fetcher = config.get_fetcher('plugin')
+        if not fetcher.is_cache:
+            plugin = BaseMethods._filter_snippets_by_name(plugin, fetcher.local)
+        if fetcher.is_cache or not isinstance(plugin, PlugInSnippet):
+            plugin = BaseMethods._filter_snippets_by_name(plugin, fetcher.remote)
+        return plugin
+    
+    @staticmethod
+    def _filter_snippets_by_name(name:str, snippets: list):
+        if filtered := [s for s in snippets if s.name == name]:
+            return filtered[0]
+        else:
+            return name
+            
+    @staticmethod
+    def _assemble_nifti1image(scanobj: 'Scan', 
+                              dataobj: NDArray, 
+                              affine: NDArray,
+                              scale_mode: Optional[Literal['header', 'apply']] = None):
         if isinstance(dataobj, list):
             # multi-dataobj (e.g. msme)
-            affine = affine if isinstance(affine, list) else [affine for _ in range(len(dataobj))]
-            return [Nifti1Image(dataobj=dobj, affine=affine[i], header=header) for i, dobj in enumerate(dataobj)]
+            niis = BaseMethods._assemble_msme(dataobj, affine)
+            return [BaseMethods.update_nifti1header(nifti1image=nii, 
+                                                    scanobj=scanobj, 
+                                                    scale_mode=scale_mode) for nii in niis]
         if isinstance(affine, list):
             # multi-slicepacks
-            return [Nifti1Image(dataobj[:,:,i,...], affine=aff, header=header) for i, aff in enumerate(affine)]
-        return Nifti1Image(dataobj=dataobj, affine=affine, header=header)
+            niis = BaseMethods._assemble_ms(dataobj, affine)
+            return niis
+        nii = Nifti1Image(dataobj=dataobj, affine=affine)
+        return BaseMethods.update_nifti1header(nifti1image=nii,
+                                               scanobj=scanobj,
+                                               scale_mode=scale_mode)
+
+    @staticmethod
+    def _assemble_msme(dataobj: NDArray, affine: NDArray):
+        affine = affine if isinstance(affine, list) else [affine for _ in range(len(dataobj))]
+        return [Nifti1Image(dataobj=dobj, affine=affine[i]) for i, dobj in enumerate(dataobj)]
+
+    @staticmethod
+    def _assemble_ms(dataobj: NDArray, affine: NDArray):
+        return [Nifti1Image(dataobj=dataobj[:,:,i,...], affine=aff) for i, aff in enumerate(affine)]
     
-    
-class BasePlugin(Scan, BaseMethods):
-    """Base class for handling plugin operations, integrating scanning and basic method functionalities.
-
-    This class initializes plugin operations with options for verbose output and integrates functionalities
-    from the Scan and BaseMethods classes. It provides methods to close the plugin and clear any cached data.
-
-    Args:
-        pvobj (Union['PvScan', 'PvReco', 'PvFiles']): An object representing the PV (ParaVision) scan, reconstruction, 
-                                                      or file data, which is central to initializing the plugin operations.
-        verbose (bool): Flag to enable verbose output during operations, defaults to False.
-        **kwargs: Additional keyword arguments that are passed to the superclass.
-
-    Attributes:
-        verbose (bool): Enables or disables verbose output.
-    """
-    def __init__(self, pvobj: Union['PvScan', 'PvReco', 'PvFiles'], 
-                 verbose: bool=False, **kwargs):
-        """Initializes the BasePlugin with a PV object, optional verbosity, and other parameters.
-
-        Args:
-            pvobj (Union['PvScan', 'PvReco', 'PvFiles']): The primary object associated with ParaVision operations.
-            verbose (bool, optional): If True, enables verbose output. Defaults to False.
-            **kwargs: Arbitrary keyword arguments passed to the superclass initialization.
-        """
-        super().__init__(pvobj, **kwargs)
-        self.verbose = verbose
-    
-    def close(self):
-        """Closes the plugin and clears any associated caches by invoking the clear_cache method.
-        """
-        super().close()
-        self.clear_cache()
-                
-    def clear_cache(self):
-        """Clears all cached data associated with the plugin. This involves deleting files that have been
-        cached during plugin operations.
-        """
-        for buffer in self._buffers:
-            file_path = Path(buffer.name)
-            if file_path.exists():
-                file_path.unlink()
+    def list_plugin(self):
+        avail_dict = self.config.avail('plugin')
+        return {'local': [s for s in avail_dict['local'] if s.type == 'tonifti'],
+                'remote': [s for s in avail_dict['remote'] if s.type == 'tonifti']}

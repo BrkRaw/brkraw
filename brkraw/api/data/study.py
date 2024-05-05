@@ -31,9 +31,10 @@ from copy import copy
 from pathlib import Path
 from dataclasses import dataclass
 from .scan import Scan
+from brkraw import config
 from brkraw.api.pvobj import PvStudy
 from brkraw.api.analyzer.base import BaseAnalyzer
-from brkraw.api.helper.recipe import Recipe
+from xnippy.formatter import RecipeFormatter
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional
@@ -154,21 +155,28 @@ class Study(PvStudy, BaseAnalyzer):
         Returns:
             dict: A dictionary containing structured information about the study, its scans, and reconstructions.
         """
-        spec_path = os.path.join(os.path.dirname(__file__), 'study.yaml')
+        spec_path = os.path.join(os.path.dirname(__file__), 'study.yaml')  # TODO:asdasd 
         with open(spec_path, 'r') as f:
             spec = yaml.safe_load(f)
-        self._info = StudyHeader(header=Recipe(self, copy(spec)['study']).get(), scans=[])
+        self._info = StudyHeader(header=RecipeFormatter(self, copy(spec)['study']).get(), 
+                                 scans=[])
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for scan_id in self.avail:
                 scanobj = self.get_scan(scan_id)
                 scan_spec = copy(spec)['scan']
-                scan_header = ScanHeader(scan_id=scan_id, header=Recipe(scanobj.info, scan_spec).get(), recos=[])
+                scaninfo_targets = [scanobj.info, 
+                                    scanobj.get_scaninfo(get_analyzer=True)]
+                scan_header = ScanHeader(scan_id=scan_id, 
+                                         header=RecipeFormatter(scaninfo_targets, scan_spec).get(), 
+                                         recos=[])
                 for reco_id in scanobj.avail:
-                    recoinfo = scanobj.get_scaninfo(reco_id)
+                    recoinfo_targets = [scanobj.get_scaninfo(reco_id=reco_id),
+                                        scanobj.get_scaninfo(reco_id=reco_id, get_analyzer=True)]
                     reco_spec = copy(spec)['reco']
-                    reco_header = Recipe(recoinfo, reco_spec).get()
-                    reco_header = RecoHeader(reco_id=reco_id, header=reco_header) if reco_header else None
+                    reco_header = RecipeFormatter(recoinfo_targets, reco_spec).get()
+                    reco_header = RecoHeader(reco_id=reco_id, 
+                                             header=reco_header) if reco_header else None
                     if reco_header:
                         scan_header.recos.append(reco_header)
                 self._info.scans.append(scan_header)
