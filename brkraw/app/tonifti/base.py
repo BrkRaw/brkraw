@@ -12,11 +12,11 @@ if TYPE_CHECKING:
     from typing import Optional, Union, Literal
     from typing import List
     from numpy.typing import NDArray
-    from xnippy.types import ConfigManagerType
+    from xnippy.types import XnipyManagerType
 
 
 class BaseMethods(BaseBufferHandler):
-    config: ConfigManagerType = config
+    config: XnipyManagerType = config
     
     def set_scale_mode(self, 
                        scale_mode: Optional[Literal['header', 'apply']] = None):
@@ -122,7 +122,7 @@ class BaseMethods(BaseBufferHandler):
                                   plugin_kws: Optional[dict] = None) -> Optional[Nifti1Image]:
         if isinstance(plugin, str):
             plugin = BaseMethods._get_plugin_snippets_by_name(plugin)
-        if isinstance(plugin, PlugInSnippet) and plugin.type == 'tonifti':
+        if isinstance(plugin, PlugInSnippet) and 'brkraw' in plugin._manifest['package']:  # TODO: need to have better tool to check version compatibility as well.
             print(f'++ Installed PlugIn: {plugin}')
             with plugin.run(pvobj=scanobj.pvobj, **plugin_kws) as p:
                 nifti1image = p.get_nifti1image(subj_type=subj_type, subj_position=subj_position)

@@ -1,15 +1,10 @@
-plugin:
+xnippy:
   repo:
   - name: brkraw-snippets
     url: https://github.com/brkraw/brkraw-snippets.git
-    path: plugin
-    preset:
-      path: preset
-    spec:
-      path: spec
-    recipe:
-      path: recipe
-  
+    plugin:
+      path: plugin
+    
 app:
   tonifti:
     output_filename:
