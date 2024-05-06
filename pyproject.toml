@@ -16,7 +16,10 @@ dependencies = [
     'packaging>=23.1',
     'xnippy>=0.1.1',
     'nibabel>=3.0.2',
-    'requests>=2.31.0'
+    'requests>=2.31.0',
+    'pandas>=1.0.0',
+    'openpyxl>=3.0.3',
+    'xlrd>=1.0.0',
 ]
 description = "Bruker PvDataset Loader"
 license = {text = "GNLv3"}
@@ -41,9 +44,6 @@ Homepage = "https://brkraw.github.io"
 
 [project.optional-dependencies]
 legacy = [
-    'pandas>=1.0.0',
-    'openpyxl>=3.0.3',
-    'xlrd>=1.0.0',
     'SimpleITK>=1.2.4'
     ]
 
