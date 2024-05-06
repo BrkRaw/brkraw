@@ -1,0 +1,49 @@
+name: tonifti-studyinfo
+type: recipe
+subtype: studyinfo
+version: 24.5.3
+
+study:
+  date:
+  - header.study_date
+  - header.date
+  dob: header.dbirth
+  id: header.id
+  name: header.name_string
+  operator: study_operator
+  position:
+  - header.study_instrument_position
+  - entry: header.entry
+    position: header.position
+    script: entry.split("_").pop(-1) + "_" + position.split("_").pop(-1)
+  sex:
+  - header.gender
+  - header.sex
+  study_name: header.study_name
+  study_nr: header.study_nr
+  sw_version: header.sw_version
+  type: header.type
+  weight:
+  - header.study_weight
+  - header.weight
+
+scan:
+  dim: image.dim
+  in_plane_shape: image.shape
+  in_plann_resolution: image.resolution
+  method: protocol.scan_method
+  num_cycles: cycle.num_cycles
+  num_slice_packs: slicepack.num_slice_packs
+  num_slices_each_pack: slicepack.num_slices_each_pack
+  ppg: protocol.pulse_program
+  protocol: protocol.protocol_name
+  slice_distances_each_pack: slicepack.slice_distances_each_pack
+  slice_order_scheme: slicepack.slice_order_scheme
+  time_step: cycle.time_step
+
+reco:
+  dim_description:
+    dim_desc: image.dim_desc
+    fg_desc: frame_group.id
+    script: dim_desc + [f.split("_")[-1].lower() for f in fg_desc]
+  type: frame_group.type

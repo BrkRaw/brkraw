@@ -1,3 +1,15 @@
+"""Provides parsing utilities for handling and converting parameter data from string representations to structured formats.
+
+This module includes the `Parser` class, which leverages regular expressions to accurately parse and convert various 
+data types found in parameter files, such as integers, floats, complex arrays, and strings. 
+The functionality is designed to support the manipulation and analysis of data from Paravision parameter files, 
+ensuring data integrity and accessibility.
+
+Classes:
+    Parser: A class that offers a comprehensive suite of methods for parsing parameter data, 
+            supporting complex data structures and providing tools to convert and clean data efficiently.
+"""
+
 import re
 import numpy as np
 from collections import OrderedDict, defaultdict
@@ -25,34 +37,31 @@ PARAMETER = 1
 
 
 class Parser: 
-    """
-    Parser class for handling parameter dictionaries.
+    """A utility class for parsing and converting parameter data from string representations.
 
-    This class provides methods for loading parameters from a list of strings, converting strings to specific data types, cleaning up array elements, processing complex arrays, parsing shapes, parsing data, parsing array data, and converting data to specified shapes.
+    The Parser class uses regular expressions to identify and convert data types found in parameter files. It handles typical data formats including integers, floats, strings, and complex arrays, making them amenable for further processing and analysis.
 
     Methods:
-        load_param: JCAMP DX parser that loads parameters from a list of strings.
-        convert_string_to: Converts a string to a specific data type if it matches certain patterns.
-        clean_up_elements_in_array: Cleans up array elements by replacing patterns with repeated values.
-        process_bisarray: Determines the case of an array with BIS prefix by converting each element to a specific data type.
-        process_complexarray: Process a complex array and return a parsed dictionary.
-        process_string: Process a string and return the parsed data based on its shape.
-        parse_shape: Parse the shape of the data.
-        parse_data: Parse the data based on its format.
-        parse_array_data: Parse the array data.
-        convert_data_to: Convert the given data to the specified shape.
+        load_param(stringlist): Parses parameters from a list of strings, identifying headers and parameters.
+        convert_string_to(string): Converts strings to appropriate data types based on their content.
+        clean_up_elements_in_array(data): Cleans array elements by handling patterns and replacing them with repeated values.
+        process_complexarray(data): Converts complex nested array strings into structured dictionary formats.
+        parse_shape(shape): Interprets textual shape descriptions into tuple or list formats.
+        parse_data(data): Converts string data into lists or single values depending on the structure.
+        convert_data_to(data, shape): Transforms data into the specified shape or data type.
     """
     @staticmethod
     def load_param(stringlist):
-        """JCAMP DX parser that loads parameters from a list of strings.
+        """Parses parameters from a list of string representations of a JCAMP DX file.
+
+        Each string is inspected for key-value pairs that represent parameters or headers. 
+        This method categorizes and stores them accordingly.
 
         Args:
-            stringlist (list): A list of strings containing parameter information.
+            stringlist (list[str]): A list of strings, each containing a line from a JCAMP DX file.
 
         Returns:
-            params (OrderedDict): An ordered dictionary containing the parsed parameters, where the key is the line number and the value is a tuple of the parameter type, key, and value.
-            param_addresses (list): A list of line numbers where parameters were found.
-            stringlist (list): The original list of strings.
+            tuple: A tuple containing an OrderedDict of parameters, a list of line numbers where parameters are found, and the original list of strings.
         """
         params = OrderedDict()
         param_addresses = []
@@ -74,13 +83,13 @@ class Parser:
 
     @staticmethod
     def convert_string_to(string):
-        """Converts a string to a specific data type if it matches certain patterns.
+        """Converts a string to an integer, float, or string based on its content, using regular expression matching.
 
         Args:
             string (str): The string to be converted.
 
         Returns:
-            float, int, or str or None: The converted value of the string, or None if the string is empty.
+            int, float, str, or None: The converted value of the string, or None if the string is empty.
         """
         string = string.strip()
         if re.match(ptrn_string, string):
@@ -137,19 +146,13 @@ class Parser:
 
     @staticmethod
     def process_complexarray(data):
-        """
-        Process a complex array and return a parsed dictionary.
+        """Processes a string representation of a complex nested array and converts it into a structured dictionary format.
 
         Args:
-            data: The complex array to be processed.
+            data (str): The complex array string to be processed.
 
         Returns:
-            dict: A dictionary containing the parsed data.
-
-        Examples:
-            >>> data = [1, [2, 3], [[4, 5], [6, 7]]]
-            >>> process_complexarray(data)
-            {'level_1': [[1]], 'level_2': [[2, 3]], 'level_3': [[4, 5], [6, 7]]}
+            dict: A dictionary representing the structured levels of the array, categorized by depth.
         """
         data_holder = copy(data)
         parser = defaultdict(list)
@@ -164,8 +167,7 @@ class Parser:
     
     @staticmethod
     def process_string(data, shape):
-        """
-        Process a string and return the parsed data based on its shape.
+        """Process a string and return the parsed data based on its shape.
 
         Args:
             data: The string to be processed.
@@ -173,17 +175,6 @@ class Parser:
 
         Returns:
             tuple: A tuple containing the parsed data and an empty string, or the processed string.
-
-        Examples:
-            >>> data = "[1, 2, 3]"
-            >>> shape = "(3,)"
-            >>> process_string(data, shape)
-            ([1, 2, 3], '')
-
-            >>> data = "Hello, World!"
-            >>> shape = ""
-            >>> process_string(data, shape)
-            'Hello, World!'
         """
         shape = Parser.parse_shape(shape)
         if elements := re.findall(ptrn_bisstring, data):
@@ -201,8 +192,7 @@ class Parser:
 
     @staticmethod
     def parse_shape(shape):
-        """
-        Parse the shape of the data.
+        """Parse the shape of the data.
 
         Args:
             shape: The shape of the data.
@@ -212,23 +202,6 @@ class Parser:
 
         Raises:
             ValueError: If the shape is invalid.
-
-        Examples:
-            >>> shape = "(3, 4)"
-            >>> parse_shape(shape)
-            '3, 4'
-
-            >>> shape = "3, 4"
-            >>> parse_shape(shape)
-            '3, 4'
-
-            >>> shape = "(3, 4, 5)"
-            >>> parse_shape(shape)
-            '3, 4, 5'
-
-            >>> shape = "(3, 4,)"
-            >>> parse_shape(shape)
-            ValueError: Invalid shape: (3, 4,)
         """
         if shape != -1:
             shape = re.sub(ptrn_array, r'\g<array>', shape)
@@ -238,31 +211,13 @@ class Parser:
 
     @staticmethod
     def parse_data(data):
-        """
-        Parse the data based on its format.
+        """Parse the data based on its format.
 
         Args:
             data: The data to be parsed.
 
         Returns:
             list or str: The parsed data.
-
-        Examples:
-            >>> data = "[1, 2, 3]"
-            >>> parse_data(data)
-            [1, 2, 3]
-
-            >>> data = "1, 2, 3"
-            >>> parse_data(data)
-            [1, 2, 3]
-
-            >>> data = "1 2 3"
-            >>> parse_data(data)
-            [1, 2, 3]
-
-            >>> data = "Hello, World!"
-            >>> parse_data(data)
-            'Hello, World!'
         """
         if matched := re.findall(ptrn_array, data):
             return Parser.parse_array_data(matched)
@@ -274,17 +229,13 @@ class Parser:
 
     @staticmethod
     def parse_array_data(matched):
-        """
-        Parse the array data.
+        """Parse the array data.
 
         Args:
             matched: A list of strings representing the matched array data.
 
         Returns:
             list: The parsed array data.
-
-        Examples:
-            This method is intended to be called internally within the class and does not have direct usage examples.
         """
         if any(',' in cell for cell in matched):
             return [[Parser.convert_string_to(c) for c in cell.split(',')] for cell in matched]
@@ -292,8 +243,7 @@ class Parser:
 
     @staticmethod
     def convert_data_to(data, shape):
-        """
-        Convert the given data to the specified shape.
+        """Convert the given data to the specified shape.
 
         Args:
             data: The data to be converted.
@@ -301,9 +251,6 @@ class Parser:
 
         Returns:
             object: The converted data.
-
-        Examples:
-            This method is intended to be called internally within the class and does not have direct usage examples.
         """
         if isinstance(data, str):
             data, shape = Parser.process_string(data, shape)

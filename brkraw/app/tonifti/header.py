@@ -1,18 +1,29 @@
+"""This module create header
+currently not functioning as expected, need to work more
+"""
+
 from __future__ import annotations
 import warnings
-from nibabel.nifti1 import Nifti1Header
-from typing import TYPE_CHECKING, Union
+from nibabel.nifti1 import Nifti1Image
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from typing import Optional, Literal
     from brkraw.api.data import ScanInfo
-    from .base import ScaleMode
 
 
 class Header:
-    def __init__(self, scaninfo:'ScanInfo', scale_mode:Union['ScaleMode', int]):
+    info: ScanInfo
+    scale_mode: int
+    nifti1image: 'Nifti1Image'
+    
+    def __init__(self, 
+                 scaninfo: 'ScanInfo',
+                 nifti1image: 'Nifti1Image',
+                 scale_mode: Optional[Literal['header', 'apply']] = None):
         self.info = scaninfo
-        self.scale_mode = int(scale_mode.value)
-        self.nifti1header = Nifti1Header()
-        self.nifti1header.default_x_flip = False
+        self.scale_mode = 1 if scale_mode == 'header' else 0
+        self.nifti1image = nifti1image
+        self.nifti1image.header.default_x_flip = False
         self._set_scale_params()
         self._set_sliceorder()
         self._set_time_step()
@@ -39,19 +50,25 @@ class Header:
                 "Failed to identify compatible 'slice_code'. "
                 "Please use this header information with care in case slice timing correction is needed."
             )
-        self.nifti1header['slice_code'] = slice_code
-    
+        self.nifti1image.header['slice_code'] = slice_code
+
     def _set_time_step(self):
+        xyzt_unit = {'cycle':('mm', 'sec')}
         if self.info.cycle['num_cycles'] > 1:
-            time_step = self.info.cycle['time_step']
-            self.nifti1header['pixdim'][4] = time_step
+            time_step = self.info.cycle['time_step'] / 1000
+            self.nifti1image.header['pixdim'][4] = time_step
             num_slices = self.info.slicepack['num_slices_each_pack'][0]
-            self.nifti1header['slice_duration'] = time_step / num_slices
+            self.nifti1image.header['slice_duration'] = time_step / num_slices
+            self.nifti1image.header.set_xyzt_units(*xyzt_unit['cycle'])
             
     def _set_scale_params(self):
-        if self.scale_mode == 2:
-            self.nifti1header['scl_slope'] = self.info.dataarray['slope']
-            self.nifti1header['scl_inter'] = self.info.dataarray['offset']
+        if self.scale_mode:
+            self.nifti1image.header.set_slope_inter(slope=self.info.dataarray['slope'],
+                                                    inter=self.info.dataarray['offset'])
+        self._update_dtype()
+
+    def _update_dtype(self):
+        self.nifti1image.header.set_data_dtype(self.nifti1image.dataobj.dtype)
 
     def get(self):
-        return self.nifti1header
+        return self.nifti1image

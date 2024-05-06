@@ -10,36 +10,51 @@ classifiers = [
     'Natural Language :: English',
 ]
 dependencies = [
-    'nibabel>=3.0.2',
+    'pyyaml>=6.0.1',
     'numpy>=1.18.0',
-    'pandas>=1.0.0',
-    'pillow>=7.1.1',
     'tqdm>=4.45.0',
+    'xnippet>=0.1.0',
+    'nibabel>=3.0.2',
+    'pandas>=1.0.0',
     'openpyxl>=3.0.3',
     'xlrd>=1.0.0',
-    'toml>=0.10.2'
 ]
 description = "Bruker PvDataset Loader"
 license = {text = "GNLv3"}
 dynamic = ["version"]
-maintainers = [{name = "SungHo Lee", email = 'shlee@unc.edu'}]
+maintainers = [
+    {name = "SungHo Lee", email = 'shlee@unc.edu'}
+    ]
 name = "brkraw"
 readme = "README.md"
 requires-python = ">=3.7"
-keywords = ['bruker', 'data_handler', 'converter', 'administrator_tool']
+keywords = [
+    'bruker', 
+    'data_handler', 
+    'converter', 
+    'administrator_tool', 
+    'extensible', 
+    'xoani'
+    ]
 
 [project.urls]
-Homepage = "https://github.com/brkraw/brkraw"
+Homepage = "https://brkraw.github.io"
 
 [project.optional-dependencies]
-SimpleITK = [
+legacy = [
     'SimpleITK>=1.2.4'
-]
+    ]
+
+viewer = [
+    'pillow>=7.1.1'
+    ]
+
 dev = [
     "flake8",
     "pytest",
-    "nbmake"
-]
+    "nbmake",
+    "types-PyYAML"
+    ]
 
 [tool.hatch.version]
 path = "brkraw/__init__.py"

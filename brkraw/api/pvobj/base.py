@@ -1,56 +1,86 @@
+"""Base functionality for handling buffer and method operations in pvobj.
+
+This module defines core classes that offer foundational utilities for managing and processing raw datasets.
+The classes provide methods for handling file operations, such as opening and closing file buffers, fetching 
+directory structures, and more, all while using an object-oriented approach to maintain and access these datasets.
+
+Classes:
+    BaseBufferHandler: Manages file buffer operations, ensuring proper opening, closing, and context management of file streams.
+    BaseMethods: Extends BaseBufferHandler to include various file and directory handling methods necessary 
+    for accessing and managing dataset contents.
+"""
+
 from __future__ import annotations
 import os
-import zipfile
-from collections import OrderedDict
-from collections import defaultdict
-from typing import TYPE_CHECKING
+from zipfile import ZipFile
+from collections import OrderedDict, defaultdict
 from pathlib import Path
 from .parameters import Parameter
-
+from xnippet.formatter import PathFormatter
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Optional, Union, List
-    from io import BufferedReader
-    from zipfile import ZipExtFile
+    from typing import Optional, List
+    from .types import PvFileBuffer
 
 
-class BaseBufferHandler:
-    _buffers: Union[List[BufferedReader], List[ZipExtFile]] = []
+class BaseBufferHandler(PathFormatter):
+    """Handles buffer management for file operations, ensuring all file streams are properly managed.
+
+    This class provides context management for file buffers, allowing for easy and safe opening and closing 
+    of file streams. It ensures that all buffers are closed when no longer needed, preventing resource leakage.
+
+    Attributes:
+        _buffers (Union[List[BufferedReader], List[ZipExtFile]]): A list of file buffer objects.
+    """
+    _buffers: List[PvFileBuffer] = []
     def close(self):
+        """Closes all open file buffers managed by this handler."""
         if self._buffers:
             for b in self._buffers:
                 if not b.closed:
                     b.close()
     
     def __enter__(self):
+        """Enters the runtime context related to this object."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exits the runtime context and closes the file buffers, handling any exceptions."""
         self.close()
-        # Return False to propagate exceptions, if any
         return False
 
 
-class BaseMethods:
-    """
-    The `BaseMethods` class provides internal method for PvObjects.
+class BaseMethods(BaseBufferHandler):
+    """Provides utility methods for handling files and directories within PvObjects.
 
-    Explanation:
-    This class contains various methods for handling files and directories, including fetching directory structure, 
-    fetching zip file contents, opening files as file objects or strings, retrieving values associated with keys, and setting configuration options.
+    This class offers methods to fetch directory structures, handle zip file contents, and open files either 
+    as file objects or as readable strings. It also provides a property to access the contents of directories 
+    and zip files, tailored to the needs of managing Bruker raw datasets.
 
-    Args:
-        **kwargs: Keyword arguments for configuration options.
-        
-    Returns:
-        None
+    Attributes:
+        _scan_id (Optional[int]): The identifier for a specific scan, used in file path resolutions.
+        _reco_id (Optional[int]): The identifier for a specific reconstruction, used in file path resolutions.
+        _path (Optional[Path]): The base path for file operations.
+        _rootpath (Optional[Path]): The root path of the dataset, used for resolving relative paths.
+        _contents (Optional[dict]): A structured dictionary containing directory and file details.
     """
-    _scan_id = None
-    _reco_id = None
-    _path = None
-    _rootpath = None
-    _contents = None
+    _scan_id: int = None
+    _reco_id: int = None
+    _path: 'Path' = None
+    _rootpath: 'Path' = None
+    _contents: 'Path' = None
     
-    def isinstance(self, name):
+    def isinstance(self, name: str):
+        """Check if the class name matches the provided string.
+
+        This method compares the class name of the current instance with a given string to determine if they match.
+
+        Args:
+            name (str): The class name to check against the instance's class name.
+
+        Returns:
+            bool: True if the given name matches the instance's class name, otherwise False.
+        """
         return self.__class__.__name__ == name
     
     @staticmethod
@@ -91,7 +121,7 @@ class BaseMethods:
                 - 'files': A list of file names.
                 - 'file_indexes': A list of file indexes.
         """
-        with zipfile.ZipFile(path) as zip_file:
+        with ZipFile(path) as zip_file:
             contents = defaultdict(lambda: {'dirs': set(), 'files': [], 'file_indexes': [], 'file_sizes': []})
             for i, item in enumerate(zip_file.infolist()):
                 if not item.is_dir():
@@ -105,7 +135,7 @@ class BaseMethods:
                             contents[dirpath]['dirs'].add(dirname)
         return contents
     
-    def _open_as_fileobject(self, key):
+    def _open_as_fileobject(self, key: str):
         """Opens a file object for the given key.
 
         Args:
@@ -131,7 +161,7 @@ class BaseMethods:
             raise KeyError(f'Failed to load filename "{key}" from folder "{rel_path}".\n [{", ".join(files)}]')
 
         if file_indexes := self.contents.get('file_indexes'):
-            with zipfile.ZipFile(rootpath) as zf:
+            with ZipFile(rootpath) as zf:
                 idx = file_indexes[files.index(key)]
                 return zf.open(zf.namelist()[idx])
         else:
@@ -139,7 +169,7 @@ class BaseMethods:
             path = os.path.join(*path_list)
             return open(path, 'rb')
 
-    def _open_as_string(self, key):
+    def _open_as_string(self, key: str):
         """Opens a file as binary, decodes it as UTF-8, and splits it into lines.
 
         Args:
@@ -166,7 +196,7 @@ class BaseMethods:
         """
         return self.__getattr__(key)
         
-    def __getattr__(self, key):
+    def __getattr__(self, key: str):
         """
         Get attribute by name.
 
@@ -195,9 +225,32 @@ class BaseMethods:
 
     @property
     def contents(self):
+        """Access the contents dictionary holding directory and file details.
+
+        This property provides access to a structured dictionary that organizes directory and file information,
+        facilitating file operations across the class methods.
+
+        Returns:
+            dict: The contents dictionary with details about directories and files.
+        """
         return self._contents
 
     def get_fid(self, scan_id:Optional[int] = None):
+        """Retrieve the file object for the 'fid' or 'rawdata.job0' file from the dataset.
+
+        This method attempts to fetch the 'fid' file commonly used in imaging datasets. If 'fid' is not found,
+        it tries 'rawdata.job0'. It uses internal methods to navigate through dataset structures based on provided scan ID.
+
+        Args:
+            scan_id (Optional[int]): The identifier for the scan. Necessary if the class structure requires it to fetch data.
+
+        Returns:
+            BufferedReader: The file object for the 'fid' or 'rawdata.job0'.
+
+        Raises:
+            TypeError: If 'scan_id' is required but not provided.
+            FileNotFoundError: If neither 'fid' nor 'rawdata.job0' files are found in the dataset.
+        """
         try:
             pvobj = self.get_scan(scan_id) if hasattr(self, 'get_scan') else self
         except KeyError:
@@ -210,6 +263,21 @@ class BaseMethods:
                                 "Please check the dataset and ensure the file is in the expected location.")
     
     def get_2dseq(self, scan_id:Optional[int] = None, reco_id:Optional[int] = None):
+        """Retrieve the '2dseq' file from the dataset for a specific scan and reconstruction.
+
+        This method navigates through the dataset structure to fetch the '2dseq' file, a common data file in imaging datasets.
+
+        Args:
+            scan_id (Optional[int]): The scan ID to navigate to the correct scan. Required if the dataset structure is hierarchical.
+            reco_id (Optional[int]): The reconstruction ID. Required if multiple reconstructions exist and are not specified.
+
+        Returns:
+            BufferedReader: The file object for the '2dseq'.
+
+        Raises:
+            TypeError: If necessary IDs are not provided.
+            FileNotFoundError: If the '2dseq' file is not found in the dataset.
+        """
         try:
             if scan_id and hasattr(self, 'get_scan'):
                 pvobj = self.get_scan(scan_id).get_reco(reco_id)
@@ -233,7 +301,16 @@ class BaseMethods:
                                     "Please check the dataset and ensure the file is in the expected location.")
         
     @staticmethod
-    def _is_binary(fileobj, bytes=512):
+    def _is_binary(fileobj: PvFileBuffer, bytes: int = 512):
+        """Determine if a file is binary by reading a block of data.
+
+        Args:
+            fileobj (BufferedReader): The file object to check.
+            bytes (int): Number of bytes to read for the check.
+
+        Returns:
+            bool: True if the file contains binary data, otherwise False.
+        """
         block = fileobj.read(bytes)
         fileobj.seek(0)
         return b'\x00' in block

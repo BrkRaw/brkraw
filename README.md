@@ -4,7 +4,6 @@
 
 ## BrkRaw: A comprehensive tool to access raw Bruker Biospin MRI data
 #### Version: 0.3.11
-
 ### Description
 
 The ‘BrkRaw’ is a python module designed to provide a comprehensive tool to access raw data acquired from 

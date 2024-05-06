@@ -1,0 +1,15 @@
+xnippet:
+  repo:
+  - name: brkraw-snippets
+    url: https://github.com/brkraw/brkraw-snippets.git
+    plugin:
+      path: plugin
+    
+app:
+  tonifti:
+    output_filename:
+      recipy: "@brkraw-snippets,better-tonifti:studyinfo"
+      format: <id>_<method>_<scan_id>_<reco_id>
+      spec: null
+    studyinfo:
+      recipe: brkraw-snippets:studyinfo #<repo name>:<recipe name>:<recipe version>

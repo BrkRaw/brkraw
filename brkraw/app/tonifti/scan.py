@@ -1,17 +1,21 @@
 from __future__ import annotations
+from collections import OrderedDict
 from pathlib import Path
 from brkraw.api.data import Scan
 from brkraw.api.pvobj import PvScan, PvReco, PvFiles
-from collections import OrderedDict
+from .base import BaseMethods
 from typing import TYPE_CHECKING
-from .base import BaseMethods, ScaleMode
 if TYPE_CHECKING:
-    from typing import Union, Optional
-    from brkraw.api.plugin import Plugged
+    from typing import Union, Optional, Literal
+    from brkraw.api import PlugInSnippet
+    from nibabel.nifti1 import Nifti1Image
     
 
 class ScanToNifti(Scan, BaseMethods):
-    def __init__(self, *paths: Path, scale_mode: Optional[ScaleMode]=None, **kwargs):
+    def __init__(self, 
+                 *paths: Path, 
+                 scale_mode: Optional[Literal['header', 'apply']] = None, 
+                 **kwargs):
         """_summary_
 
         Args:
@@ -22,19 +26,17 @@ class ScanToNifti(Scan, BaseMethods):
         if len(paths) == 0:
             super().__init__(**kwargs)
         else:
-                
             if len(paths) == 1 and paths[0].is_dir():
                 abspath = paths[0].absolute()
+                print(abspath)
                 if contents := self._is_pvscan(abspath):
                     pvobj = self._construct_pvscan(abspath, contents)                
                 elif contents := self._is_pvreco(abspath):
                     pvobj = self._construct_pvreco(abspath, contents)
             else:
                 pvobj = PvFiles(*paths)
-            # self.scanobj = Scan(pvobj=pvobj, reco_id=pvobj._reco_id)
             super().__init__(pvobj=pvobj, reco_id=pvobj._reco_id)
 
-    
     @staticmethod
     def _construct_pvscan(path: 'Path', contents: 'OrderedDict') -> 'PvScan':
         ref_paths = (path.parent, path.name)
@@ -76,35 +78,58 @@ class ScanToNifti(Scan, BaseMethods):
             return contents
         return False
     
-    def get_affine(self, reco_id:Optional[int]=None, 
-                   subj_type:Optional[str]=None, subj_position:Optional[str]=None):
-        return super().get_affine(scanobj=self, reco_id=reco_id, 
-                                  subj_type=subj_type, subj_position=subj_position)
+    def get_affine(self, reco_id: Optional[int] = None, 
+                   subj_type: Optional[str] = None, 
+                   subj_position: Optional[str] = None):
+        return super().get_affine(scanobj = self, 
+                                  reco_id = reco_id, 
+                                  subj_type = subj_type, 
+                                  subj_position = subj_position)
     
-    def get_dataobj(self, reco_id:Optional[int]=None, scale_mode:Optional['ScaleMode'] = None):
+    def get_dataobj(self, reco_id: Optional[int] = None, 
+                    scale_mode: Optional[Literal['header', 'apply']] = None):
         scale_mode = scale_mode or self.scale_mode
-        scale_correction = False if scale_mode == ScaleMode.HEADER else True
+        scale_correction = False if not scale_mode or scale_mode == 'header' else True
         if reco_id:
             self.set_scaninfo(reco_id)
-        return super().get_dataobj(scanobj=self, reco_id=reco_id, scale_correction=scale_correction)
+        return super().get_dataobj(scanobj = self, 
+                                   reco_id = reco_id, 
+                                   scale_correction = scale_correction)
     
-    def get_data_dict(self, reco_id:Optional[int]=None):
+    def get_data_dict(self, reco_id: Optional[int] = None):
         if reco_id:
             self.set_scaninfo(reco_id)
         return super().get_data_dict(scanobj=self, reco_id=reco_id)
 
-    def get_affine_dict(self, reco_id:Optional[int]=None, subj_type:Optional[str]=None, subj_position:Optional[str]=None):
+    def get_affine_dict(self, reco_id: Optional[int] = None, 
+                        subj_type: Optional[str] = None, 
+                        subj_position: Optional[str] = None):
         if reco_id:
             self.set_scaninfo(reco_id)
-        return super().get_affine_dict(scanobj=self, reco_id=reco_id,
-                                       subj_type=subj_type, subj_position=subj_position)
+        return super().get_affine_dict(scanobj = self, 
+                                       reco_id = reco_id,
+                                       subj_type = subj_type, 
+                                       subj_position = subj_position)
 
-    def get_nifti1header(self, reco_id:Optional[int]=None, scale_mode:Optional['ScaleMode'] = None):
+    def update_nifti1header(self,
+                            nifti1obj: 'Nifti1Image',
+                            reco_id: Optional[int] = None, 
+                            scale_mode: Optional[Literal['header', 'apply']] = None):
         scale_mode = scale_mode or self.scale_mode
-        return super().get_nifti1header(self, reco_id, scale_mode).get()
+        return super().update_nifti1header(self, nifti1obj, reco_id, scale_mode)
 
-    def get_nifti1image(self, reco_id:Optional[int]=None, scale_mode:Optional['ScaleMode']=None,
-                        subj_type:Optional[str]=None, subj_position:Optional[str]=None,
-                        plugin:Optional['Plugged']=None, plugin_kws:dict=None):
+    def get_nifti1image(self, 
+                        reco_id: Optional[int] = None, 
+                        scale_mode: Optional[Literal['header', 'apply']] = None,
+                        subj_type: Optional[str] = None, 
+                        subj_position: Optional[str] = None,
+                        plugin: Optional[Union['PlugInSnippet', str]] = None, 
+                        plugin_kws: dict = None):
         scale_mode = scale_mode or self.scale_mode
-        return super().get_nifti1image(self, reco_id, scale_mode, subj_type, subj_position, plugin, plugin_kws)
+        return super().get_nifti1image(self, 
+                                       reco_id, 
+                                       scale_mode, 
+                                       subj_type, 
+                                       subj_position, 
+                                       plugin, 
+                                       plugin_kws)

@@ -7,4 +7,7 @@ exclude =
 	env,
 	venv,
 max-line-length = 127
-max-complexity=10
+max-complexity = 10
+ignore = W291, W293
+docstring-convention = google
+mypy-config = ./mypy.ini
