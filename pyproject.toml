@@ -14,7 +14,8 @@ dependencies = [
     'numpy>=1.18.0',
     'tqdm>=4.45.0',
     'packaging>=23.1',
-    'xnippy>=0.1.1'
+    'xnippy>=0.1.1',
+    'nibabel>=3.0.2'
 ]
 description = "Bruker PvDataset Loader"
 license = {text = "GNLv3"}
@@ -43,10 +44,6 @@ legacy = [
     'openpyxl>=3.0.3',
     'xlrd>=1.0.0',
     'SimpleITK>=1.2.4'
-    ]
-
-tonifti = [
-    'nibabel>=3.0.2'
     ]
 
 viewer = [
