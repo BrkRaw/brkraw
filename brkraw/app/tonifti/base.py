@@ -6,17 +6,17 @@ from nibabel.nifti1 import Nifti1Image
 from .header import Header
 from brkraw.api.pvobj.base import BaseBufferHandler
 from brkraw.api.data import Scan
-from xnippy.snippet import PlugInSnippet
+from xnippet.snippet import PlugInSnippet
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional, Union, Literal
     from typing import List
     from numpy.typing import NDArray
-    from xnippy.types import XnipyManagerType
+    from xnippet.types import XnippetManagerType
 
 
 class BaseMethods(BaseBufferHandler):
-    config: XnipyManagerType = config
+    config: XnippetManagerType = config
     
     def set_scale_mode(self, 
                        scale_mode: Optional[Literal['header', 'apply']] = None):

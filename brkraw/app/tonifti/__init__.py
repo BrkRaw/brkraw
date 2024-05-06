@@ -3,7 +3,7 @@ dependency:
     bids, plugin
 """
 from brkraw import __version__, config
-from xnippy.module import ModuleCommander
+from xnippet.module import ModuleCommander
 from brkraw.app.tonifti.plugin import ToNiftiPlugin, PvScan, PvReco, PvFiles
 from brkraw.app.tonifti.study import StudyToNifti, ScanToNifti
 

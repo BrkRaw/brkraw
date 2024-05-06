@@ -16,7 +16,7 @@ from zipfile import ZipFile
 from collections import OrderedDict, defaultdict
 from pathlib import Path
 from .parameters import Parameter
-from xnippy.formatter import PathFormatter
+from xnippet.formatter import PathFormatter
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional, List

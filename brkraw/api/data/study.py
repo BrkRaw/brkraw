@@ -34,7 +34,7 @@ from .scan import Scan
 from brkraw import config
 from brkraw.api.pvobj import PvStudy
 from brkraw.api.analyzer.base import BaseAnalyzer
-from xnippy.parser import RecipeParser
+from xnippet.parser import RecipeParser
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional
