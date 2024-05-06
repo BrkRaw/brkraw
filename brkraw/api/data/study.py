@@ -34,7 +34,7 @@ from .scan import Scan
 from brkraw import config
 from brkraw.api.pvobj import PvStudy
 from brkraw.api.analyzer.base import BaseAnalyzer
-from xnippy.formatter import RecipeFormatter
+from xnippy.parser import RecipeParser
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional
@@ -158,7 +158,7 @@ class Study(PvStudy, BaseAnalyzer):
         spec_path = os.path.join(os.path.dirname(__file__), 'study.yaml')  # TODO:asdasd 
         with open(spec_path, 'r') as f:
             spec = yaml.safe_load(f)
-        self._info = StudyHeader(header=RecipeFormatter(self, copy(spec)['study']).get(), 
+        self._info = StudyHeader(header=RecipeParser(self, copy(spec)['study']).get(), 
                                  scans=[])
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -168,13 +168,13 @@ class Study(PvStudy, BaseAnalyzer):
                 scaninfo_targets = [scanobj.info, 
                                     scanobj.get_scaninfo(get_analyzer=True)]
                 scan_header = ScanHeader(scan_id=scan_id, 
-                                         header=RecipeFormatter(scaninfo_targets, scan_spec).get(), 
+                                         header=RecipeParser(scaninfo_targets, scan_spec).get(), 
                                          recos=[])
                 for reco_id in scanobj.avail:
                     recoinfo_targets = [scanobj.get_scaninfo(reco_id=reco_id),
                                         scanobj.get_scaninfo(reco_id=reco_id, get_analyzer=True)]
                     reco_spec = copy(spec)['reco']
-                    reco_header = RecipeFormatter(recoinfo_targets, reco_spec).get()
+                    reco_header = RecipeParser(recoinfo_targets, reco_spec).get()
                     reco_header = RecoHeader(reco_id=reco_id, 
                                              header=reco_header) if reco_header else None
                     if reco_header:

@@ -14,7 +14,7 @@ dependencies = [
     'numpy>=1.18.0',
     'tqdm>=4.45.0',
     'packaging>=23.1',
-    'xnippy==0.0.1'
+    'xnippy>=0.1.1'
 ]
 description = "Bruker PvDataset Loader"
 license = {text = "GNLv3"}

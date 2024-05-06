@@ -124,20 +124,19 @@ class BaseMethods(BaseBufferHandler):
             plugin = BaseMethods._get_plugin_snippets_by_name(plugin)
         if isinstance(plugin, PlugInSnippet) and plugin.type == 'tonifti':
             print(f'++ Installed PlugIn: {plugin}')
-            with plugin.set(pvobj=scanobj.pvobj, **plugin_kws) as p:
+            with plugin.run(pvobj=scanobj.pvobj, **plugin_kws) as p:
                 nifti1image = p.get_nifti1image(subj_type=subj_type, subj_position=subj_position)
             return nifti1image
         else:
-            fetcher = config.get_fetcher('plugin')
             warnings.warn("Failed. Given plugin not available, "
                           "please install local plugin or use from available on "
-                          f"remote repository. -> {[p.name for p in fetcher.remote]}",
+                          f"remote repository. -> {[p.name for p in config.avail]}",
                           UserWarning)
             return None
     
     @staticmethod
     def _get_plugin_snippets_by_name(plugin: str):
-        fetcher = config.get_fetcher('plugin')
+        fetcher = config._fetcher
         if not fetcher.is_cache:
             plugin = BaseMethods._filter_snippets_by_name(plugin, fetcher.local)
         if fetcher.is_cache or not isinstance(plugin, PlugInSnippet):

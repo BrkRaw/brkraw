@@ -1,8 +1,8 @@
 from .lib import *
-from xnippy import Xnippy as ConfigManager
+from xnippy import XnippyManager
 
 __version__ = '0.4.0'
-config = ConfigManager(package_name=__package__, 
+config = XnippyManager(package_name=__package__, 
                        package_version=__version__,
                        package__file__=__file__,
                        config_filename='config.yaml')

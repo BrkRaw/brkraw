@@ -18,3 +18,5 @@ tests/.brkraw
 tests/_*.ipynb
 tests/tutorials
 tests/_datasets
+
+.python-version
