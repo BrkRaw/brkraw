@@ -20,3 +20,4 @@ tests/tutorials
 tests/_datasets
 
 .python-version
+.vscode
