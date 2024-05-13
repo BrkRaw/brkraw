@@ -34,7 +34,7 @@ from .scan import Scan
 from brkraw import config
 from brkraw.api.pvobj import PvStudy
 from brkraw.api.analyzer.base import BaseAnalyzer
-from xnippet.parser import RecipeParser
+from reshipe import RecipeParser
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional
@@ -129,6 +129,7 @@ class Study(PvStudy, BaseAnalyzer):
     def info(self) -> dict:
         if not hasattr(self, '_info'):
             self._process_header()
+        # return self._info
         if not hasattr(self, '_streamed_info'): 
             self._streamed_info = self._stream_info() 
         return self._streamed_info
@@ -155,7 +156,7 @@ class Study(PvStudy, BaseAnalyzer):
         Returns:
             dict: A dictionary containing structured information about the study, its scans, and reconstructions.
         """
-        spec_path = os.path.join(os.path.dirname(__file__), 'study.yaml')  # TODO:asdasd 
+        spec_path = os.path.join(os.path.dirname(__file__), 'study.yaml')
         with open(spec_path, 'r') as f:
             spec = yaml.safe_load(f)
         self._info = StudyHeader(header=RecipeParser(self, copy(spec)['study']).get(), 
@@ -165,18 +166,16 @@ class Study(PvStudy, BaseAnalyzer):
             for scan_id in self.avail:
                 scanobj = self.get_scan(scan_id)
                 scan_spec = copy(spec)['scan']
-                scaninfo_targets = [scanobj.info, 
-                                    scanobj.get_scaninfo(get_analyzer=True)]
+                scaninfo_targets = scanobj.info
                 scan_header = ScanHeader(scan_id=scan_id, 
                                          header=RecipeParser(scaninfo_targets, scan_spec).get(), 
                                          recos=[])
                 for reco_id in scanobj.avail:
-                    recoinfo_targets = [scanobj.get_scaninfo(reco_id=reco_id),
-                                        scanobj.get_scaninfo(reco_id=reco_id, get_analyzer=True)]
+                    recoinfo_targets = [scanobj.get_scaninfo(reco_id=reco_id)]
                     reco_spec = copy(spec)['reco']
-                    reco_header = RecipeParser(recoinfo_targets, reco_spec).get()
+                    parsed_reco = RecipeParser(recoinfo_targets, reco_spec).get()
                     reco_header = RecoHeader(reco_id=reco_id, 
-                                             header=reco_header) if reco_header else None
+                                             header=parsed_reco) if parsed_reco else None
                     if reco_header:
                         scan_header.recos.append(reco_header)
                 self._info.scans.append(scan_header)

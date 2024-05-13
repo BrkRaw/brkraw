@@ -13,18 +13,15 @@ dependencies = [
     'pyyaml>=6.0.1',
     'numpy>=1.18.0',
     'tqdm>=4.45.0',
-    'xnippet>=0.1.0',
-    'nibabel>=3.0.2',
-    'pandas>=1.0.0',
-    'openpyxl>=3.0.3',
-    'xlrd>=1.0.0',
+    'xnippet @ git+https://github.com/dvm-shlee/xnippet.git',
+    'reshipe', #'reshipe @ git+https://github.com/dvm-shlee/reshipe.git'
 ]
 description = "Bruker PvDataset Loader"
 license = {text = "GNLv3"}
 dynamic = ["version"]
 maintainers = [
     {name = "SungHo Lee", email = 'shlee@unc.edu'}
-    ]
+]
 name = "brkraw"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -34,27 +31,43 @@ keywords = [
     'converter', 
     'administrator_tool', 
     'extensible', 
-    'xoani'
-    ]
+]
 
 [project.urls]
 Homepage = "https://brkraw.github.io"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project.optional-dependencies]
+all = ["brkraw[tonii]", "brkraw[viewer]"]
+
 legacy = [
-    'SimpleITK>=1.2.4'
-    ]
+    'brkraw[all]',
+    'pandas>=1.0.0',
+    'openpyxl>=3.0.3',
+    'xlrd>=1.0.0',
+]
+
+simpleitk = [
+    'SimpleITK>=1.2.4',
+]
+
+tonii = [
+    'nibabel>=3.0.2',
+]
 
 viewer = [
     'pillow>=7.1.1'
-    ]
+]
 
 dev = [
+    "matplotlib",
     "flake8",
     "pytest",
     "nbmake",
-    "types-PyYAML"
-    ]
+    "types-PyYAML",
+]
 
 [tool.hatch.version]
 path = "brkraw/__init__.py"
@@ -63,3 +76,7 @@ style = "pep440"
 [project.scripts]
 brkraw = "brkraw.scripts.brkraw:main"
 brk-backup = 'brkraw.scripts.brk_backup:main'
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"

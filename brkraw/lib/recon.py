@@ -51,7 +51,7 @@ class Reconstruction:
         self.NR         = self.acqp['NR']
         self.NRecs      = 1
         self.reco_id    = reco_id
-        self.info       = scanobj.get_info(self.reco_id)
+        self.info       = scanobj.get_scaninfo(self.reco_id)
         self.protocol   = self.info.protocol
         self.reco       = pvscan.get_reco(self.reco_id).reco        
         self.supported_protocol = any([True for i in SUPPORTED_PROTOCOLS if i in self.protocol['protocol_name'].lower()])

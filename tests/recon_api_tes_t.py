@@ -1,3 +1,4 @@
+from pathlib import Path
 from brkraw.app import tonifti as tonii
 from brkraw.lib.recon import reconstruction
 
@@ -6,8 +7,8 @@ import matplotlib.pyplot as plt
 
 import nibabel as nib
 
-fiddata_path = 'YOUR.PvDatasets'
-studyobj = tonii.brkraw.BrkrawToNifti(fiddata_path)
+fiddata_path = Path(__file__).parents[2] / 'brkraw-dataset_local' / 'KCL' / '20200310_101931_PHYSICS_PHYSICS_EK_BIDStest_RatHead_1_1.zip'
+studyobj = tonii.StudyToNifti(fiddata_path)
 scan_id  = 10 # REPLACE WITH YOUR SCAN NUMBER
 reco_id  = 1
 scanobj  = studyobj.get_scan(scan_id)
@@ -20,13 +21,13 @@ print(reconobj.shape)
 plt.subplot(1,2,1)
 if len(reconobj.shape) == 2:
     plt.imshow(reconobj[:,:].T)
-    plt.title(f"{scan_id},{scanobj.acqp['ACQ_scan_name']}")
+    plt.title(f"{scan_id},{scanobj.pvobj.acqp['ACQ_scan_name']}")
 elif len(reconobj.shape) == 3:
     plt.imshow(reconobj[:,:,reconobj.shape[2]//2].T)
-    plt.title(f"{scan_id},{scanobj.acqp['ACQ_scan_name']}")
+    plt.title(f"{scan_id},{scanobj.pvobj.acqp['ACQ_scan_name']}")
 elif len(reconobj.shape) == 4:
     plt.imshow(reconobj[:,:,reconobj.shape[2]//2,0].T)
-    plt.title(f"{scan_id},{scanobj.acqp['ACQ_scan_name']}")  
+    plt.title(f"{scan_id},{scanobj.pvobj.acqp['ACQ_scan_name']}")  
 plt.subplot(1,2,2)
 if len(reconobj.shape) == 2:
     plt.imshow(dataobj[:,:].T)
