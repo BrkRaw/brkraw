@@ -391,11 +391,11 @@ def main():
 
         # [220202] make compatible with csv, tsv and xlsx
         if 'xlsx' in datasheet_ext:
-            df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str})
+            df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str, 'inv': str, 'flip': str})
         elif 'csv' in datasheet_ext:
-            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str}, index_col=None, header=0, sep=',')
+            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str, 'inv': str, 'flip': str}, index_col=None, header=0, sep=',')
         elif 'tsv' in datasheet_ext:
-            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str}, index_col=None, header=0, sep='\t')
+            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str, 'inv': str, 'flip': str}, index_col=None, header=0, sep='\t')
         else:
             print(f'{datasheet_ext} if not supported format.')
             raise InvalidApproach('Invalid input for datasheet!')
@@ -702,6 +702,18 @@ def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_pa
         if pd.notnull(row.rec):
             if bids_validation(df, i, 'rec', row.rec, 2):
                 fname = '{}_rec-{}'.format(fname, row.rec)
+        if pd.notnull(row.flip):
+            if bids_validation(df, i, 'flip', row.flip, 2):
+                fname = '{}_flip-{}'.format(fname, row.flip)
+        if pd.notnull(row.inv):
+            if bids_validation(df, i, 'inv', row.inv, 2):
+                fname = '{}_inv-{}'.format(fname, row.inv)
+        if pd.notnull(row.mt):
+            if bids_validation(df, i, 'mt', row.mt, 3):
+                fname = '{}_mt-{}'.format(fname, row.mt)
+        if pd.notnull(row.part):
+            if bids_validation(df, i, 'part', row.part, 5):
+                fname = '{}_part-{}'.format(fname, row.part)
         filtered_dset.loc[i, 'FileName'] = fname
         filtered_dset.loc[i, 'Dir'] = dtype_path
         if pd.isnull(row.modality):
