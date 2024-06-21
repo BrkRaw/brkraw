@@ -470,11 +470,11 @@ def main():
                                 if len(md_df) > 1:
                                     conflict_tested = []
                                     for j, sub_row in md_df.iterrows():
+                                        # Try to append a run number if it was not already specified
+                                        # The run tag might not appear at the right position with this 
+                                        # strategy
                                         if pd.isnull(sub_row.run):
                                             fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
-                                        else:
-                                            _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                            fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2)) # [20210822] format error
                                         if fname in conflict_tested:
                                             raise ValueConflictInField('ScanID:[{}] Conflict error. '
                                                                        'The [run] index value must be unique '
@@ -702,6 +702,9 @@ def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_pa
         if pd.notnull(row.dir):
             if bids_validation(df, i, 'dir', row.dir, 2):
                 fname = '{}_dir-{}'.format(fname, row.dir)
+        if pd.notnull(row.run):
+            if bids_validation(df, i, 'run', row.run, 2):
+                fname = '{}_run-{}'.format(fname, row.run)
         if pd.notnull(row.flip):
             if bids_validation(df, i, 'flip', row.flip, 2):
                 fname = '{}_flip-{}'.format(fname, row.flip)
