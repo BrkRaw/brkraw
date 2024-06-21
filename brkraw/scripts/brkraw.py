@@ -696,12 +696,12 @@ def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_pa
         if pd.notnull(row.ce):
             if bids_validation(df, i, 'ce', row.ce, 5):
                 fname = '{}_ce-{}'.format(fname, row.ce)
-        if pd.notnull(row.dir):
-            if bids_validation(df, i, 'dir', row.dir, 2):
-                fname = '{}_dir-{}'.format(fname, row.dir)
         if pd.notnull(row.rec):
             if bids_validation(df, i, 'rec', row.rec, 2):
                 fname = '{}_rec-{}'.format(fname, row.rec)
+        if pd.notnull(row.dir):
+            if bids_validation(df, i, 'dir', row.dir, 2):
+                fname = '{}_dir-{}'.format(fname, row.dir)
         if pd.notnull(row.flip):
             if bids_validation(df, i, 'flip', row.flip, 2):
                 fname = '{}_flip-{}'.format(fname, row.flip)
