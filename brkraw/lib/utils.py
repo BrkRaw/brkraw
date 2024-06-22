@@ -404,9 +404,11 @@ def build_bids_json(dset, row, fname, json_path, slope=False, offset=False):
         crop = None
     if dset.is_multi_echo(row.ScanID, row.RecoID):  # multi_echo
         nii_objs = dset.get_niftiobj(row.ScanID, row.RecoID, crop=crop, slope=slope, offset=offset)
+        n_echo = len(nii_objs)
+        n_digit = len(str(n_echo))
         for echo, nii in enumerate(nii_objs):
             # caught a bug here for multiple echo, changed fname to currentFileName
-            currentFileName = '{}_echo-{}_{}'.format(fname, echo + 1, row.modality)
+            currentFileName = fname.replace('echo.index',str(echo + 1).zfill(n_digit))
             output_path = os.path.join(row.Dir, currentFileName)
             nii.to_filename('{}.nii.gz'.format(output_path))
             if json_path:

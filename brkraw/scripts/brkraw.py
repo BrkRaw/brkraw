@@ -705,6 +705,8 @@ def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_pa
         if pd.notnull(row.run):
             if bids_validation(df, i, 'run', row.run, 2):
                 fname = '{}_run-{}'.format(fname, row.run)
+        if dset.is_multi_echo(row.ScanID, row.RecoID):
+            fname = '{}_echo-echo.index'.format(fname)
         if pd.notnull(row.flip):
             if bids_validation(df, i, 'flip', row.flip, 2):
                 fname = '{}_flip-{}'.format(fname, row.flip)
