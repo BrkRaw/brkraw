@@ -391,11 +391,11 @@ def main():
 
         # [220202] make compatible with csv, tsv and xlsx
         if 'xlsx' in datasheet_ext:
-            df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str})
+            df = pd.read_excel(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str, 'inv': str, 'flip': str})
         elif 'csv' in datasheet_ext:
-            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str}, index_col=None, header=0, sep=',')
+            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str, 'inv': str, 'flip': str}, index_col=None, header=0, sep=',')
         elif 'tsv' in datasheet_ext:
-            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str}, index_col=None, header=0, sep='\t')
+            df = pd.read_csv(datasheet, dtype={'SubjID': str, 'SessID': str, 'run': str, 'inv': str, 'flip': str}, index_col=None, header=0, sep='\t')
         else:
             print(f'{datasheet_ext} if not supported format.')
             raise InvalidApproach('Invalid input for datasheet!')
@@ -470,11 +470,11 @@ def main():
                                 if len(md_df) > 1:
                                     conflict_tested = []
                                     for j, sub_row in md_df.iterrows():
+                                        # Try to append a run number if it was not already specified
+                                        # The run tag might not appear at the right position with this 
+                                        # strategy
                                         if pd.isnull(sub_row.run):
                                             fname = '{}_run-{}'.format(sub_row.FileName, str(j+1).zfill(2))
-                                        else:
-                                            _ = bids_validation(df, i, 'run', sub_row.run, 3, dtype=int)
-                                            fname = '{}_run-{}'.format(sub_row.FileName, str(sub_row.run).zfill(2)) # [20210822] format error
                                         if fname in conflict_tested:
                                             raise ValueConflictInField('ScanID:[{}] Conflict error. '
                                                                        'The [run] index value must be unique '
@@ -696,12 +696,29 @@ def completeFieldsCreateFolders (df, filtered_dset, dset, multi_session, root_pa
         if pd.notnull(row.ce):
             if bids_validation(df, i, 'ce', row.ce, 5):
                 fname = '{}_ce-{}'.format(fname, row.ce)
-        if pd.notnull(row.dir):
-            if bids_validation(df, i, 'dir', row.dir, 2):
-                fname = '{}_dir-{}'.format(fname, row.dir)
         if pd.notnull(row.rec):
             if bids_validation(df, i, 'rec', row.rec, 2):
                 fname = '{}_rec-{}'.format(fname, row.rec)
+        if pd.notnull(row.dir):
+            if bids_validation(df, i, 'dir', row.dir, 2):
+                fname = '{}_dir-{}'.format(fname, row.dir)
+        if pd.notnull(row.run):
+            if bids_validation(df, i, 'run', row.run, 2):
+                fname = '{}_run-{}'.format(fname, row.run)
+        if dset.is_multi_echo(row.ScanID, row.RecoID):
+            fname = '{}_echo-echo.index'.format(fname)
+        if pd.notnull(row.flip):
+            if bids_validation(df, i, 'flip', row.flip, 2):
+                fname = '{}_flip-{}'.format(fname, row.flip)
+        if pd.notnull(row.inv):
+            if bids_validation(df, i, 'inv', row.inv, 2):
+                fname = '{}_inv-{}'.format(fname, row.inv)
+        if pd.notnull(row.mt):
+            if bids_validation(df, i, 'mt', row.mt, 3):
+                fname = '{}_mt-{}'.format(fname, row.mt)
+        if pd.notnull(row.part):
+            if bids_validation(df, i, 'part', row.part, 5):
+                fname = '{}_part-{}'.format(fname, row.part)
         filtered_dset.loc[i, 'FileName'] = fname
         filtered_dset.loc[i, 'Dir'] = dtype_path
         if pd.isnull(row.modality):

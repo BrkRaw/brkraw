@@ -402,11 +402,14 @@ def build_bids_json(dset, row, fname, json_path, slope=False, offset=False):
         crop = [int(row.Start), int(row.End)]
     else:
         crop = None
+    fname = '{}_{}'.format(fname, row.modality)
     if dset.is_multi_echo(row.ScanID, row.RecoID):  # multi_echo
         nii_objs = dset.get_niftiobj(row.ScanID, row.RecoID, crop=crop, slope=slope, offset=offset)
+        n_echo = len(nii_objs)
+        n_digit = len(str(n_echo))
         for echo, nii in enumerate(nii_objs):
             # caught a bug here for multiple echo, changed fname to currentFileName
-            currentFileName = '{}_echo-{}_{}'.format(fname, echo + 1, row.modality)
+            currentFileName = fname.replace('echo.index',str(echo + 1).zfill(n_digit))
             output_path = os.path.join(row.Dir, currentFileName)
             nii.to_filename('{}.nii.gz'.format(output_path))
             if json_path:
@@ -414,7 +417,6 @@ def build_bids_json(dset, row, fname, json_path, slope=False, offset=False):
                 dset.save_json(row.ScanID, row.RecoID, currentFileName, dir=row.Dir,
                                metadata=ref, condition=['me', echo])
     else:
-        fname = '{}_{}'.format(fname, row.modality)
         dset.save_as(row.ScanID, row.RecoID, fname, dir=row.Dir, crop=crop, slope=slope, offset=offset)
         if re.search('dwi', row.modality, re.IGNORECASE):
             # DTI parameter (FSL style)
