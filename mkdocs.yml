@@ -12,6 +12,10 @@ theme:
   font:
     text: Space Grotesk
     code: JetBrains Mono
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
   features:
     - navigation.tabs
     - navigation.top
@@ -25,6 +29,9 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.superfences
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md
