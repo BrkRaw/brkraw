@@ -29,7 +29,7 @@ Notes:
 
 ## brkraw addon attach-map
 
-Attach a map file to an installed spec.
+Attach a context map to an installed spec.
 
 Examples:
 
@@ -41,9 +41,9 @@ Notes:
 
 - The spec must already be installed.
 
-- The map file is copied into `maps/`, and the spec `__meta__.map_file` is updated.
+- The context map is copied into `maps/`, and the spec `__meta__.context_map` is updated.
 
-- If the spec already has a map file, you will be prompted to replace it.
+- If the spec already has a context map, you will be prompted to replace it.
 
 - Use `--force` to replace without prompting.
 
@@ -67,7 +67,7 @@ Notes:
 
 - `--kind` can limit removal to `spec`, `pruner`, `rule`, `transform`, or `map`.
 
-- Removing a map file clears any matching `__meta__.map_file` entries.
+- Removing a context map clears any matching `__meta__.context_map` entries.
 
 ## brkraw addon edit
 

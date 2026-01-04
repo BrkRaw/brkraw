@@ -106,10 +106,10 @@ def cmd_tonii(args: argparse.Namespace) -> int:
         args.output_format = os.environ.get("BRKRAW_TONII_OUTPUT_FORMAT")
     if args.header is None:
         args.header = os.environ.get("BRKRAW_TONII_HEADER")
-    if args.sidecar_map_file is None:
-        args.sidecar_map_file = os.environ.get("BRKRAW_TONII_SIDECAR_MAP_FILE")
-    if args.output_map_file is None:
-        args.output_map_file = os.environ.get("BRKRAW_TONII_OUTPUT_MAP_FILE")
+    if args.sidecar_context_map is None:
+        args.sidecar_context_map = os.environ.get("BRKRAW_TONII_SIDECAR_CONTEXT_MAP")
+    if args.output_context_map is None:
+        args.output_context_map = os.environ.get("BRKRAW_TONII_OUTPUT_CONTEXT_MAP")
 
     if not Path(args.path).exists():
         logger.error("Path not found: %s", args.path)
@@ -180,7 +180,7 @@ def cmd_tonii(args: argparse.Namespace) -> int:
                     scan_id,
                     output_format_fields=output_fields,
                     output_format_spec=format_spec,
-                    map_file=args.output_map_file,
+                    context_map=args.output_context_map,
                     root=args.root,
                     reco_id=reco_id,
                 )
@@ -201,7 +201,7 @@ def cmd_tonii(args: argparse.Namespace) -> int:
                     loader,
                     scan_id,
                     output_format_spec=format_spec,
-                    map_file=args.output_map_file,
+                    context_map=args.output_context_map,
                     root=args.root,
                     reco_id=reco_id,
                 )
@@ -229,7 +229,7 @@ def cmd_tonii(args: argparse.Namespace) -> int:
                 sidecar_meta = loader.get_metadata(
                     scan_id,
                     reco_id=reco_id,
-                    map_file=args.sidecar_map_file,
+                    context_map=args.sidecar_context_map,
                 )
 
             for path, obj in zip(output_paths, nii_list):
@@ -492,14 +492,14 @@ def _add_tonii_args(
         help="Write a JSON sidecar using metadata rules.",
     )
     parser.add_argument(
-        "--sidecar-map-file",
-        dest="sidecar_map_file",
-        help="Override map file used by metadata sidecar rules.",
+        "--sidecar-context-map",
+        dest="sidecar_context_map",
+        help="Override context map used by metadata sidecar rules.",
     )
     parser.add_argument(
-        "--output-map-file",
-        dest="output_map_file",
-        help="Override map file used by output format spec mapping.",
+        "--output-context-map",
+        dest="output_context_map",
+        help="Override context map used by output format spec mapping.",
     )
     parser.add_argument(
         "--unwrap-pose",

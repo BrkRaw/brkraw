@@ -21,7 +21,7 @@ def render_output_format(
     *,
     output_format_fields: Optional[Iterable[Mapping[str, Any]]] = None,
     output_format_spec: Optional[Union[str, Path]] = None,
-    map_file: Optional[Union[str, Path]] = None,
+    context_map: Optional[Union[str, Path]] = None,
     root: Optional[Union[str, Path]] = None,
     reco_id: Optional[int] = None,
 ) -> str:
@@ -29,7 +29,7 @@ def render_output_format(
         loader,
         scan_id,
         output_format_spec=output_format_spec,
-        map_file=map_file,
+        context_map=context_map,
         root=root,
         reco_id=reco_id,
     )
@@ -41,7 +41,7 @@ def load_output_format_info(
     scan_id: int,
     *,
     output_format_spec: Optional[Union[str, Path]],
-    map_file: Optional[Union[str, Path]],
+    context_map: Optional[Union[str, Path]],
     root: Optional[Union[str, Path]],
     reco_id: Optional[int],
 ) -> Dict[str, Any]:
@@ -59,7 +59,8 @@ def load_output_format_info(
             spec_data,
             transforms,
             validate=False,
-            map_file=map_file,
+            context_map=context_map,
+            context={"scan_id": scan_id, "reco_id": reco_id},
         )
         if not isinstance(mapped, dict):
             raise ValueError("output_format_spec must resolve to a mapping.")

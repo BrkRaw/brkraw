@@ -222,7 +222,13 @@ def _get_params(source, file: str, reco_id: Optional[int]):
     return None
 
 
-def _resolve_value(source, sources, transforms: Dict[str, Callable], result_ctx: Dict[str, Any]):
+def _resolve_value(
+    source,
+    sources,
+    transforms: Dict[str, Callable],
+    result_ctx: Dict[str, Any],
+    ids: Dict[str, Optional[int]],
+):
     """Resolve the first available value from a list of source descriptors.
 
     Args:
@@ -236,7 +242,7 @@ def _resolve_value(source, sources, transforms: Dict[str, Callable], result_ctx:
     """
     for src in sources:
         if "inputs" in src:
-            inputs = _resolve_inputs(source, src["inputs"], transforms, result_ctx)
+            inputs = _resolve_inputs(source, src["inputs"], transforms, result_ctx, ids)
             if "transform" in src:
                 return _apply_inputs_transform(inputs, transforms, src["transform"])
             return inputs
@@ -350,9 +356,10 @@ def _is_study_like(source: Any) -> bool:
 
 def _resolve_input(
     source,
-    spec: Dict[str, Any],
+    spec: Any,
     transforms: Dict[str, Callable],
     result_ctx: Dict[str, Any],
+    ids: Dict[str, Optional[int]],
 ) -> Any:
     """Resolve a single input value based on a spec entry.
 
@@ -365,12 +372,19 @@ def _resolve_input(
     Returns:
         The resolved input value, possibly transformed.
     """
+    if isinstance(spec, str):
+        if spec.startswith("$"):
+            value = _resolve_context_value(spec[1:], result_ctx, ids)
+            return None if value is _MISSING else value
+        raise ValueError(f"Input shorthand must start with '$': {spec!r}")
+    if not isinstance(spec, dict):
+        raise ValueError(f"Input spec must be a mapping or $var: {spec!r}")
     if "const" in spec:
         return spec["const"]
     if "ref" in spec:
         return _get_nested(result_ctx, spec["ref"])
 
-    raw = _resolve_value(source, spec.get("sources", []), transforms, result_ctx)
+    raw = _resolve_value(source, spec.get("sources", []), transforms, result_ctx, ids)
     if raw is None:
         if "default" in spec:
             raw = spec["default"]
@@ -387,6 +401,7 @@ def _resolve_inputs(
     inputs_spec: Dict[str, Any],
     transforms: Dict[str, Callable],
     result_ctx: Dict[str, Any],
+    ids: Dict[str, Optional[int]],
 ) -> Dict[str, Any]:
     """Resolve a dict of input values for a rule.
 
@@ -401,7 +416,7 @@ def _resolve_inputs(
     """
     inputs: Dict[str, Any] = {}
     for name, spec in inputs_spec.items():
-        inputs[name] = _resolve_input(source, spec, transforms, result_ctx)
+        inputs[name] = _resolve_input(source, spec, transforms, result_ctx, ids)
     return inputs
 
 
@@ -449,7 +464,8 @@ def map_parameters(
     transforms: Optional[Dict[str, Callable]] = None,
     *,
     validate: bool = False,
-    map_file: Optional[Union[str, Path]] = None,
+    context_map: Optional[Union[str, Path]] = None,
+    context: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Map parameters to a nested dict according to spec rules.
 
@@ -458,7 +474,8 @@ def map_parameters(
         spec: Mapping of output keys to resolution rules.
         transforms: Transform registry used by rules (optional).
         validate: If True, validate the spec before mapping.
-        map_file: Optional mapping file override.
+        context_map: Optional context map override.
+        context: Optional context values (e.g., scan_id/reco_id).
 
     Returns:
         Nested dictionary of mapped outputs.
@@ -473,20 +490,21 @@ def map_parameters(
         _enforce_study_rules(spec)
     if transforms is None:
         transforms = {}
-    map_data = _load_map_data(spec, map_file=map_file)
+    map_data = _load_map_data(spec, context_map=context_map)
+    ids = _get_source_ids(source, context=context)
     result: Dict[str, Any] = {}
     for out_key, rule in spec.items():
         if out_key == "__meta__":
             continue
         try:
             if "inputs" in rule:
-                inputs = _resolve_inputs(source, rule["inputs"], transforms, result)
+                inputs = _resolve_inputs(source, rule["inputs"], transforms, result, ids)
                 if "transform" in rule:
                     val = _apply_inputs_transform(inputs, transforms, rule["transform"])
                 else:
                     val = inputs
             else:
-                raw = _resolve_value(source, rule.get("sources", []), transforms, result)
+                raw = _resolve_value(source, rule.get("sources", []), transforms, result, ids)
                 val = _apply_transform_chain(raw, transforms, rule.get("transform"))
 
             if "." in out_key:
@@ -497,22 +515,22 @@ def map_parameters(
             msg = f"Error mapping {out_key!r} with rule {rule!r}: {exc}"
             raise type(exc)(msg) from exc
     if map_data:
-        result = _apply_map_rules(result, map_data, source)
+        result = _apply_map_rules(result, map_data, source, context=context)
     return result
 
 
 def _load_map_data(
     spec: Mapping[str, Any],
     *,
-    map_file: Optional[Union[str, Path]],
+    context_map: Optional[Union[str, Path]],
 ) -> Dict[str, Any]:
     meta = spec.get("__meta__") if isinstance(spec, Mapping) else None
-    override_path = _resolve_map_path(map_file, base=None)
+    override_path = _resolve_map_path(context_map, base=None)
     if override_path is not None:
         return _read_map_file(override_path)
     if not isinstance(meta, Mapping):
         return {}
-    meta_path = meta.get("map_file")
+    meta_path = meta.get("context_map")
     spec_path = meta.get("__spec_path__")
     base = Path(spec_path).parent if isinstance(spec_path, str) else None
     resolved = _resolve_map_path(meta_path, base=base)
@@ -551,8 +569,10 @@ def _apply_map_rules(
     result: Dict[str, Any],
     map_data: Dict[str, Any],
     source: Any,
+    *,
+    context: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
-    ids = _get_source_ids(source)
+    ids = _get_source_ids(source, context=context)
     for out_key, raw_rule in map_data.items():
         rules = _normalize_map_rules(raw_rule)
         if not rules:
@@ -575,7 +595,7 @@ def _apply_map_rules(
 
 def _normalize_map_rules(raw_rule: Any) -> List[Dict[str, Any]]:
     if isinstance(raw_rule, list):
-        return [rule for rule in raw_rule if isinstance(rule, Mapping)]
+        return [dict(rule) for rule in raw_rule if isinstance(rule, Mapping)]
     if isinstance(raw_rule, Mapping):
         return [dict(raw_rule)]
     raise ValueError("Map rule must be a mapping or list of mappings.")
@@ -583,16 +603,21 @@ def _normalize_map_rules(raw_rule: Any) -> List[Dict[str, Any]]:
 
 def _get_output_value(result: Dict[str, Any], out_key: str) -> Tuple[bool, Any]:
     if "." in out_key:
-        value = _resolve_nested(result, out_key)
+        value = _get_nested(result, out_key)
         return (value is not None), value
     if out_key in result:
         return True, result[out_key]
     return False, None
 
 
-def _get_source_ids(source: Any) -> Dict[str, Optional[int]]:
+def _get_source_ids(source: Any, *, context: Optional[Mapping[str, Any]] = None) -> Dict[str, Optional[int]]:
     scan_id = getattr(source, "scan_id", None)
     reco_id = getattr(source, "reco_id", None)
+    if context:
+        if "scan_id" in context:
+            scan_id = context.get("scan_id")
+        if "reco_id" in context:
+            reco_id = context.get("reco_id")
     return {
         "scanid": scan_id,
         "scan_id": scan_id,
@@ -618,7 +643,7 @@ def _resolve_context_value(key: str, result: Dict[str, Any], ids: Dict[str, Opti
     if normalized in ids and ids[normalized] is not None:
         return ids[normalized]
     if "." in key:
-        value = _resolve_nested(result, key)
+        value = _get_nested(result, key)
         return value if value is not None else _MISSING
     if key in result:
         return result[key]
@@ -706,93 +731,3 @@ __all__ = [
     "load_spec",
     "map_parameters",
 ]
-
-
-if __name__ == "__main__":
-    import tempfile
-
-    class _Params(dict):
-        """Minimal dict-like params with attribute access."""
-
-        def __getattr__(self, name: str):
-            try:
-                return self[name]
-            except KeyError as exc:
-                raise AttributeError(name) from exc
-
-    class _Reco:
-        def __init__(self, reco_id: int, visu_pars: Dict[str, Any], reco: Dict[str, Any]):
-            self.reco_id = reco_id
-            self.visu_pars = _Params(visu_pars)
-            self.reco = _Params(reco)
-
-    class _Scan:
-        def __init__(self, method: Dict[str, Any], acqp: Dict[str, Any], recos: Dict[int, _Reco]):
-            self.method = _Params(method)
-            self.acqp = _Params(acqp)
-            self._recos = recos
-
-        def get_reco(self, reco_id: int) -> _Reco:
-            return self._recos[reco_id]
-
-    spec_yaml = (
-        "out.scalar:\n"
-        "  sources:\n"
-        "    - file: method\n"
-        "      key: PVM_SPackArrNSlices\n"
-        "out.const_value:\n"
-        "  inputs:\n"
-        "    foo:\n"
-        "      const: 42\n"
-        "  transform: pick_foo\n"
-        "out.combined:\n"
-        "  inputs:\n"
-        "    a:\n"
-        "      sources:\n"
-        "        - file: acqp\n"
-        "          key: ACQ_scan_name\n"
-        "    b:\n"
-        "      sources:\n"
-        "        - file: visu_pars\n"
-        "          key: VisuCoreFrameCount\n"
-        "          reco_id: 1\n"
-        "      default: 1\n"
-        "  transform: join_fields\n"
-    )
-
-    transforms_py = (
-        "def pick_foo(foo):\n"
-        "    return foo\n"
-        "\n"
-        "def join_fields(a, b):\n"
-        "    return f\"{a}_{b}\"\n"
-    )
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        spec_path = Path(tmpdir) / "spec.yaml"
-        transforms_path = Path(tmpdir) / "transforms.py"
-        spec_path.write_text(
-            "__meta__:\n"
-            "  transforms_source: \"transforms.py\"\n"
-            f"{spec_yaml}",
-            encoding="utf-8",
-        )
-        transforms_path.write_text(transforms_py, encoding="utf-8")
-        spec, transforms = load_spec(
-            spec_path,
-        )
-
-    scan = _Scan(
-        method={"PVM_SPackArrNSlices": 8},
-        acqp={"ACQ_scan_name": "test_scan"},
-        recos={
-            1: _Reco(
-                reco_id=1,
-                visu_pars={"VisuCoreFrameCount": 3},
-                reco={},
-            )
-        },
-    )
-
-    result = map_parameters(scan, spec, transforms)
-    print(result)

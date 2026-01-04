@@ -99,8 +99,8 @@ def cmd_unset(args: argparse.Namespace) -> int:
         "BRKRAW_TONII_SCAN_ID",
         "BRKRAW_TONII_RECO_ID",
         "BRKRAW_TONII_SIDECAR",
-        "BRKRAW_TONII_SIDECAR_MAP_FILE",
-        "BRKRAW_TONII_OUTPUT_MAP_FILE",
+        "BRKRAW_TONII_SIDECAR_CONTEXT_MAP",
+        "BRKRAW_TONII_OUTPUT_CONTEXT_MAP",
         "BRKRAW_TONII_UNWRAP_POSE",
         "BRKRAW_TONII_FLIP_X",
         "BRKRAW_TONII_OVERRIDE_SUBJECT_TYPE",
@@ -156,8 +156,8 @@ def cmd_env(_: argparse.Namespace) -> int:
     tonii_scan_id = os.environ.get("BRKRAW_TONII_SCAN_ID")
     tonii_reco_id = os.environ.get("BRKRAW_TONII_RECO_ID")
     tonii_sidecar = os.environ.get("BRKRAW_TONII_SIDECAR")
-    tonii_sidecar_map_file = os.environ.get("BRKRAW_TONII_SIDECAR_MAP_FILE")
-    tonii_output_map_file = os.environ.get("BRKRAW_TONII_OUTPUT_MAP_FILE")
+    tonii_sidecar_map_file = os.environ.get("BRKRAW_TONII_SIDECAR_CONTEXT_MAP")
+    tonii_output_map_file = os.environ.get("BRKRAW_TONII_OUTPUT_CONTEXT_MAP")
     tonii_unwrap_pose = os.environ.get("BRKRAW_TONII_UNWRAP_POSE")
     tonii_flip_x = os.environ.get("BRKRAW_TONII_FLIP_X")
     tonii_subject_type = os.environ.get("BRKRAW_TONII_OVERRIDE_SUBJECT_TYPE")
@@ -214,9 +214,9 @@ def cmd_env(_: argparse.Namespace) -> int:
     if tonii_sidecar is not None:
         print(f"BRKRAW_TONII_SIDECAR={tonii_sidecar}")
     if tonii_sidecar_map_file is not None:
-        print(f"BRKRAW_TONII_SIDECAR_MAP_FILE={tonii_sidecar_map_file}")
+        print(f"BRKRAW_TONII_SIDECAR_CONTEXT_MAP={tonii_sidecar_map_file}")
     if tonii_output_map_file is not None:
-        print(f"BRKRAW_TONII_OUTPUT_MAP_FILE={tonii_output_map_file}")
+        print(f"BRKRAW_TONII_OUTPUT_CONTEXT_MAP={tonii_output_map_file}")
     if tonii_unwrap_pose is not None:
         print(f"BRKRAW_TONII_UNWRAP_POSE={tonii_unwrap_pose}")
     if tonii_flip_x is not None:

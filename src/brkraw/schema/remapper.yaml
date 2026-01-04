@@ -91,28 +91,32 @@ $defs:
     required: ["inputs"]
 
   Input:
-    type: object
-    properties:
-      sources:
-        type: array
-        items: { $ref: "#/$defs/Source" }
-        description: "Ordered list of sources to resolve an input value."
-      const: {}
-      ref:
-        type: string
-        description: "Dot path to a previously resolved output value."
-      transform:
-        anyOf:
-          - type: string
-          - type: array
-            items: { type: string }
-        description: "Transform name(s) to apply. Arrays execute in order."
-      default: {}
-      required:
-        type: boolean
-        description: "If true, missing input raises instead of returning None."
-    additionalProperties: false
-    oneOf:
-      - required: ["sources"]
-      - required: ["const"]
-      - required: ["ref"]
+    anyOf:
+      - type: string
+        pattern: "^\\$[A-Za-z_][A-Za-z0-9_]*$"
+        description: "Context variable reference (e.g., $scan_id)."
+      - type: object
+        properties:
+          sources:
+            type: array
+            items: { $ref: "#/$defs/Source" }
+            description: "Ordered list of sources to resolve an input value."
+          const: {}
+          ref:
+            type: string
+            description: "Dot path to a previously resolved output value."
+          transform:
+            anyOf:
+              - type: string
+              - type: array
+                items: { type: string }
+            description: "Transform name(s) to apply. Arrays execute in order."
+          default: {}
+          required:
+            type: boolean
+            description: "If true, missing input raises instead of returning None."
+        additionalProperties: false
+        oneOf:
+          - required: ["sources"]
+          - required: ["const"]
+          - required: ["ref"]

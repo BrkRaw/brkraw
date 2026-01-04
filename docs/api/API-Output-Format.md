@@ -18,7 +18,7 @@ name = output_format_core.render_output_format(
         {"key": "Protocol", "hide": True},
     ],
     output_format_spec="metadata_common",
-    map_file="maps.yaml",
+    context_map="maps.yaml",
 )
 ```
 
@@ -48,7 +48,7 @@ Notes:
 
 - When no parts remain, the fallback is `scan-<ScanID>`.
 
-- `map_file` overrides the spec `__meta__.map_file` at runtime.
+- `context_map` overrides the spec `__meta__.context_map` at runtime.
 
 ## Slice pack suffixes
 

@@ -11,6 +11,45 @@ BrkRaw separates *selection logic* (rules) from *parameter mapping* (specs) and
 
 without modifying core code.
 
+## Extensibility overview
+
+BrkRaw exposes extension points in layers so you can plug in just the part you
+need:
+
+- **CLI plugins** (`brkraw.cli` entrypoint): add new CLI commands and workflows.
+
+- **Rules**: selectors that decide which specs or hooks apply to a given scan.
+
+- **Converter hooks** (`brkraw.converter_hook` entrypoint): override
+  `get_dataobj`, `get_affine`, and/or `get_nifti1image` to integrate custom
+  reconstruction pipelines, with full access to FID and sequence parameters.
+
+- **Specs**: remap parameter files into structured metadata for info tables or
+  sidecar JSON (e.g., BIDS-style fields).
+
+- **Transforms**: Python snippets used by specs to derive or normalize values.
+
+- **Context maps** (`__meta__.context_map`): project-specific value mapping on
+  top of spec outputs (e.g., subject/session/run mapping).
+
+- **Output formats**: use spec/transform/context-map outputs to generate
+  standardized filenames and folder structures.
+
+## Terminology
+
+- **Rule**: a selector that matches scan parameters and chooses specs/hooks.
+
+- **Converter hook**: a plugin that overrides one or more conversion methods.
+
+- **Spec**: a mapping recipe from Bruker parameters to structured outputs.
+
+- **Transform**: a Python function applied during spec resolution.
+
+- **Context map**: a project-scoped mapping table applied after spec/transform
+  resolution.
+
+- **Output format**: formatting rules for dataset paths and filenames.
+
 ### Rules
 
 Rules select specs or converter hooks based on Paravision parameters. You

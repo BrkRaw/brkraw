@@ -140,7 +140,7 @@ def _validate_meta_minimal(
         "version",
         "description",
         "category",
-        "map_file",
+        "context_map",
         "authors",
         "developers",
         "doi",

@@ -22,7 +22,7 @@ properties:
   category:
     type: string
     minLength: 1
-  map_file:
+  context_map:
     type: string
     minLength: 1
   authors:

@@ -1,6 +1,6 @@
 # Rule Syntax guide (specs.rules module)
 
-This document describes the rule syntax used to select specs and hooks
+This document describes the rule syntax used to select specs and entry points
 from `~/.brkraw/rules/*.yaml`. Rule files are loaded in filename order and
 evaluated top to bottom. If multiple rules match the same category, the last
 matching rule wins (override).
@@ -81,7 +81,7 @@ Each rule item supports:
 
 - `if` (optional): condition expression using the variables from `when`.
 
-- `use` (required): target spec name or spec path, or hook name.
+- `use` (required): target spec name or spec path, or entry point name.
 
 - `version` (optional): spec version to select when `use` is a spec name.
 
@@ -157,7 +157,7 @@ if:
 
 - `converter_hook` uses the hook name registered under
 
-  `brkraw.converter_hook` (or another configured group).
+  `brkraw.converter` (or another configured group).
 
 When `use` is a spec name, rules will:
 

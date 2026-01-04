@@ -144,7 +144,7 @@ class ScanLoader(Scan, BaseLoader):
             self, 
             reco_id: Optional[int] = None,
             spec: Optional[Union[Mapping[str, Any], str, "Path"]] = None,
-            map_file: Optional[Union[str, "Path"]] = None,
+            context_map: Optional[Union[str, "Path"]] = None,
             return_spec: bool = False,
             ) -> Optional[Union[dict, Tuple[Optional[dict], Optional[dict]]]]:
         ...

@@ -77,7 +77,7 @@ def add_spec_data(
     paths = config_core.paths(root=root)
     target = paths.specs_dir / filename
     installed = [target]
-    installed_map = _install_map_file(spec_data, source_path=source_path, target_spec=target, root=root)
+    installed_map = _install_context_map(spec_data, source_path=source_path, target_spec=target, root=root)
     if installed_map is not None:
         installed.append(installed_map)
     installed_transforms, updated = _install_transforms_from_spec(
@@ -164,18 +164,18 @@ def add_rule_data(
     return [target]
 
 
-def install_map(
-    map_file: Union[str, Path],
+def install_context_map(
+    context_map: Union[str, Path],
     spec: Union[str, Path],
     *,
     category: Optional[str] = None,
     force: bool = False,
     root: Optional[Union[str, Path]] = None,
 ) -> List[Path]:
-    """Install a map file and bind it to an installed spec.
+    """Install a context map and bind it to an installed spec.
 
     Args:
-        map_file: Source map YAML file.
+        context_map: Source context map YAML file.
         spec: Installed spec name or filename.
         category: Optional spec category hint.
         root: Optional config root override.
@@ -187,9 +187,9 @@ def install_map(
     spec_path = resolve_spec_reference(str(spec), category=category, root=root)
     if not _is_installed_spec(spec_path, paths.specs_dir):
         raise ValueError(f"Spec is not installed: {spec_path}")
-    installed_map = _install_map_for_spec(
+    installed_map = _install_context_map_for_spec(
         spec_path,
-        map_file=map_file,
+        context_map=context_map,
         force=force,
         root=root,
     )
@@ -286,7 +286,7 @@ def list_installed(root: Optional[Union[str, Path]] = None) -> Dict[str, List[Di
         spec_label = record["file"]
         for src in _collect_transforms_sources(spec_path):
             transforms_map.setdefault(Path(src).name, set()).add(spec_label)
-        map_entry = _resolve_spec_map_file(spec_path)
+        map_entry = _resolve_spec_context_map(spec_path)
         if map_entry is not None:
             maps_map.setdefault(map_entry.name, set()).add(spec_label)
 
@@ -500,7 +500,7 @@ def _specs_using_map(map_path: Path, specs_dir: Path) -> Set[str]:
         return used_by
     files = list(specs_dir.glob("*.yaml")) + list(specs_dir.glob("*.yml"))
     for path in files:
-        resolved = _resolve_spec_map_file(path)
+        resolved = _resolve_spec_context_map(path)
         if resolved is not None and resolved.name == map_path.name:
             used_by.add(path.name)
     return used_by
@@ -829,17 +829,17 @@ def _load_spec_meta(path: Path) -> Dict[str, str]:
     return out
 
 
-def _resolve_spec_map_file(spec_path: Path) -> Optional[Path]:
+def _resolve_spec_context_map(spec_path: Path) -> Optional[Path]:
     data = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         return None
     meta = data.get("__meta__")
     if not isinstance(meta, dict):
         return None
-    map_file = meta.get("map_file")
-    if not isinstance(map_file, str) or not map_file:
+    context_map = meta.get("context_map")
+    if not isinstance(context_map, str) or not context_map:
         return None
-    path = Path(map_file)
+    path = Path(context_map)
     if not path.is_absolute():
         path = (spec_path.parent / path).resolve()
     return path
@@ -854,7 +854,7 @@ def _is_installed_spec(spec_path: Path, specs_dir: Path) -> bool:
     return specs_dir in spec_path.parents or spec_path == specs_dir
 
 
-def _install_map_file(
+def _install_context_map(
     spec_data: Dict[str, Any],
     *,
     source_path: Optional[Path],
@@ -864,11 +864,11 @@ def _install_map_file(
     meta = spec_data.get("__meta__")
     if not isinstance(meta, dict):
         return None
-    map_file = meta.get("map_file")
-    if not isinstance(map_file, str) or not map_file:
+    context_map = meta.get("context_map")
+    if not isinstance(context_map, str) or not context_map:
         return None
     paths = config_core.paths(root=root)
-    src_path = Path(map_file)
+    src_path = Path(context_map)
     if not src_path.is_absolute():
         if source_path is None:
             raise FileNotFoundError(src_path)
@@ -878,20 +878,20 @@ def _install_map_file(
     target = paths.maps_dir / src_path.name
     _write_file(target, src_path.read_text(encoding="utf-8"))
     rel_path = os.path.relpath(target, start=target_spec.parent)
-    meta["map_file"] = rel_path
-    logger.info("Installed map file: %s", target)
+    meta["context_map"] = rel_path
+    logger.info("Installed context map: %s", target)
     return target
 
 
-def _install_map_for_spec(
+def _install_context_map_for_spec(
     spec_path: Path,
     *,
-    map_file: Union[str, Path],
+    context_map: Union[str, Path],
     force: bool,
     root: Optional[Union[str, Path]],
 ) -> Path:
     paths = config_core.paths(root=root)
-    src_path = Path(map_file).expanduser()
+    src_path = Path(context_map).expanduser()
     if not src_path.is_absolute():
         src_path = (Path.cwd() / src_path).resolve()
     if not src_path.exists():
@@ -902,9 +902,9 @@ def _install_map_for_spec(
     meta = data.get("__meta__")
     if not isinstance(meta, dict):
         raise ValueError(f"{spec_path}: __meta__ must be an object.")
-    existing = _resolve_spec_map_file(spec_path)
+    existing = _resolve_spec_context_map(spec_path)
     if existing is not None and not force:
-        logger.info("Spec already has map_file: %s", existing)
+        logger.info("Spec already has context_map: %s", existing)
         raise RuntimeError("Map file already installed; remove it or use force=True.")
     if existing is not None and force:
         used_by = _specs_using_map(existing, paths.specs_dir)
@@ -916,14 +916,14 @@ def _install_map_for_spec(
     target = paths.maps_dir / src_path.name
     _write_file(target, src_path.read_text(encoding="utf-8"))
     rel_path = os.path.relpath(target, start=spec_path.parent)
-    meta["map_file"] = rel_path
+    meta["context_map"] = rel_path
     _write_file(spec_path, yaml.safe_dump(data, sort_keys=False))
-    logger.info("Installed map file: %s", target)
-    logger.info("Updated spec map_file: %s", spec_path)
+    logger.info("Installed context map: %s", target)
+    logger.info("Updated spec context_map: %s", spec_path)
     return target
 
 
-def _remove_map_references(map_path: Path, specs_dir: Path) -> None:
+def _remove_context_map_references(map_path: Path, specs_dir: Path) -> None:
     if not specs_dir.exists():
         return
     spec_files = list(specs_dir.glob("*.yml")) + list(specs_dir.glob("*.yaml"))
@@ -934,7 +934,7 @@ def _remove_map_references(map_path: Path, specs_dir: Path) -> None:
         meta = data.get("__meta__")
         if not isinstance(meta, dict):
             continue
-        current = meta.get("map_file")
+        current = meta.get("context_map")
         if not isinstance(current, str) or not current:
             continue
         resolved = Path(current)
@@ -945,9 +945,9 @@ def _remove_map_references(map_path: Path, specs_dir: Path) -> None:
                 continue
         except FileNotFoundError:
             continue
-        meta.pop("map_file", None)
+        meta.pop("context_map", None)
         _write_file(spec_path, yaml.safe_dump(data, sort_keys=False))
-        logger.info("Cleared map_file from spec: %s", spec_path)
+        logger.info("Cleared context_map from spec: %s", spec_path)
 
 
 def _ensure_spec_category(spec_path: Path, category: str) -> None:

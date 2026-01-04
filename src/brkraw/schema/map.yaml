@@ -1,5 +1,5 @@
 title: "BrkRaw Map File"
-description: "Per-key mapping rules referenced by __meta__.map_file."
+description: "Per-key mapping rules referenced by __meta__.context_map."
 type: object
 additionalProperties:
   oneOf:

@@ -50,10 +50,10 @@ meta, spec_info = loader.get_metadata(3, reco_id=1, return_spec=True)
 print(spec_info["name"], spec_info.get("version"))
 ```
 
-Override map file:
+Override context map:
 
 ```python
-meta = loader.get_metadata(3, reco_id=1, map_file="maps.yaml")
+meta = loader.get_metadata(3, reco_id=1, context_map="maps.yaml")
 ```
 
 ## Parameter search

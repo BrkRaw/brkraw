@@ -102,6 +102,10 @@ def _validate_inputs(inputs: Any, path: str, errors: List[str]) -> None:
         return
     for name, spec in inputs.items():
         item_path = f"{path}.inputs[{name!r}]"
+        if isinstance(spec, str):
+            if not spec.startswith("$"):
+                errors.append(f"{item_path}: input shorthand must start with '$'.")
+            continue
         if not isinstance(spec, dict):
             errors.append(f"{item_path}: input spec must be an object.")
             continue
@@ -277,11 +281,11 @@ def validate_map_data(map_data: Any, *, raise_on_error: bool = True) -> List[str
     return errors
 
 
-def validate_map_file(path: Union[str, Path], *, raise_on_error: bool = True) -> List[str]:
-    """Load and validate a map file from YAML.
+def validate_context_map(path: Union[str, Path], *, raise_on_error: bool = True) -> List[str]:
+    """Load and validate a context map from YAML.
 
     Args:
-        path: Map YAML file path.
+        path: Context map YAML file path.
         raise_on_error: If True, raise ValueError on validation errors.
 
     Returns:
@@ -290,3 +294,4 @@ def validate_map_file(path: Union[str, Path], *, raise_on_error: bool = True) ->
     map_path = Path(path)
     data = yaml.safe_load(map_path.read_text(encoding="utf-8"))
     return validate_map_data(data, raise_on_error=raise_on_error)
+

@@ -31,7 +31,7 @@ like `study.yaml` with multiple sections, put `__meta__` under each section.
 relative/absolute spec paths to merge before the current spec. Keys in the
 current spec override included keys unless `__meta__.include_mode` is set to
 `strict`, which raises on conflicts.
-`__meta__.map_file` is optional. When present, it points to a YAML mapping file
+`__meta__.context_map` is optional. When present, it points to a YAML mapping file
 resolved relative to the spec file.
 
 ## Meta Fields
@@ -62,12 +62,12 @@ Optional fields:
 
 - `citation`: citation text.
 
-- `map_file`: mapping file path with per-key mapping rules.
+- `context_map`: mapping file path with per-key mapping rules.
 
 ## Mapping Rules
 
 Specs can apply lookup tables without writing Python transforms. Provide
-`__meta__.map_file` and define per-key mapping rules inside the map file.
+`__meta__.context_map` and define per-key mapping rules inside the context map.
 
 ```yaml
 __meta__:
@@ -75,7 +75,7 @@ __meta__:
   version: "1.0.0"
   description: "..."
   category: "metadata_spec"
-  map_file: "maps.yaml"
+  context_map: "maps.yaml"
 
 Subject.ID:
   sources:
@@ -164,9 +164,10 @@ Aliases:
 
 Behavior:
 
-- Mapping rules apply automatically when a map file entry matches an output key.
+- Mapping rules apply automatically when a context map entry matches an output key.
 
-- `override: true` replaces existing values; otherwise values are filled only when missing (default: true).
+- `override: true` replaces existing values; set `override: false` to only fill
+  missing values when the spec/transform already produced a value (default: true).
 
 - `when` supports exact match, `in`, `regex`, and `not` conditions.
 
@@ -197,12 +198,12 @@ Guidelines:
 
 - Constant rules use `value`.
 
-To validate a map file:
+To validate a context map:
 
 ```python
-from brkraw.specs.remapper import validate_map_file
+from brkraw.specs.remapper import validate_context_map
 
-validate_map_file("specs/maps.yaml")
+validate_context_map("specs/maps.yaml")
 ```
 
 Schema: `src/brkraw/schema/map.yaml`
@@ -236,6 +237,10 @@ When using `inputs`, each input has one of:
 
 - `ref`: dotted path to a previously resolved output value.
 
+You can also reference context variables using `$<name>`:
+
+- `$scan_id` / `$reco_id` are provided by the loader context.
+
 Optional modifiers:
 
 - `transform`: apply transform(s) after resolving the input.
@@ -249,12 +254,7 @@ Example:
 ```yaml
 out.joined:
   inputs:
-    a:
-      sources:
-
-        - file: acqp
-
-          key: ACQ_scan_name
+    a: $scan_id
     b:
       const: 3
   transform: join_fields

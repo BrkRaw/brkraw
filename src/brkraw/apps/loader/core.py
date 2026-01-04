@@ -349,7 +349,7 @@ class BrukerLoader:
         scan_id: int,
         reco_id: Optional[int] = None,
         spec: Optional[Union[Mapping[str, Any], str, Path]] = None,
-        map_file: Optional[Union[str, Path]] = None,
+        context_map: Optional[Union[str, Path]] = None,
         return_spec: bool = False,
     ):
         """Return metadata for a scan/reco.
@@ -358,7 +358,7 @@ class BrukerLoader:
             scan_id: Scan identifier.
             reco_id: Reco identifier (defaults to the first available).
             spec: Optional spec mapping or spec file path.
-            map_file: Optional mapping file override.
+            context_map: Optional context map override.
             return_spec: If True, return spec info alongside metadata.
 
         Returns:
@@ -369,7 +369,7 @@ class BrukerLoader:
         return scan.get_metadata(
             reco_id=reco_id,
             spec=spec,
-            map_file=map_file,
+            context_map=context_map,
             return_spec=return_spec,
         )
 

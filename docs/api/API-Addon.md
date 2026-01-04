@@ -109,14 +109,14 @@ from brkraw.apps import addon
 spec_path = addon.resolve_pruner_spec_reference("pruner_default", version="1.0.0")
 ```
 
-## install_map
+## install_context_map
 
-Attach a map file to an installed spec (and update `__meta__.map_file`).
+Attach a context map to an installed spec (and update `__meta__.context_map`).
 
 ```python
 from brkraw.apps import addon
 
-addon.install_map(
+addon.install_context_map(
     "maps.yaml",
     "metadata_common",
     category="metadata_spec",
@@ -130,7 +130,7 @@ Returns:
 
 Errors:
 
-- `FileNotFoundError`: map file or spec not found.
+- `FileNotFoundError`: context map or spec not found.
 
 - `RuntimeError`: map already attached (use `force=True`).
 

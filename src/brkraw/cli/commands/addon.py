@@ -186,17 +186,17 @@ def cmd_install_map(args: argparse.Namespace) -> int:
         category=args.category,
         root=args.root,
     )
-    existing = _read_spec_map_file(spec_path)
+    existing = _read_spec_context_map(spec_path)
     if existing is not None and not args.force:
-        prompt = f"Spec already has map_file ({existing.name}). Replace? [y/N]: "
+        prompt = f"Spec already has context_map ({existing.name}). Replace? [y/N]: "
         response = input(prompt).strip().lower()
         if response not in {"y", "yes"}:
             logger.info("Cancelled.")
             return 2
         args.force = True
     try:
-        installed = addon_app.install_map(
-            args.map_file,
+        installed = addon_app.install_context_map(
+            args.context_map,
             args.spec,
             category=args.category,
             force=args.force,
@@ -269,17 +269,17 @@ def _resolve_spec_path(target: str, *, category: Optional[str], root: Optional[s
     return addon_app.resolve_spec_reference(target, category=category, root=root)
 
 
-def _read_spec_map_file(spec_path: Path) -> Optional[Path]:
+def _read_spec_context_map(spec_path: Path) -> Optional[Path]:
     data = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         return None
     meta = data.get("__meta__")
     if not isinstance(meta, dict):
         return None
-    map_file = meta.get("map_file")
-    if not isinstance(map_file, str) or not map_file:
+    context_map = meta.get("context_map")
+    if not isinstance(context_map, str) or not context_map:
         return None
-    path = Path(map_file)
+    path = Path(context_map)
     if not path.is_absolute():
         path = (spec_path.parent / path).resolve()
     return path
@@ -339,7 +339,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "attach-map",
         help="Attach a map file to an installed spec.",
     )
-    attach_map_parser.add_argument("map_file", help="Map YAML file.")
+    attach_map_parser.add_argument("context_map", help="Context map YAML file.")
     attach_map_parser.add_argument("spec", help="Installed spec name or filename.")
     attach_map_parser.add_argument(
         "--category",
@@ -348,7 +348,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     attach_map_parser.add_argument(
         "--force",
         action="store_true",
-        help="Replace existing map_file without prompting.",
+        help="Replace existing context_map without prompting.",
     )
     attach_map_parser.set_defaults(addon_func=cmd_install_map)
 
@@ -356,7 +356,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "attach_map",
         help="Alias of attach-map.",
     )
-    attach_map_alias.add_argument("map_file", help="Map YAML file.")
+    attach_map_alias.add_argument("context_map", help="Context map YAML file.")
     attach_map_alias.add_argument("spec", help="Installed spec name or filename.")
     attach_map_alias.add_argument(
         "--category",
@@ -365,7 +365,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     attach_map_alias.add_argument(
         "--force",
         action="store_true",
-        help="Replace existing map_file without prompting.",
+        help="Replace existing context_map without prompting.",
     )
     attach_map_alias.set_defaults(addon_func=cmd_install_map)
 
@@ -373,7 +373,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "install-map",
         help="Alias of attach-map.",
     )
-    install_map_alias.add_argument("map_file", help="Map YAML file.")
+    install_map_alias.add_argument("context_map", help="Context map YAML file.")
     install_map_alias.add_argument("spec", help="Installed spec name or filename.")
     install_map_alias.add_argument(
         "--category",
@@ -382,7 +382,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     install_map_alias.add_argument(
         "--force",
         action="store_true",
-        help="Replace existing map_file without prompting.",
+        help="Replace existing context_map without prompting.",
     )
     install_map_alias.set_defaults(addon_func=cmd_install_map)
 
@@ -390,7 +390,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "install_map",
         help="Alias of attach-map.",
     )
-    install_map_underscore.add_argument("map_file", help="Map YAML file.")
+    install_map_underscore.add_argument("context_map", help="Context map YAML file.")
     install_map_underscore.add_argument("spec", help="Installed spec name or filename.")
     install_map_underscore.add_argument(
         "--category",
@@ -399,7 +399,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     install_map_underscore.add_argument(
         "--force",
         action="store_true",
-        help="Replace existing map_file without prompting.",
+        help="Replace existing context_map without prompting.",
     )
     install_map_underscore.set_defaults(addon_func=cmd_install_map)
 

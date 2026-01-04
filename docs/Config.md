@@ -166,7 +166,7 @@ specs.
 
 ### `rules_dir`, `specs_dir`, `pruner_specs_dir`, `transforms_dir`, `maps_dir`
 
-Relative paths under the config root where rule/spec/transform/map files are
+Relative paths under the config root where rule/spec/transform/context map files are
 installed. Most users should keep the defaults.
 
 ## Managing config from CLI

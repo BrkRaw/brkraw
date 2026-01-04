@@ -28,9 +28,9 @@ Notes:
 
 - Multiple slice packs use `output.slicepack_suffix` from `config.yaml`.
 
-- `--sidecar-map-file` overrides the map file used for metadata sidecars.
+- `--sidecar-context-map` overrides the context map used for metadata sidecars.
 
-- `--output-map-file` overrides the map file used for output filename mapping.
+- `--output-context-map` overrides the context map used for output filename mapping.
 
 ## brkraw tonii_all
 
@@ -89,7 +89,7 @@ Common keys:
 
 - `OUTPUT`, `PREFIX`, `SCAN_ID`, `RECO_ID`
 
-- `SIDECAR`, `SIDECAR_MAP_FILE`, `OUTPUT_MAP_FILE`
+- `SIDECAR`, `SIDECAR_CONTEXT_MAP`, `OUTPUT_CONTEXT_MAP`
 
 - `UNWRAP_POSE`, `FLIP_X`
 
