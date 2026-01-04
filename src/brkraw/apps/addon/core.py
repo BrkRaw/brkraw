@@ -1139,7 +1139,7 @@ __all__ = [
     "add_spec_data",
     "add_pruner_spec_data",
     "install_examples",
-    "install_map",
+    "install_context_map",
     "resolve_spec_reference",
     "resolve_pruner_spec_reference",
     "list_installed",
