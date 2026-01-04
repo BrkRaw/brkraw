@@ -48,6 +48,27 @@ def _normalize_row(row: Dict[str, str]) -> Dict[str, object]:
     }
 
 
+def _normalize_rule_row(row: Dict[str, str]) -> Dict[str, object]:
+    name = row.get("name", "")
+    desc = row.get("description", "")
+    category = row.get("category", "")
+    name_cell: object = name
+    desc_cell: object = desc
+    category_cell: object = category
+    if row.get("name_unknown") == "1":
+        name_cell = {"value": name, "color": "gray"}
+    if row.get("description_unknown") == "1":
+        desc_cell = {"value": desc, "color": "gray"}
+    if row.get("category_unknown") == "1":
+        category_cell = {"value": category, "color": "gray"}
+    return {
+        "file": row.get("file", ""),
+        "category": category_cell,
+        "name": name_cell,
+        "description": desc_cell,
+    }
+
+
 def _normalize_transform_row(row: Dict[str, str]) -> Dict[str, object]:
     spec = row.get("spec", "")
     spec_cell: object = spec
@@ -71,21 +92,16 @@ def cmd_list(args: argparse.Namespace) -> int:
     rules = data["rules"]
     pruner_specs = data.get("pruner_specs", [])
     columns = ("file", "category", "name", "version", "description")
+    rule_columns = ("file", "category", "name", "description")
     transform_columns = ("file", "spec")
     map_columns = ("file", "spec")
     spec_rows = [_normalize_row(row) for row in data["specs"]]
     pruner_rows = [_normalize_row(row) for row in pruner_specs]
-    rules_rows = [_normalize_row(row) for row in rules]
+    rules_rows = [_normalize_rule_row(row) for row in rules]
     transform_rows = [_normalize_transform_row(row) for row in data["transforms"]]
     map_rows = [_normalize_transform_row(row) for row in data["maps"]]
     category_order = {"info_spec": 0, "metadata_spec": 1, "converter_hook": 2, "<Unknown>": 9}
     spec_rows.sort(
-        key=lambda row: (
-            category_order.get(str(row.get("category", "")), 9),
-            str(row.get("name", "")),
-        )
-    )
-    rules_rows.sort(
         key=lambda row: (
             category_order.get(str(row.get("category", "")), 9),
             str(row.get("name", "")),
@@ -98,10 +114,9 @@ def cmd_list(args: argparse.Namespace) -> int:
         )
     )
     spec_widths = formatter.compute_column_widths(columns, spec_rows)
-    rules_widths = formatter.compute_column_widths(columns, rules_rows)
     pruner_widths = formatter.compute_column_widths(columns, pruner_rows)
     col_widths = {
-        col: max(spec_widths.get(col, 0), rules_widths.get(col, 0), pruner_widths.get(col, 0))
+        col: max(spec_widths.get(col, 0), pruner_widths.get(col, 0))
         for col in columns[:-1]
     }
     spec_table = formatter.format_table(
@@ -115,12 +130,12 @@ def cmd_list(args: argparse.Namespace) -> int:
     )
     rules_table = formatter.format_table(
         "Rules",
-        columns,
+        rule_columns,
         rules_rows,
         width=width,
         colors={"file": "gray", "name": "yellow", "description": "gray"},
         title_color="yellow",
-        col_widths=col_widths,
+        col_widths=formatter.compute_column_widths(rule_columns, rules_rows),
     )
     pruner_table = formatter.format_table(
         "Pruner Specs",
