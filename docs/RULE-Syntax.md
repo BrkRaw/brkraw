@@ -1,6 +1,6 @@
 # Rule Syntax guide (specs.rules module)
 
-This document describes the rule syntax used to select specs and entry points
+This document describes the rule syntax used to select specs and hooks
 from `~/.brkraw/rules/*.yaml`. Rule files are loaded in filename order and
 evaluated top to bottom. If multiple rules match the same category, the last
 matching rule wins (override).
@@ -75,15 +75,17 @@ Each rule item supports:
 
 - `description` (optional): human-readable explanation.
 
-- `when` (required): variable bindings using remapper-style sources. Each
+- `when` (optional): variable bindings using remapper-style sources. Each
 
   variable may include `transform` to normalize values before matching.
 
-- `if` (optional): condition expression using the variables from `when`.
+- `if` (required when `when` is present): condition expression using the variables from `when`.
 
-- `use` (required): target spec name or spec path, or entry point name.
+- `use` (required): target spec name or spec path, or hook name.
 
 - `version` (optional): spec version to select when `use` is a spec name.
+
+- Default rules can omit `when`/`if`, but must be the first entry in a category.
 
 ## Variable Binding (`when`)
 
@@ -112,6 +114,8 @@ This binds `$method` to the first available value from the sources list.
 ## Conditions (`if`)
 
 The `if` field uses a simple structured expression. Supported operators:
+
+- `always`: `true` or `false`
 
 - `eq`: `["$var", "value"]`
 

@@ -34,7 +34,6 @@ $defs:
         minLength: 1
     required:
       - name
-      - when
       - use
     additionalProperties: false
   when:
@@ -129,6 +128,8 @@ $defs:
         $ref: "#/$defs/binop"
       contains:
         $ref: "#/$defs/binop"
+      always:
+        type: boolean
       gt:
         $ref: "#/$defs/binop"
       ge:

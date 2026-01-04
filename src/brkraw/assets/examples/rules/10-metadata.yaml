@@ -1,12 +1,6 @@
 metadata_spec:
   - name: "metadata-common"
     description: "Default metadata mapping for Bruker scans."
-    when:
-      method:
-        sources:
-          - file: method
-            key: Method
-        transform: normalize_method
     use: "specs/metadata_common.yaml"
 
   - name: "metadata-anat"

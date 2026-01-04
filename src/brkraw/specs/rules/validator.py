@@ -44,7 +44,39 @@ def validate_rules(
         else yaml.safe_load(schema_path.read_text(encoding="utf-8"))
     )
     jsonschema.Draft202012Validator(schema).validate(rule_data)
+    _validate_default_rules(rule_data)
     _validate_converter_hooks(rule_data)
+
+
+def _validate_default_rules(rule_data: Dict[str, Any]) -> None:
+    """Ensure default rules (no 'when') appear first and avoid 'if'."""
+    for category, items in rule_data.items():
+        if not isinstance(items, list):
+            continue
+        default_indexes = []
+        for idx, rule in enumerate(items):
+            if not isinstance(rule, dict):
+                continue
+            has_when = "when" in rule
+            has_if = "if" in rule
+            if has_when and not has_if:
+                name = rule.get("name", "<unnamed>")
+                raise ValueError(
+                    f"Rule {name!r} in {category!r} must define 'if' when 'when' is present."
+                )
+            if not has_when:
+                if has_if:
+                    name = rule.get("name", "<unnamed>")
+                    raise ValueError(
+                        f"Rule {name!r} in {category!r} cannot use 'if' without 'when'."
+                    )
+                default_indexes.append(idx)
+        if not default_indexes:
+            continue
+        if len(default_indexes) > 1 or default_indexes[0] != 0:
+            raise ValueError(
+                f"Default rule (no 'when') must be the first entry in {category!r}."
+            )
 
 
 def _validate_converter_hooks(rule_data: Dict[str, Any]) -> None:

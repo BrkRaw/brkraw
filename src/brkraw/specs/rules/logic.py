@@ -73,6 +73,10 @@ def _eval_expr(expr: Any, bindings: Dict[str, Any]) -> bool:
         return all(_eval_expr(item, bindings) for item in args)
     if op == "not":
         return not _eval_expr(args, bindings)
+    if op == "always":
+        if not isinstance(args, bool):
+            raise ValueError("always expects a boolean.")
+        return args
 
     if not isinstance(args, (list, tuple)) or len(args) != 2:
         raise ValueError(f"Operator {op!r} requires two arguments.")
@@ -146,6 +150,8 @@ def rule_matches(
     base: Path,
 ) -> bool:
     when = rule.get("when")
+    if when is None:
+        return True
     if not isinstance(when, dict):
         raise ValueError("Rule 'when' must be a mapping.")
     transforms = _load_rule_transforms(rule, base)
