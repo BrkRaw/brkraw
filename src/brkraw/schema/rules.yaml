@@ -7,7 +7,7 @@ properties:
     $ref: "#/$defs/rule_list"
   metadata_spec:
     $ref: "#/$defs/rule_list"
-  converter_entrypoint:
+  converter_hook:
     $ref: "#/$defs/rule_list"
 additionalProperties: false
 $defs:

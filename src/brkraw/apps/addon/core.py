@@ -26,7 +26,7 @@ from ...specs.rules import validator as rules_validator
 
 logger = logging.getLogger("brkraw")
 
-RULE_KEYS = {"info_spec", "metadata_spec", "converter_entrypoint"}
+RULE_KEYS = {"info_spec", "metadata_spec", "converter_hook"}
 _SPEC_EXTS = (".yaml", ".yml")
 
 
@@ -448,7 +448,7 @@ def _rules_using_spec(spec_name: str, rules_dir: Path) -> Set[str]:
         if not isinstance(data, dict):
             continue
         for key in RULE_KEYS:
-            if key == "converter_entrypoint":
+            if key == "converter_hook":
                 continue
             for item in data.get(key, []) or []:
                 if not isinstance(item, dict):
@@ -722,7 +722,7 @@ def _ensure_rule_specs_present(rule_data: Dict[str, Any], *, root: Optional[Unio
     """
     base = config_core.resolve_root(root)
     for key in RULE_KEYS:
-        if key == "converter_entrypoint":
+        if key == "converter_hook":
             continue
         for item in rule_data.get(key, []) or []:
             if not isinstance(item, dict):

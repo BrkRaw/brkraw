@@ -1,6 +1,6 @@
 # Rule Syntax guide (specs.rules module)
 
-This document describes the rule syntax used to select specs and entry points
+This document describes the rule syntax used to select specs and hooks
 from `~/.brkraw/rules/*.yaml`. Rule files are loaded in filename order and
 evaluated top to bottom. If multiple rules match the same category, the last
 matching rule wins (override).
@@ -20,7 +20,7 @@ in a single file.
   sidecar metadata, especially when a separate rule set is needed for metadata
   creation.
 
-- `converter_entrypoint`: rules that choose a converter entry point. These are
+- `converter_hook`: rules that choose a converter hook. These are
 
   used by the loader when converting to NIfTI so that a custom reconstruction
   can be selected for scans matching the rule conditions.
@@ -45,7 +45,7 @@ info_spec:
     use: "mrs"
     version: "1.0.0"
 
-converter_entrypoint:
+converter_hook:
 
   - name: "mrs-reco"
 
@@ -81,7 +81,7 @@ Each rule item supports:
 
 - `if` (optional): condition expression using the variables from `when`.
 
-- `use` (required): target spec name or spec path, or entry point name.
+- `use` (required): target spec name or spec path, or hook name.
 
 - `version` (optional): spec version to select when `use` is a spec name.
 
@@ -155,9 +155,9 @@ if:
 
   `__meta__.transforms_source`.
 
-- `converter_entrypoint` uses the entry point name registered under
+- `converter_hook` uses the hook name registered under
 
-  `brkraw.converter` (or another configured group).
+  `brkraw.converter_hook` (or another configured group).
 
 When `use` is a spec name, rules will:
 

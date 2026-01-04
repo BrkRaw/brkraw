@@ -11,7 +11,7 @@ through add-on rules, specs, and plugins.
 - Inspect study and scan metadata with rich CLI tables.
 - Map parameters via remapper specs and rule-based selection.
 - Convert scans to NIfTI with configurable filename templates.
-- Extend behavior via rules, specs, and converter entrypoints.
+- Extend behavior via rules, specs, and converter hooks.
 
 ## Quick links
 

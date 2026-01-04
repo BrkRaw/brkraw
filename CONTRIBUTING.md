@@ -18,7 +18,7 @@ You can extend BrkRaw without modifying core code:
 
 - Add rules/specs/transforms via the `addon` CLI.
 
-- Provide `converter_entrypoint` overrides for specialized conversion logic.
+- Provide `converter_hook` overrides for specialized conversion logic.
 
 - Ship CLI plugins through `brkraw.cli` entrypoints.
 

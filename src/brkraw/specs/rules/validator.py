@@ -13,7 +13,7 @@ import yaml
 
 from ...core.entrypoints import list_entry_points
 
-CONVERTER_GROUP = "brkraw.converter"
+CONVERTER_GROUP = "brkraw.converter_hook"
 
 def _load_schema() -> Dict[str, Any]:
     if __package__ is None:
@@ -28,7 +28,7 @@ def validate_rules(
     rule_data: Dict[str, Any],
     schema_path: Optional[Path] = None,
 ) -> None:
-    """Validate rule mappings against schema and entrypoint availability.
+    """Validate rule mappings against schema and hook availability.
 
     Args:
         rule_data: Parsed rule mapping to validate.
@@ -44,13 +44,13 @@ def validate_rules(
         else yaml.safe_load(schema_path.read_text(encoding="utf-8"))
     )
     jsonschema.Draft202012Validator(schema).validate(rule_data)
-    _validate_converter_entrypoints(rule_data)
+    _validate_converter_hooks(rule_data)
 
 
-def _validate_converter_entrypoints(rule_data: Dict[str, Any]) -> None:
-    """Ensure converter_entrypoint references resolve to installed entry points."""
+def _validate_converter_hooks(rule_data: Dict[str, Any]) -> None:
+    """Ensure converter_hook references resolve to installed hooks."""
     missing: List[str] = []
-    items = rule_data.get("converter_entrypoint", [])
+    items = rule_data.get("converter_hook", [])
     if not items:
         return
     if not isinstance(items, list):
@@ -66,6 +66,6 @@ def _validate_converter_entrypoints(rule_data: Dict[str, Any]) -> None:
     if missing:
         missing_text = ", ".join(sorted(set(missing)))
         raise ValueError(
-            "converter_entrypoint references missing entry points: "
+            "converter_hook references missing hooks: "
             f"{missing_text} (group={CONVERTER_GROUP})"
         )

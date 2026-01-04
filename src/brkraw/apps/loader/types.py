@@ -100,7 +100,7 @@ class ScanLoader(Scan, BaseLoader):
 
     image_info: Dict[int, Optional["ResolvedImage"]]
     affine_info: Dict[int, Optional["ResolvedAffine"]]
-    _converter_entrypoint: Optional[ConverterEntrypoint]
+    _converter_hook: Optional[ConverterHook]
 
 
     def get_fid(self, 
@@ -155,15 +155,15 @@ class RecoLoader(Reco, BaseLoader):
     ...
 
 
-ConverterEntrypoint: TypeAlias = Mapping[str, Union[GetDataobjType[Any], GetAffineType, GetNifti1ImageType]]
-"""Mapping of converter entrypoint keys to override callables."""
+ConverterHook: TypeAlias = Mapping[str, Union[GetDataobjType[Any], GetAffineType, GetNifti1ImageType]]
+"""Mapping of converter hook keys to override callables."""
 
 
 __all__ = [
     'GetDataobjType',
     'GetAffineType',
     'GetNifti1ImageType',
-    'ConverterEntrypoint',
+    'ConverterHook',
     'StudyLoader',
     'ScanLoader',
     'RecoLoader',

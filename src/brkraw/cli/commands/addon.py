@@ -78,7 +78,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     rules_rows = [_normalize_row(row) for row in rules]
     transform_rows = [_normalize_transform_row(row) for row in data["transforms"]]
     map_rows = [_normalize_transform_row(row) for row in data["maps"]]
-    category_order = {"info_spec": 0, "metadata_spec": 1, "converter_entrypoint": 2, "<Unknown>": 9}
+    category_order = {"info_spec": 0, "metadata_spec": 1, "converter_hook": 2, "<Unknown>": 9}
     spec_rows.sort(
         key=lambda row: (
             category_order.get(str(row.get("category", "")), 9),

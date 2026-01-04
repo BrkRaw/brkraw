@@ -515,14 +515,14 @@ def _get_metadata(
     return metadata, spec_info
 
 
-def _apply_converter_entrypoint(
+def _apply_converter_hook(
     scan: "ScanLoader",
-    converter_entrypoint: Mapping[str, Any],
+    converter_hook: Mapping[str, Any],
 ) -> None:
-    """Override scan conversion helpers using a converter entrypoint."""
-    converter_core.validate_entrypoint(converter_entrypoint)
-    plugin = dict(converter_entrypoint)
-    scan._converter_entrypoint = plugin
+    """Override scan conversion helpers using a converter hook."""
+    converter_core.validate_hook(converter_hook)
+    plugin = dict(converter_hook)
+    scan._converter_hook = plugin
     if "get_dataobj" in plugin:
         scan.get_dataobj = MethodType(plugin["get_dataobj"], scan)
     if "get_affine" in plugin:

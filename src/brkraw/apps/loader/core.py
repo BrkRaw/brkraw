@@ -35,7 +35,7 @@ from .helper import (
     _resolve_data_and_affine,
     _search_parameters,
     make_dir,
-    _apply_converter_entrypoint,
+    _apply_converter_hook,
 )
 
 if TYPE_CHECKING:
@@ -158,29 +158,29 @@ class BrukerLoader:
             scan.get_dataobj = MethodType(_get_dataobj, scan)
             scan.get_affine = MethodType(_get_affine, scan)
             scan.get_nifti1image = MethodType(_get_nifti1image, scan)
-            scan._converter_entrypoint = None
+            scan._converter_hook = None
             if rules:
                 try:
-                    entry_name = select_rule_use(
+                    hook_name = select_rule_use(
                         scan,
-                        rules.get("converter_entrypoint", []),
+                        rules.get("converter_hook", []),
                         base=base,
                         resolve_paths=False,
                     )
                 except Exception:
-                    entry_name = None
-                if isinstance(entry_name, str):
+                    hook_name = None
+                if isinstance(hook_name, str):
                     try:
-                        entry = converter_core.resolve_entrypoint(entry_name)
+                        entry = converter_core.resolve_hook(hook_name)
                     except Exception as exc:
                         logger.warning(
-                            "Converter entrypoint %r not available: %s",
-                            entry_name,
+                            "Converter hook %r not available: %s",
+                            hook_name,
                             exc,
                         )
                         entry = None
                     if entry:
-                        _apply_converter_entrypoint(scan, entry)
+                        _apply_converter_hook(scan, entry)
             scan.get_metadata = MethodType(_get_metadata, scan)
             scan.search_params = MethodType(_search_parameters, scan)
             for reco in scan.avail.values():
@@ -209,18 +209,18 @@ class BrukerLoader:
     def override_converter(
         self,
         scan_id: int,
-        converter_entrypoint: Mapping[str, Callable[..., Any]],
+        converter_hook: Mapping[str, Callable[..., Any]],
     ) -> None:
-        """Override scan conversion methods with a converter entrypoint.
+        """Override scan conversion methods with a converter hook.
 
         Args:
             scan_id: Scan identifier.
-            converter_entrypoint: Mapping of method names to callables. Only
+            converter_hook: Mapping of method names to callables. Only
                 provided keys are overridden.
         """
         scan = self.avail[scan_id]
         scan = cast(ScanLoader, scan)
-        _apply_converter_entrypoint(scan, converter_entrypoint)
+        _apply_converter_hook(scan, converter_hook)
 
     def restore_converter(self, scan_id: int) -> None:
         """Restore default conversion methods for a scan.
@@ -233,7 +233,7 @@ class BrukerLoader:
         scan.get_dataobj = MethodType(_get_dataobj, scan)
         scan.get_affine = MethodType(_get_affine, scan)
         scan.get_nifti1image = MethodType(_get_nifti1image, scan)
-        scan._converter_entrypoint = None
+        scan._converter_hook = None
 
     def get_scan(self, scan_id: int) -> "ScanLoader":
         """Return scan by id.

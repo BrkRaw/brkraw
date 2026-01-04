@@ -9,7 +9,7 @@ from ...core import config as config_module
 from ..remapper import load_spec, map_parameters
 from .validator import validate_rules
 
-RULE_CATEGORIES = ("info_spec", "metadata_spec", "converter_entrypoint")
+RULE_CATEGORIES = ("info_spec", "metadata_spec", "converter_hook")
 SPEC_CATEGORIES = ("info_spec", "metadata_spec")
 
 

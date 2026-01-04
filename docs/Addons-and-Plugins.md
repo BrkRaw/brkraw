@@ -1,19 +1,19 @@
 # Addons and CLI Plugins
 
 This document describes BrkRaw's extensibility model: rules, specs, converter
-entrypoints, and CLI plugins.
+hooks, and CLI plugins.
 
 ## Concepts
 
 BrkRaw separates *selection logic* (rules) from *parameter mapping* (specs) and
 
-*conversion overrides* (converter_entrypoint). This lets you compose behavior
+*conversion overrides* (converter_hook). This lets you compose behavior
 
 without modifying core code.
 
 ### Rules
 
-Rules select specs or converter entrypoints based on Paravision parameters. You
+Rules select specs or converter hooks based on Paravision parameters. You
 can check fields from `method`, `acqp`, `visu_pars`, and others. When a rule
 matches, BrkRaw chooses the corresponding spec or converter override.
 
@@ -34,9 +34,9 @@ Each spec must include a `__meta__` block with required fields:
 `category` should be `info_spec` or `metadata_spec` when the spec is selected
 by rules. Specs may also include optional author/developer and citation fields.
 
-### Converter entrypoints
+### Converter hooks
 
-Converter entrypoints provide optional override callables for:
+Converter hooks provide optional override callables for:
 
 - `get_dataobj`
 
@@ -54,7 +54,7 @@ Rules can select:
 
 - a spec (rule + spec), or
 
-- a converter override (rule + converter_entrypoint), or
+- a converter override (rule + converter_hook), or
 
 - both.
 
@@ -65,7 +65,7 @@ if method/acqp/visu parameters match X
 
   -> use spec A
 
-  -> use converter entrypoint B
+  -> use converter hook B
 
 ```
 
@@ -95,9 +95,9 @@ Rules can reference specs by name (recommended) or by path. When a name is
 used, the rule category must match `__meta__.category`, and `version` can be
 specified to pin the selection; otherwise the latest version is used.
 
-## Converter entrypoint roadmap
+## Converter hook roadmap
 
-We plan to add a converter entrypoint for UNC's SORDINO sequence to
+We plan to add a converter hook for UNC's SORDINO sequence to
 support the custom reconstruction pipeline.
 
 ## CLI plugins

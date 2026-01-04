@@ -51,7 +51,7 @@ BrkRaw is designed for extension without modifying the core repository:
 
 - Specs map parameter files into structured metadata.
 
-- Converter entrypoints override data/affine/NIfTI generation for specialized
+- Converter hooks override data/affine/NIfTI generation for specialized
 
   sequences.
 
