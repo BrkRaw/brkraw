@@ -22,6 +22,7 @@ def prune_dataset_to_zip(
     dirs: Optional[Iterable[Mapping[str, Any]]] = None,
     add_root: bool = True,
     root_name: Optional[str] = None,
+    strip_jcamp_comments: bool = False,
 ) -> Path:
     """Create a pruned dataset ZIP with optional JCAMP parameter edits.
 
@@ -34,6 +35,7 @@ def prune_dataset_to_zip(
         dirs: Directory rules as a list of {level, dirs} mappings.
         add_root: Whether to include a top-level root directory in the zip.
         root_name: Override the root directory name when add_root is True.
+        strip_jcamp_comments: When True, remove $$ comment lines from JCAMP files.
 
     Returns:
         Path to the created zip file.
@@ -60,7 +62,14 @@ def prune_dataset_to_zip(
 
     arcnames = [_to_arcname(relpath, root, add_root=add_root) for relpath in selected_files]
     param_updates = _load_parameter_updates(update_params)
-    _write_zip(fs, dest, selected_files, arcnames, param_updates=param_updates)
+    _write_zip(
+        fs,
+        dest,
+        selected_files,
+        arcnames,
+        param_updates=param_updates,
+        strip_jcamp_comments=strip_jcamp_comments,
+    )
     return dest
 
 
@@ -70,6 +79,10 @@ def prune_dataset_to_zip_from_spec(
     source: Optional[Union[str, Path]] = None,
     dest: Optional[Union[str, Path]] = None,
     validate: bool = True,
+    strip_jcamp_comments: Optional[bool] = None,
+    root_name: Optional[str] = None,
+    dirs: Optional[Iterable[Mapping[str, Any]]] = None,
+    mode: Optional[Literal["keep", "drop"]] = None,
 ) -> Path:
     """Create a pruned dataset ZIP from a prune spec mapping or YAML path.
 
@@ -78,6 +91,10 @@ def prune_dataset_to_zip_from_spec(
         source: Optional override for spec["source"].
         dest: Optional override for spec["dest"].
         validate: When True, validate the spec against the schema.
+        strip_jcamp_comments: Optional override to strip $$ comment lines.
+        root_name: Optional override for the root directory name in the zip.
+        dirs: Optional override for directory filter rules.
+        mode: Optional override for keep/drop mode.
 
     Returns:
         Path to the created zip file.
@@ -92,15 +109,24 @@ def prune_dataset_to_zip_from_spec(
     if source is None or dest is None:
         raise ValueError("source and dest are required for prune spec.")
 
+    mode_value = mode if mode is not None else spec_data.get("mode", "keep")
+    if mode_value not in {"keep", "drop"}:
+        raise ValueError("mode must be 'keep' or 'drop'.")
+
     return prune_dataset_to_zip(
         source,
         dest,
         files=spec_data.get("files", []),
-        mode=spec_data.get("mode", "keep"),
+        mode=mode_value,
         update_params=spec_data.get("update_params"),
-        dirs=spec_data.get("dirs"),
+        dirs=dirs if dirs is not None else spec_data.get("dirs"),
         add_root=spec_data.get("add_root", True),
-        root_name=spec_data.get("root_name"),
+        root_name=root_name if root_name is not None else spec_data.get("root_name"),
+        strip_jcamp_comments=(
+            strip_jcamp_comments
+            if strip_jcamp_comments is not None
+            else bool(spec_data.get("strip_jcamp_comments", False))
+        ),
     )
 
 
@@ -168,6 +194,7 @@ def _write_zip(
     arcnames: Iterable[str],
     *,
     param_updates: Optional[Mapping[str, Mapping[str, Optional[str]]]] = None,
+    strip_jcamp_comments: bool = False,
 ) -> None:
     """Write selected files into a zip, applying JCAMP edits when requested."""
     entries = sorted(zip(files, arcnames), key=lambda item: item[1])
@@ -183,8 +210,18 @@ def _write_zip(
             if updates:
                 content = fs.open_binary(relpath).read()
                 updated_text = _apply_jcamp_updates(content, updates, path_hint=relpath)
+                if strip_jcamp_comments:
+                    updated_text = _strip_jcamp_comments(updated_text)
                 zf.writestr(arcname, updated_text.encode("utf-8"))
                 continue
+            if strip_jcamp_comments:
+                content = fs.open_binary(relpath).read()
+                if Parameters._looks_like_jcamp(content):
+                    stripped = _strip_jcamp_comments(
+                        content.decode("utf-8", errors="ignore")
+                    )
+                    zf.writestr(arcname, stripped.encode("utf-8"))
+                    continue
             with fs.open_binary(relpath) as src, zf.open(arcname, "w") as dst:
                 shutil.copyfileobj(src, dst)
 
@@ -238,6 +275,13 @@ def _apply_jcamp_updates(
         raise ValueError(f"Parameter file is not parseable: {path_hint}") from exc
     params.replace_values(updates, reparse=True)
     return params.source_text()
+
+
+def _strip_jcamp_comments(text: str) -> str:
+    """Remove $$ comment lines from JCAMP text."""
+    lines = text.splitlines(keepends=True)
+    kept = [line for line in lines if not line.lstrip().startswith("$$")]
+    return "".join(kept)
 
 
 def _normalize_dir_rules(

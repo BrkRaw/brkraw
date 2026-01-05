@@ -17,8 +17,12 @@ logger = logging.getLogger("brkraw")
 
 def cmd_prune(args: argparse.Namespace) -> int:
     output = args.output
+    root_name_override = None
+    dirs_override = _build_dir_override(args.scan_ids, args.reco_ids)
     if output is None:
         output = _default_output_path(Path(args.path), spec_path=Path(args.spec))
+    else:
+        root_name_override = Path(output).stem
     try:
         logger.info("Pruning dataset: %s", args.path)
         logger.info("Prune spec: %s", args.spec)
@@ -29,6 +33,10 @@ def cmd_prune(args: argparse.Namespace) -> int:
                 source=args.path,
                 dest=output,
                 validate=not args.no_validate,
+                strip_jcamp_comments=args.strip_jcamp_comments,
+                root_name=root_name_override,
+                dirs=dirs_override,
+                mode=args.mode,
             )
         logger.info("Wrote pruned zip: %s", out_path)
     except Exception as exc:
@@ -66,6 +74,28 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         action="store_true",
         help="Skip prune spec validation.",
     )
+    prune_parser.add_argument(
+        "--strip-jcamp-comments",
+        action="store_true",
+        help="Remove $$ comment lines from kept JCAMP files.",
+    )
+    prune_parser.add_argument(
+        "--mode",
+        choices=["keep", "drop"],
+        help="Override spec mode for file selection.",
+    )
+    prune_parser.add_argument(
+        "--scan-ids",
+        nargs="+",
+        metavar="SCAN_ID",
+        help="Override scan IDs to keep (space or comma separated).",
+    )
+    prune_parser.add_argument(
+        "--reco-ids",
+        nargs="+",
+        metavar="RECO_ID",
+        help="Override reco IDs to keep (space or comma separated).",
+    )
     prune_parser.set_defaults(func=cmd_prune)
 
 
@@ -99,3 +129,29 @@ def _load_root_name(spec_path: Path) -> Optional[str]:
     if isinstance(root_name, str) and root_name.strip():
         return root_name.strip()
     return None
+
+
+def _build_dir_override(
+    scan_ids: Optional[list[str]],
+    reco_ids: Optional[list[str]],
+) -> Optional[list[dict[str, object]]]:
+    scan_list = _parse_id_list(scan_ids)
+    reco_list = _parse_id_list(reco_ids)
+    rules: list[dict[str, object]] = []
+    if scan_list:
+        rules.append({"level": 1, "dirs": scan_list})
+    if reco_list:
+        rules.append({"level": 3, "dirs": reco_list})
+    return rules or None
+
+
+def _parse_id_list(values: Optional[list[str]]) -> list[str]:
+    if not values:
+        return []
+    result: list[str] = []
+    for value in values:
+        for part in str(value).split(","):
+            part = part.strip()
+            if part:
+                result.append(part)
+    return result

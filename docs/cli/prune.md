@@ -16,6 +16,14 @@ Optional overrides:
 
 - `--no-validate`: skip spec validation
 
+- `--strip-jcamp-comments`: remove `$$` comment lines from kept JCAMP files
+
+- `--mode`: override spec `mode` (`keep` or `drop`)
+
+- `--scan-ids`: override scan IDs to keep (space or comma separated)
+
+- `--reco-ids`: override reco IDs to keep (space or comma separated)
+
 If `--output` is omitted, the default filename uses `root_name` from the spec
 (falling back to `<input>_pruned` when `root_name` is missing).
 
@@ -26,6 +34,11 @@ Notes on `update_params`:
 - It applies to every matching parameter file (by basename), not to a specific scan id.
 
 - Use it for de-identification or redaction when preparing datasets for sharing.
+
+Optional JCAMP cleanup:
+
+- `strip_jcamp_comments: true` removes `$$` comment lines from JCAMP files that
+  are kept in the pruned archive.
 
 - No helper utilities are provided; you must ensure JCAMP compliance yourself.
 
@@ -59,6 +72,13 @@ dirs:
     dirs: ["13"]
 ```
 
+Keeping specific scans/reconstructions without editing the spec:
+
+```bash
+brkraw prune /data/study --spec specs/prune.yaml --scan-ids 1 3
+brkraw prune /data/study --spec specs/prune.yaml --scan-ids 1 --reco-ids 1,2
+```
+
 Example:
 
 ```bash
@@ -89,6 +109,7 @@ files:
 update_params:
   method:
     PVM_ScanTimeStr: "120.0"
+strip_jcamp_comments: true
 add_root: true
 root_name: "study_pruned"
 ```

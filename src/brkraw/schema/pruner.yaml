@@ -48,6 +48,8 @@ properties:
     type: boolean
   root_name:
     type: string
+  strip_jcamp_comments:
+    type: boolean
 required:
   - __meta__
   - files
