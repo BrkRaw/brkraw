@@ -2,6 +2,4 @@
 
 Thanks to everyone who has contributed to BrkRaw.
 
-Add your name below (alphabetical order preferred):
-
-- Your Name
+This page is auto-generated from GitHub contributors.
