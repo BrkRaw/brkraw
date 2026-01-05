@@ -160,6 +160,7 @@ def cmd_list(args: argparse.Namespace) -> int:
         colors={"file": "gray", "name": "magenta", "description": "gray"},
         title_color="magenta",
         col_widths=pruner_widths,
+        min_wrap_width=50,
     )
     transforms_table = formatter.format_table(
         "Transforms",
