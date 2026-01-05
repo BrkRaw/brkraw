@@ -4,10 +4,7 @@
       font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
         "Liberation Mono", monospace;
       font-size: 28px;
-      fill: #0b1f2a;
-    }
-    @media (prefers-color-scheme: dark) {
-      .logo-text { fill: #ffffff; }
+      fill: #ffffff;
     }
     .char {
       opacity: 0;
