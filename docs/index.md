@@ -1,5 +1,6 @@
 # Preclinical MRI Dataset Toolkit
 
+Documentation for BrkRaw v0.5.0b1.
 BrkRaw is a toolkit for loading Bruker Paravision studies, inspecting metadata,
 mapping parameters with rules/specs, and exporting NIfTI with optional sidecar
 metadata. It ships with a CLI and a Python API, and is designed to be extended

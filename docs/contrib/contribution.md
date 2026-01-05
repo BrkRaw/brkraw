@@ -99,12 +99,21 @@ explain why it cannot be handled through addons or plugins.
 
 ## Defaults we want help with
 
-We are looking for suggestions on default rules/specs to ship out of the box.
-If you work with specific Bruker sequences, please propose:
+We are looking for suggestions on default rules/specs to ship out of the box,
+especially for modality-specific workflows. If you work with specific Bruker
+sequences, please propose:
 
-- `info_spec` improvements for `brkraw info` / `BrukerLoader.info`.
-- `metadata_spec` mappings for sidecar metadata (BIDS or lab standards).
+- Modality-specific `info_spec` improvements for `brkraw info` /
+  `BrukerLoader.info`.
+- `metadata_spec` mappings geared toward BIDS or lab standards.
 - Rules that select the right spec based on `method`, `acqp`, or `visu_pars`.
+- `context_map` patterns that capture common lab or modality use cases.
+
+We also welcome contributions for documentation, including:
+
+- End-to-end use-case scenarios with `context_map`, rules, and specs.
+- Modality-specific tutorials (for example DWI, fMRI, MRS).
+- Updates or corrections to the docs.
 
 Even small improvements (for example, better labels or parameter keys) are
 useful. Open a Discussion with your sequence details and the parameter files

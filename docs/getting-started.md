@@ -29,7 +29,7 @@ Common flags:
 
 - `--root` to override the config root.
 - `--no-config` to skip creating `config.yaml`.
-- `--install-example` to install example rules/specs.
+- `--install-default` to install default rules/specs.
 - `--shell-rc` to append shell helpers.
 - `--yes` to skip prompts.
 

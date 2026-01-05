@@ -18,7 +18,7 @@ logger = logging.getLogger("brkraw")
 def cmd_init(args: argparse.Namespace) -> int:
     interactive = not args.yes
     create_config = not args.no_config
-    install_examples = args.install_example
+    install_defaults = args.install_default
     shellrc = Path(args.shellrc) if args.shellrc else _default_shell_rc()
     config_values: Optional[Dict[str, Any]] = None
 
@@ -26,8 +26,8 @@ def cmd_init(args: argparse.Namespace) -> int:
         create_config = _prompt_bool("Create config.yaml?", default=create_config)
         if create_config:
             config_values = _prompt_config_values()
-        install_examples = _prompt_bool(
-            "Install example specs/rules?", default=install_examples
+        install_defaults = _prompt_bool(
+            "Install default specs/rules?", default=install_defaults
         )
         install_helpers = _prompt_bool(
             "Install shell helpers?", default=shellrc is not None
@@ -50,10 +50,10 @@ def cmd_init(args: argparse.Namespace) -> int:
         if config_values is None:
             config_values = config_core.default_config()
         config_core.write_config(config_values, root=args.root)
-    if install_examples:
-        installed = addon_app.install_examples(root=args.root)
+    if install_defaults:
+        installed = addon_app.install_defaults(root=args.root)
         if installed:
-            logger.info("Installed %d example file(s).", len(installed))
+            logger.info("Installed %d default file(s).", len(installed))
     if not interactive and shellrc is not None:
         _install_shell_helpers(shellrc)
     return 0
@@ -62,7 +62,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
     init_parser = subparsers.add_parser(
         "init",
-        help="Initialize config and install examples.",
+        help="Initialize config and install defaults.",
     )
     init_parser.add_argument(
         "--root",
@@ -84,9 +84,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help="Skip prompts and use defaults.",
     )
     init_parser.add_argument(
-        "--install-example",
+        "--install-default",
         action="store_true",
-        help="Install example specs and rules.",
+        help="Install default specs and rules.",
     )
     init_parser.add_argument(
         "--shell-rc",

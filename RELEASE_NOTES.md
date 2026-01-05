@@ -1,8 +1,11 @@
-# Release v0.5.0a3
+# Release v0.5.0b1
 
 Date: 2026-01-05
 Changes since 0.5.0a1
 
+- Restore mkdocs logo color (0e252e7)
+- Adjust logo colors for light/dark themes (a637f8b)
+- Update docs, release tooling, and assets (c7435be)
 - Rename docs files to consistent lowercase names (8f09315)
 - Gate docs and publish workflows to upstream repo (ddd941d)
 - Normalize docs file names and update links (e937eaa)

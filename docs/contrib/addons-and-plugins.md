@@ -120,7 +120,7 @@ under `pruner_specs/`. Use the `addon` CLI to install, list, and remove them:
 
 - `brkraw addon rm "spec.yaml" --force`
 
-See `assets/examples/` for working examples, including:
+See `src/brkraw/default/` for bundled defaults, including:
 
 - MRS `info_spec` for controlling `brkraw info`
 

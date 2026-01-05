@@ -126,11 +126,11 @@ def add_rule_data(
     return [target]
 
 
-def install_examples(root: Optional[Union[str, Path]] = None) -> List[Path]:
-    """Install bundled example specs and rules."""
+def install_defaults(root: Optional[Union[str, Path]] = None) -> List[Path]:
+    """Install bundled default specs and rules."""
     installed: List[Path] = []
 
-    base = resources.files("brkraw.assets.examples")
+    base = resources.files("brkraw.default")
     for rel_dir in ("specs", "rules"):
         src_dir = base / rel_dir
         if not src_dir.is_dir():
@@ -464,7 +464,7 @@ __all__ = [
     "add_spec_data",
     "add_pruner_spec_data",
     "add_rule_data",
-    "install_examples",
+    "install_defaults",
     "list_installed",
     "remove",
     "resolve_targets",
