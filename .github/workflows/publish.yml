@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    if: ${{ github.repository == 'BrkRaw/brkraw' }}
+    if: ${{ github.repository == 'BrkRaw/brkraw' && (github.event_name != 'release' || github.event.release.prerelease == false) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
           path: dist/
 
   publish:
-    if: ${{ github.repository == 'BrkRaw/brkraw' }}
+    if: ${{ github.repository == 'BrkRaw/brkraw' && (github.event_name != 'release' || github.event.release.prerelease == false) }}
     runs-on: ubuntu-latest
     needs: [build]
     permissions:

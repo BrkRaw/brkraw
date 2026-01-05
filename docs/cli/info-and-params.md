@@ -1,4 +1,4 @@
-# CLI: Info and Params
+# CLI: Info & Params
 
 This guide covers the inspection commands that read dataset metadata and
 parameter files.

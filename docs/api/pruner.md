@@ -1,4 +1,4 @@
-# Pruner API
+# API: Pruner
 
 BrkRaw Pruner selects files from a Bruker dataset, bundles them into a ZIP,
 and optionally updates JCAMP parameter values.

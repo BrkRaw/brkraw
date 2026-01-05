@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-__version__ = '0.5.0a2'
-
+__version__ = '0.5.0a3'
 from .apps.loader import BrukerLoader
 
 

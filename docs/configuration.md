@@ -1,4 +1,4 @@
-# Config Reference
+# Configuration Reference
 
 BrkRaw stores user configuration under the config root. By default this is
 `~/.brkraw`, or you can override it with `BRKRAW_CONFIG_HOME`.

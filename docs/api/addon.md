@@ -1,4 +1,4 @@
-# API: addon
+# API: Addon
 
 Programmatic access to addon installation and lookup utilities.
 

@@ -1,0 +1,60 @@
+title: "Proposal: "
+labels: ["discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for starting a discussion. For BrkRaw, most extensions should be
+        handled via addons (rules/specs/transforms/context_map) or plugins.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence overview of the proposal.
+      placeholder: "Add support for XYZ scan metadata mapping"
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Dataset type, Paravision version, and the workflow you are targeting.
+      placeholder: "PV 7.0.1, multi-echo sequence, needs custom NIfTI naming"
+    validations:
+      required: true
+  - type: dropdown
+    id: approach
+    attributes:
+      label: Preferred approach
+      description: Most changes should live outside core when possible.
+      options:
+        - Addon (rules/specs/transforms/context_map)
+        - Plugin (CLI entrypoint)
+        - Core change (Paravision compatibility only)
+        - Not sure yet
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Provide rules/specs/transforms/context_map ideas or plugin hooks.
+      placeholder: "Rules match on method=..., spec adds ..., transform normalizes ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected output
+      description: What should the final behavior or artifact look like?
+      placeholder: "NIfTI names follow ..., metadata includes ..."
+    validations:
+      required: false
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links, sample data structure, or screenshots.
+      placeholder: "Link to sample dataset or docs"
+    validations:
+      required: false

@@ -1,4 +1,4 @@
-# Rule Syntax guide (specs.rules module)
+# Rule Syntax Guide (specs.rules module)
 
 This document describes the rule syntax used to select specs and hooks
 from `~/.brkraw/rules/*.yaml`. Rule files are loaded in filename order and
@@ -94,7 +94,7 @@ is available in the `if` expression using `$<name>`. If a variable binding uses
 `transform`, the transform name is resolved from the spec referenced by `use`
 via `__meta__.transforms_source`.
 
-See `docs/spec-syntax.md` for details on remapper sources and transforms.
+See `docs/contrib/spec-syntax.md` for details on remapper sources and transforms.
 
 Example:
 

@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "releaseVersion",
+      "type": "promptString",
+      "description": "Release version (e.g., 0.5.0a3)"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "MkDocs: Serve",
+      "type": "shell",
+      "command": "\"${command:python.interpreterPath}\" -m mkdocs serve",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Release: Prep (bump + notes)",
+      "type": "shell",
+      "command": "\"${command:python.interpreterPath}\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup: venv + deps",
+      "type": "shell",
+      "command": "python3 -m venv .venv && . .venv/bin/activate && python -m pip install -U pip && python -m pip install -e \".[dev]\"",
+      "windows": {
+        "command": "py -m venv .venv; .venv\\Scripts\\Activate.ps1; python -m pip install -U pip; python -m pip install -e \".[dev]\"",
+        "options": {
+          "shell": {
+            "executable": "pwsh"
+          }
+        }
+      },
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# API: layout
+# API: Layout
 
 Helpers for building filenames from info/metadata specs.
 

@@ -1,4 +1,4 @@
-# SPEC Syntax Guide (specs.remapper module)
+# Spec Syntax Guide (specs.remapper module)
 
 This module maps Bruker parameter files into a structured output dictionary.
 

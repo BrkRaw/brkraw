@@ -4,14 +4,16 @@ site_url: https://brkraw.github.io/
 repo_url: https://github.com/BrkRaw/brkraw
 repo_name: BrkRaw/brkraw
 edit_uri: edit/main/docs/
+use_directory_urls: false
 
 theme:
   name: material
   language: en
+  custom_dir: docs/overrides
+  favicon: assets/favicon.ico
   logo: assets/brkraw-logo.svg
   font:
-    text: Space Grotesk
-    code: JetBrains Mono
+    false
   palette:
     - scheme: default
       primary: custom
@@ -20,6 +22,8 @@ theme:
     - navigation.tabs
     - navigation.top
     - navigation.sections
+    - navigation.instant
+    - navigation.instant.prefetch
     - search.highlight
     - search.share
 
@@ -44,16 +48,17 @@ nav:
       - Config: cli/config.md
       - Prune: cli/prune.md
   - API:
-      - Overview: python-api.md
+      - Overview: api/overview.md
       - CLI Equivalents: api/cli-workflows.md
       - Layout API: api/layout.md
       - Addon API: api/addon.md
       - Pruner API: api/pruner.md
   - Contribution:
-      - Extending BrkRaw: contribution.md
-      - Rules: rule-syntax.md
-      - Specs: spec-syntax.md
-      - Addons and Plugins: addons-and-plugins.md
-      - Contributors: contributors.md
+      - Extending BrkRaw: contrib/contribution.md
+      - Rule Syntax: contrib/rule-syntax.md
+      - Spec Syntax: contrib/spec-syntax.md
+      - Addons and Plugins: contrib/addons-and-plugins.md
+      - Core vs Addon Development: contrib/development-model.md
+      - Contributors: contrib/contributors.md
   - Reference:
       - Configuration: configuration.md

@@ -5,12 +5,20 @@ build-backend = "hatchling.build"
 [project]
 name = "brkraw"
 dynamic = ["version"]
-description = "Bruker PvDataset Loader"
+description = "Toolkit for loading Bruker Paravision datasets, mapping metadata, and exporting NIfTI"
 classifiers = [
-    'Development Status :: 5 - Production/Stable',
-    'Intended Audience :: Science/Research',
-    'Topic :: Scientific/Engineering :: Medical Science Apps.',
-    'Natural Language :: English',
+    'Development Status :: 3 - Alpha',
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
     "numpy",
@@ -27,11 +35,15 @@ maintainers = [
 readme = "README.md"
 requires-python = ">=3.8"
 keywords = [
-    'bruker', 
-    'data_handler', 
-    'converter', 
-    'administrator_tool', 
-    'extensible', 
+    "bruker",
+    "paravision",
+    "preclinical",
+    "mri",
+    "neuroimaging",
+    "nifti",
+    "dataset",
+    "conversion",
+    "cli",
 ]
 
 [project.urls]
@@ -51,8 +63,12 @@ convert = "brkraw.cli.commands.convert:register"
 prune = "brkraw.cli.commands.prune:register"
 
 [project.optional-dependencies]
-plugin = ["jsonschema"]
-full = ["brkraw[plugin]"]
+dev = [
+    "mkdocs",
+    "mkdocs-material",
+    "pymdown-extensions",
+    "pytest",
+]
 minimal = []
 
 [tool.hatch.version]

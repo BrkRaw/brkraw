@@ -1,0 +1,40 @@
+title: "Question: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask anything about BrkRaw usage, addons, rules/specs/transforms, or
+        dataset compatibility.
+  - type: input
+    id: summary
+    attributes:
+      label: Question
+      description: Short question summary.
+      placeholder: "How do I map custom method parameters?"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: BrkRaw version, Paravision version, and OS.
+      placeholder: "BrkRaw 0.5.0a3, PV 7.0.1, macOS 14"
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What you are trying to achieve and what you have tried.
+      placeholder: "Trying to ...; current output is ..."
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Logs, error messages, or links.
+      placeholder: "Error stack trace or link to docs"
+    validations:
+      required: false
