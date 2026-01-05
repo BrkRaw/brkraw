@@ -338,14 +338,14 @@ def format_table(
                         desc,
                         width=wrap_width,
                         initial_indent="",
-                        subsequent_indent=indent,
+                        subsequent_indent="",
                         break_long_words=False,
                         break_on_hyphens=False,
                     )
                     wrapped_lines = wrapped.splitlines()
                     lines.append(f"{prefix}{' ' * gap}{_apply_color(wrapped_lines[0], desc_color)}")
                     for extra in wrapped_lines[1:]:
-                        lines.append(f"{indent}{_apply_color(extra.strip(), desc_color)}")
+                        lines.append(f"{indent}{_apply_color(extra, desc_color)}")
             else:
                 lines.append(prefix)
         else:

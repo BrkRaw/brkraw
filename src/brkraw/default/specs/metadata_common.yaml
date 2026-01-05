@@ -1,6 +1,6 @@
 __meta__:
   name: "metadata_common"
-  version: "1.0.0"
+  version: "0.0.1"
   description: "Common BIDS 1.10.1 metadata mapping for Bruker PvDataset."
   category: "metadata_spec"
   transforms_source: "metadata_transforms.py"

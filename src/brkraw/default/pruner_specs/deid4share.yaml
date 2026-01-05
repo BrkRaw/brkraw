@@ -1,0 +1,40 @@
+__meta__:
+  name: "deid4share"
+  version: "0.2.0"
+  description: >
+    De-identification prune spec for Bruker ParaVision datasets. Drops the
+    subject file and redacts potential PII from JCAMP-DX parameters. Supports
+    template variables: $subject_id, $subject_name, $study_id.
+  category: "pruner_spec"
+
+mode: "keep"
+
+files:
+  - "method"
+  - "acqp"
+  - "reco"
+  - "visu_pars"
+  - "2dseq"
+
+update_params:
+  acqp:
+    ACQ_operator: ""
+    ACQ_institution: ""
+    ACQ_station: ""
+    ACQ_time: "<00:00:00 01 Jan 2000>"
+    ACQ_abs_time: "0"
+
+  visu_pars:
+    VisuInstitution: ""
+    VisuSubjectId: "$subject_id"
+    VisuSubjectName: "$subject_name"
+    VisuStudyId: "$study_id"
+    VisuStudyDate: "<00:00:00 01 Jan 2000>"
+    VisuStudyUid: "<1.2.3.4.5>"
+    VisuSeriesUid: "<1.2.3.4.5.1>"
+    VisuFrameUid: "<1.2.3.4.5.2>"
+
+  reco:
+    RECO_base_image_uid: "<1.2.3.4.5.6>"
+
+add_root: true

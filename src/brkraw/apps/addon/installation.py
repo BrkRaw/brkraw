@@ -131,7 +131,7 @@ def install_defaults(root: Optional[Union[str, Path]] = None) -> List[Path]:
     installed: List[Path] = []
 
     base = resources.files("brkraw.default")
-    for rel_dir in ("specs", "rules"):
+    for rel_dir in ("specs", "rules", "pruner_specs"):
         src_dir = base / rel_dir
         if not src_dir.is_dir():
             continue
@@ -146,6 +146,13 @@ def install_defaults(root: Optional[Union[str, Path]] = None) -> List[Path]:
             entry_path = Path(str(entry))
             if rel_dir == "specs":
                 installed += add_spec_data(
+                    data,
+                    filename=name,
+                    source_path=entry_path,
+                    root=root,
+                )
+            elif rel_dir == "pruner_specs":
+                installed += add_pruner_spec_data(
                     data,
                     filename=name,
                     source_path=entry_path,

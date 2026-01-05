@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import argparse
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Union
 
 import yaml
 
 from brkraw.cli.utils import spinner
+from brkraw.core import config as config_core
 from brkraw.specs.pruner import prune_dataset_to_zip_from_spec
 
 logger = logging.getLogger("brkraw")
@@ -20,17 +22,28 @@ def cmd_prune(args: argparse.Namespace) -> int:
     root_name_override = None
     dirs_override = _build_dir_override(args.scan_ids, args.reco_ids)
     template_vars = _parse_kv_pairs(args.set_vars)
+    try:
+        spec_path = _resolve_pruner_spec(
+            args.spec_name if args.spec_name else args.spec
+        )
+    except ValueError as exc:
+        logger.error("%s", exc)
+        return 2
     if output is None:
-        output = _default_output_path(Path(args.path), spec_path=Path(args.spec))
+        root_name = _load_root_name(spec_path)
+        if not root_name:
+            logger.error("Prune spec has no root_name; please provide --output.")
+            return 2
+        output = _default_output_path(Path(args.path), spec_path=spec_path)
     else:
         root_name_override = Path(output).stem
     try:
         logger.info("Pruning dataset: %s", args.path)
-        logger.info("Prune spec: %s", args.spec)
+        logger.info("Prune spec: %s", spec_path)
         logger.info("Output zip: %s", output)
         with spinner("Pruning"):
             out_path = prune_dataset_to_zip_from_spec(
-                args.spec,
+                spec_path,
                 source=args.path,
                 dest=output,
                 validate=not args.no_validate,
@@ -41,6 +54,15 @@ def cmd_prune(args: argparse.Namespace) -> int:
                 template_vars=template_vars,
             )
         logger.info("Wrote pruned zip: %s", out_path)
+        _write_prune_sidecar(
+            out_path=Path(out_path),
+            input_path=Path(args.path),
+            spec_path=spec_path,
+            args=args,
+            root_name_override=root_name_override,
+            dirs_override=dirs_override,
+            template_vars=template_vars,
+        )
     except Exception as exc:
         logger.error("%s", exc)
         return 2
@@ -57,12 +79,18 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         type=str,
         help="Source dataset path.",
     )
-    prune_parser.add_argument(
+    spec_group = prune_parser.add_mutually_exclusive_group(required=True)
+    spec_group.add_argument(
         "--spec",
         dest="spec",
         type=str,
-        required=True,
-        help="Path to prune spec YAML.",
+        help="Path to prune spec YAML (or basename of installed spec).",
+    )
+    spec_group.add_argument(
+        "--spec-name",
+        dest="spec_name",
+        type=str,
+        help="Use an installed pruner spec by name (basename, no path).",
     )
     prune_parser.add_argument(
         "-o",
@@ -138,6 +166,85 @@ def _load_root_name(spec_path: Path) -> Optional[str]:
     if isinstance(root_name, str) and root_name.strip():
         return root_name.strip()
     return None
+
+
+def _write_prune_sidecar(
+    *,
+    out_path: Path,
+    input_path: Path,
+    spec_path: Path,
+    args: argparse.Namespace,
+    root_name_override: Optional[str],
+    dirs_override: Optional[list],
+    template_vars: dict,
+) -> None:
+    sidecar = out_path.with_suffix(".prune.yaml")
+    spec_summary = _load_prune_spec_summary(spec_path)
+    payload = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "command": "brkraw prune",
+        "input_path": str(input_path),
+        "output_path": str(out_path),
+        "spec_path": str(spec_path),
+        "spec": spec_summary,
+        "mode": args.mode,
+        "strip_jcamp_comments": bool(args.strip_jcamp_comments),
+        "scan_ids": args.scan_ids,
+        "reco_ids": args.reco_ids,
+        "set_vars": args.set_vars,
+        "template_vars": template_vars,
+        "root_name_override": root_name_override,
+        "dirs_override": dirs_override,
+    }
+    sidecar.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+
+def _resolve_pruner_spec(value: Optional[str]) -> Path:
+    if value is None:
+        raise ValueError("A prune spec is required (use --spec or --spec-name).")
+    raw = Path(value).expanduser()
+    candidates = []
+    if raw.suffix:
+        candidates.append(raw)
+    else:
+        candidates.append(raw)
+        candidates.append(raw.with_suffix(".yaml"))
+        candidates.append(raw.with_suffix(".yml"))
+
+    if raw.is_absolute():
+        for cand in candidates:
+            if cand.exists():
+                return cand
+        raise ValueError(f"Prune spec not found: {value}")
+
+    search_roots = [Path.cwd(), config_core.paths().pruner_specs_dir]
+    for base in search_roots:
+        for cand in candidates:
+            path = (base / cand).resolve()
+            if path.exists():
+                return path
+    raise ValueError(f"Prune spec not found: {value}")
+
+
+
+
+def _load_prune_spec_summary(spec_path: Path) -> dict:
+    try:
+        data = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {
+        "__meta__": data.get("__meta__", {}),
+        "mode": data.get("mode"),
+        "files": data.get("files"),
+        "dirs": data.get("dirs"),
+        "update_params_keys": list((data.get("update_params") or {}).keys()),
+        "add_root": data.get("add_root"),
+        "root_name": data.get("root_name"),
+        "strip_jcamp_comments": data.get("strip_jcamp_comments"),
+    }
 
 
 def _build_dir_override(

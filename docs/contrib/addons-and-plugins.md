@@ -126,6 +126,8 @@ See `src/brkraw/default/` for bundled defaults, including:
 
 - `metadata_spec` for BIDS-like sidecar metadata
 
+- Pruner specs for de-identification workflows
+
 See `docs/api/addon.md` for the addon API reference.
 
 Rules can reference specs by name (recommended) or by path. When a name is

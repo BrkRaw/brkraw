@@ -8,7 +8,9 @@ Required:
 
 - `path`: source dataset path
 
-- `--spec`: prune spec YAML path
+- `--spec`: prune spec YAML path (or basename of an installed spec)
+
+- `--spec-name`: installed pruner spec name (basename, no path)
 
 Optional overrides:
 
@@ -26,8 +28,8 @@ Optional overrides:
 
 - `--reco-ids`: override reco IDs to keep (space or comma separated)
 
-If `--output` is omitted, the default filename uses `root_name` from the spec
-(falling back to `<input>_pruned` when `root_name` is missing).
+If `--output` is omitted, the default filename uses `root_name` from the spec.
+When `root_name` is missing, `--output` is required.
 
 Notes on `update_params`:
 
@@ -90,6 +92,35 @@ Example:
 
 ```bash
 brkraw prune /data/study --spec specs/prune.yaml --output /data/out/pruned.zip
+```
+
+Sidecar log:
+
+- After pruning, BrkRaw writes a `.prune.yaml` sidecar next to the output zip.
+  The file records the CLI inputs (spec path, scan/reco ids, template vars).
+
+Using an installed spec by name:
+
+```bash
+brkraw prune /data/study --spec-name pruner_default
+```
+
+De-identification example (edit the input zip path as needed):
+
+```bash
+brkraw prune /path/to/dataset.zip \
+  --spec-name deid4share \
+  -o /path/to/output.zip \
+  --strip-jcamp-comments --mode keep \
+  --set-var subject_id=01exp --set-var subject_name=camri --set-var study_id=01 \
+  --scan-ids 3 4 9 11 --reco-ids 1
+```
+
+If you place `path` at the end and use list options like `--scan-ids` or
+`--reco-ids`, add `--` before the path to stop option parsing:
+
+```bash
+brkraw prune --spec-name deid4share --scan-ids 3 4 --reco-ids 1 -- /path/to/dataset.zip
 ```
 
 ## Example prune spec (minimal compatible)
