@@ -25,6 +25,8 @@ Notes:
 
 - Spec listings include `name`, `version`, `description`, and `category` from `__meta__`.
 
+- Pruner spec listings omit `category`.
+
 ## brkraw addon rm
 
 Remove installed addons by filename (wildcards supported).

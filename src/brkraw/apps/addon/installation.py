@@ -212,11 +212,9 @@ def list_installed(root: Optional[Union[str, Path]] = None) -> Dict[str, List[Di
                 "name": record.get("name") or "<Unknown>",
                 "version": record.get("version") or "<Unknown>",
                 "description": record.get("description") or "<Unknown>",
-                "category": record.get("category") or "pruner_spec",
                 "name_unknown": "1" if not record.get("name") else "0",
                 "version_unknown": "1" if not record.get("version") else "0",
                 "description_unknown": "1" if not record.get("description") else "0",
-                "category_unknown": "0",
             }
         )
 

@@ -46,6 +46,26 @@ def _normalize_row(row: Dict[str, str]) -> Dict[str, object]:
         "description": desc_cell,
     }
 
+def _normalize_pruner_row(row: Dict[str, str]) -> Dict[str, object]:
+    name = row.get("name", "")
+    desc = row.get("description", "")
+    version = row.get("version", "")
+    name_cell: object = name
+    desc_cell: object = desc
+    version_cell: object = version
+    if row.get("name_unknown") == "1":
+        name_cell = {"value": name, "color": "gray"}
+    if row.get("version_unknown") == "1":
+        version_cell = {"value": version, "color": "gray"}
+    if row.get("description_unknown") == "1":
+        desc_cell = {"value": desc, "color": "gray"}
+    return {
+        "file": row.get("file", ""),
+        "name": name_cell,
+        "version": version_cell,
+        "description": desc_cell,
+    }
+
 
 def _normalize_rule_row(row: Dict[str, str]) -> Dict[str, object]:
     name = row.get("name", "")
@@ -91,10 +111,11 @@ def cmd_list(args: argparse.Namespace) -> int:
     rules = data["rules"]
     pruner_specs = data.get("pruner_specs", [])
     columns = ("file", "category", "name", "version", "description")
+    pruner_columns = ("file", "name", "version", "description")
     rule_columns = ("file", "category", "name", "description")
     transform_columns = ("file", "spec")
     spec_rows = [_normalize_row(row) for row in data["specs"]]
-    pruner_rows = [_normalize_row(row) for row in pruner_specs]
+    pruner_rows = [_normalize_pruner_row(row) for row in pruner_specs]
     rules_rows = [_normalize_rule_row(row) for row in rules]
     transform_rows = [_normalize_transform_row(row) for row in data["transforms"]]
     category_order = {"info_spec": 0, "metadata_spec": 1, "converter_hook": 2, "<Unknown>": 9}
@@ -111,11 +132,8 @@ def cmd_list(args: argparse.Namespace) -> int:
         )
     )
     spec_widths = formatter.compute_column_widths(columns, spec_rows)
-    pruner_widths = formatter.compute_column_widths(columns, pruner_rows)
-    col_widths = {
-        col: max(spec_widths.get(col, 0), pruner_widths.get(col, 0))
-        for col in columns[:-1]
-    }
+    col_widths = formatter.compute_column_widths(columns, spec_rows)
+    pruner_widths = formatter.compute_column_widths(pruner_columns, pruner_rows)
     spec_table = formatter.format_table(
         "Specs",
         columns,
@@ -136,12 +154,12 @@ def cmd_list(args: argparse.Namespace) -> int:
     )
     pruner_table = formatter.format_table(
         "Pruner Specs",
-        columns,
+        pruner_columns,
         pruner_rows,
         width=width,
         colors={"file": "gray", "name": "magenta", "description": "gray"},
         title_color="magenta",
-        col_widths=col_widths,
+        col_widths=pruner_widths,
     )
     transforms_table = formatter.format_table(
         "Transforms",
