@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Iterable, Optional, Set, Union, Literal, Mapping, Dict, Any, List
+import re
 import shutil
 import zipfile
 
@@ -83,6 +84,7 @@ def prune_dataset_to_zip_from_spec(
     root_name: Optional[str] = None,
     dirs: Optional[Iterable[Mapping[str, Any]]] = None,
     mode: Optional[Literal["keep", "drop"]] = None,
+    template_vars: Optional[Mapping[str, str]] = None,
 ) -> Path:
     """Create a pruned dataset ZIP from a prune spec mapping or YAML path.
 
@@ -95,6 +97,7 @@ def prune_dataset_to_zip_from_spec(
         root_name: Optional override for the root directory name in the zip.
         dirs: Optional override for directory filter rules.
         mode: Optional override for keep/drop mode.
+        template_vars: Optional mapping used to substitute `$key` placeholders.
 
     Returns:
         Path to the created zip file.
@@ -105,6 +108,9 @@ def prune_dataset_to_zip_from_spec(
         spec_data = dict(spec)
         if validate:
             validate_prune_spec(spec_data)
+
+    if template_vars:
+        spec_data = _substitute_vars(spec_data, template_vars)
 
     if source is None or dest is None:
         raise ValueError("source and dest are required for prune spec.")
@@ -324,6 +330,28 @@ def _is_excluded_by_dir_rules(relpath: str, rules: List[Dict[str, Any]]) -> bool
             if name not in rule["dirs"]:
                 return True
     return False
+
+
+def _substitute_vars(obj: Any, variables: Mapping[str, str]) -> Any:
+    """Recursively substitute $key placeholders in strings using variables mapping."""
+    if isinstance(obj, str):
+        return _substitute_string(obj, variables)
+    if isinstance(obj, Mapping):
+        return {k: _substitute_vars(v, variables) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_substitute_vars(item, variables) for item in obj]
+    return obj
+
+
+_VAR_PATTERN = re.compile(r"\$(\w+)")
+
+
+def _substitute_string(text: str, variables: Mapping[str, str]) -> str:
+    def replacer(match: re.Match[str]) -> str:
+        key = match.group(1)
+        return variables.get(key, match.group(0))
+
+    return _VAR_PATTERN.sub(replacer, text)
 
 
 __all__ = [

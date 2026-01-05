@@ -20,6 +20,8 @@ Optional overrides:
 
 - `--mode`: override spec `mode` (`keep` or `drop`)
 
+- `--set-var`: template variable for spec substitution (repeatable, `KEY=VALUE`)
+
 - `--scan-ids`: override scan IDs to keep (space or comma separated)
 
 - `--reco-ids`: override reco IDs to keep (space or comma separated)
@@ -41,6 +43,10 @@ Optional JCAMP cleanup:
   are kept in the pruned archive.
 
 - No helper utilities are provided; you must ensure JCAMP compliance yourself.
+
+Template variables:
+
+- Strings in the spec containing `$key` are replaced when `--set-var key=value` is provided.
 
 Compatibility guidance:
 
@@ -77,6 +83,7 @@ Keeping specific scans/reconstructions without editing the spec:
 ```bash
 brkraw prune /data/study --spec specs/prune.yaml --scan-ids 1 3
 brkraw prune /data/study --spec specs/prune.yaml --scan-ids 1 --reco-ids 1,2
+brkraw prune /data/study --spec specs/prune.yaml --set-var subject=01exp --set-var study=01exp
 ```
 
 Example:

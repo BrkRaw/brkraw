@@ -19,6 +19,7 @@ def cmd_prune(args: argparse.Namespace) -> int:
     output = args.output
     root_name_override = None
     dirs_override = _build_dir_override(args.scan_ids, args.reco_ids)
+    template_vars = _parse_kv_pairs(args.set_vars)
     if output is None:
         output = _default_output_path(Path(args.path), spec_path=Path(args.spec))
     else:
@@ -37,6 +38,7 @@ def cmd_prune(args: argparse.Namespace) -> int:
                 root_name=root_name_override,
                 dirs=dirs_override,
                 mode=args.mode,
+                template_vars=template_vars,
             )
         logger.info("Wrote pruned zip: %s", out_path)
     except Exception as exc:
@@ -83,6 +85,13 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "--mode",
         choices=["keep", "drop"],
         help="Override spec mode for file selection.",
+    )
+    prune_parser.add_argument(
+        "--set-var",
+        dest="set_vars",
+        action="append",
+        metavar="KEY=VALUE",
+        help="Template variable for use in prune spec (can repeat).",
     )
     prune_parser.add_argument(
         "--scan-ids",
@@ -155,3 +164,18 @@ def _parse_id_list(values: Optional[list[str]]) -> list[str]:
             if part:
                 result.append(part)
     return result
+
+
+def _parse_kv_pairs(items: Optional[list[str]]) -> dict[str, str]:
+    if not items:
+        return {}
+    pairs: dict[str, str] = {}
+    for item in items:
+        if "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        key = key.strip()
+        if not key:
+            continue
+        pairs[key] = value
+    return pairs
