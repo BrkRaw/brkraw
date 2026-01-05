@@ -285,7 +285,7 @@ def wrap_subject_pose(affine: np.ndarray,
     elif subject_type == "Quadruped":
         # in operators view (scanner), patient is Le to Rt, V to D, Cd to Ro in scanner coordinate in "Head_Prone" position
         # step1. Rt-D-Ro, we need to change it to Rt-Ro-D (correspond to RAS of human)
-        _affine = rotate_affine(_affine, rad_x=np.pi/2)
+        _affine = rotate_affine(_affine, rad_x=-np.pi/2)
         # step2. unwrap position
         if gravity == "Supine":
             _affine = rotate_affine(_affine, rad_z=np.pi)
