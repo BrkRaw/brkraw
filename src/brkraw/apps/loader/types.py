@@ -78,6 +78,26 @@ class GetNifti1ImageType(Protocol):
         ...
 
 
+class ConvertType(Protocol):
+    """Callable signature for convert overrides."""
+    def __call__(
+        self,
+        scan: "Scan",
+        reco_id: Optional[int] = None,
+        *,
+        format: Literal["nifti", "nifti1"],
+        override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
+        unwrap_pose: bool,
+        override_subject_type: Optional[SubjectType],
+        override_subject_pose: Optional[SubjectPose],
+        flip_x: bool,
+        xyz_units: XYZUNIT,
+        t_units: TUNIT,
+        **kwargs: Any,
+    ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
+        ...
+
+
 class BaseLoader(Protocol):
     """Base protocol for loader types that can search parameters."""
     def search_params(
@@ -140,6 +160,21 @@ class ScanLoader(Scan, BaseLoader):
             ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
         ...
 
+    def convert(
+            self,
+            reco_id: Optional[int] = None,
+            *,
+            format: Literal["nifti", "nifti1"],
+            override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
+            unwrap_pose: bool,
+            override_subject_type: Optional[SubjectType],
+            override_subject_pose: Optional[SubjectPose],
+            flip_x: bool,
+            xyz_units: XYZUNIT,
+            t_units: TUNIT
+            ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
+        ...
+
     def get_metadata(
             self, 
             reco_id: Optional[int] = None,
@@ -155,7 +190,7 @@ class RecoLoader(Reco, BaseLoader):
     ...
 
 
-ConverterHook: TypeAlias = Mapping[str, Union[GetDataobjType[Any], GetAffineType, GetNifti1ImageType]]
+ConverterHook: TypeAlias = Mapping[str, Union[GetDataobjType[Any], GetAffineType, GetNifti1ImageType, ConvertType]]
 """Mapping of converter hook keys to override callables."""
 
 
@@ -163,6 +198,7 @@ __all__ = [
     'GetDataobjType',
     'GetAffineType',
     'GetNifti1ImageType',
+    'ConvertType',
     'ConverterHook',
     'StudyLoader',
     'ScanLoader',

@@ -1,0 +1,57 @@
+title: "BrkRaw Context Map"
+description: "Per-key mapping rules supplied at runtime."
+type: object
+properties:
+  __meta__:
+    type: object
+    description: "Optional layout metadata for output rendering."
+    additionalProperties: false
+    properties:
+      layout_entries:
+        type: array
+        description: "Layout entries for output naming."
+        items:
+          type: object
+      layout_template:
+        type: string
+        description: "Template string for layout naming."
+      slicepack_suffix:
+        type: string
+        description: "Template for slicepack suffix rendering."
+additionalProperties:
+  oneOf:
+    - $ref: "#/$defs/Rule"
+    - type: array
+      items:
+        $ref: "#/$defs/Rule"
+
+$defs:
+  Rule:
+    type: object
+    description: "Mapping rule for a spec output key."
+    additionalProperties: false
+    properties:
+      selector:
+        type: boolean
+        description: "If true, this key must be mapped for conversion selection."
+      target:
+        type: string
+        description: "Spec output to apply this mapping to (default: info_spec)."
+        enum: ["info_spec", "metadata_spec"]
+      type:
+        type: string
+        enum: ["mapping", "const"]
+      values:
+        type: object
+        description: "Lookup mapping table."
+        additionalProperties: true
+      value:
+        description: "Constant value for type=const."
+      default:
+        description: "Default value when no mapping matches."
+      override:
+        type: boolean
+      when:
+        type: object
+        description: "Conditions evaluated against mapped values."
+        additionalProperties: true

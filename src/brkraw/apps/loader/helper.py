@@ -6,7 +6,7 @@ Last updated: 2025-12-30
 from __future__ import annotations
 
 from types import MethodType
-from typing import TYPE_CHECKING, Optional, Tuple, Union, Any, Mapping, cast, List, Dict
+from typing import TYPE_CHECKING, Optional, Tuple, Union, Any, Mapping, cast, List, Dict, Literal
 from pathlib import Path
 from warnings import warn
 import logging
@@ -16,7 +16,7 @@ from nibabel.nifti1 import Nifti1Image
 
 from ...core.config import resolve_root
 from ...core.parameters import Parameters
-from ...specs.remapper import load_spec, map_parameters
+from ...specs.remapper import load_spec, map_parameters, load_context_map, apply_context_map
 from ...specs.rules import load_rules, select_rule_use
 from ...dataclasses import Reco, Scan, Study
 from .types import StudyLoader, ScanLoader
@@ -32,6 +32,18 @@ if TYPE_CHECKING:
     from .types import SubjectType, SubjectPose, XYZUNIT, TUNIT
 
 logger = logging.getLogger("brkraw")
+
+__all__ = [
+    "resolve_data_and_affine",
+    "search_parameters",
+    "get_dataobj",
+    "get_affine",
+    "get_nifti1image",
+    "convert",
+    "get_metadata",
+    "apply_converter_hook",
+    "make_dir",
+]
 
 
 def make_dir(names: List[str]):
@@ -64,7 +76,7 @@ def _resolve_reco_id(
     return reco_id
 
 
-def _resolve_data_and_affine(
+def resolve_data_and_affine(
     scan: Union["Scan", "ScanLoader"],
     reco_id: Optional[int] = None,
     *,
@@ -110,7 +122,7 @@ def _resolve_data_and_affine(
     scan.get_fid = MethodType(fid_resolver.resolve, scan)
 
 
-def _search_parameters(
+def search_parameters(
     self: Union[Study, Scan, Reco],
     key: str,
     file: Optional[Union[str, List[str]]] = None,
@@ -248,7 +260,7 @@ def _search_parameters(
     return None
 
 
-def _get_dataobj(
+def get_dataobj(
     self: Union["Scan", "ScanLoader"], reco_id: Optional[int] = None
 ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
     """Return reconstructed data for a reco, split by slice pack if needed.
@@ -287,7 +299,7 @@ def _get_dataobj(
     return tuple(slice_pack)
 
 
-def _get_affine(
+def get_affine(
     self: Union["Scan", "ScanLoader"],
     reco_id: Optional[int] = None,
     *,
@@ -357,7 +369,7 @@ def _get_affine(
     return tuple(affines)
 
 
-def _get_nifti1image(
+def get_nifti1image(
     self: Union["Scan", "ScanLoader"],
     reco_id: Optional[int] = None,
     *,
@@ -432,6 +444,35 @@ def _get_nifti1image(
     return tuple(niiobjs)
 
 
+def convert(
+    self: Union["Scan", "ScanLoader"],
+    reco_id: Optional[int] = None,
+    *,
+    format: Literal["nifti", "nifti1"] = "nifti",
+    unwrap_pose: bool = False,
+    override_header: Optional[Nifti1HeaderContents] = None,
+    override_subject_type: Optional[SubjectType] = None,
+    override_subject_pose: Optional[SubjectPose] = None,
+    flip_x: bool = False,
+    xyz_units: XYZUNIT = "mm",
+    t_units: TUNIT = "sec",
+) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
+    """Convert a reco to a selected output format."""
+    if format not in {"nifti", "nifti1"}:
+        raise ValueError(f"Unsupported format: {format}")
+    return get_nifti1image(
+        self,
+        reco_id,
+        unwrap_pose=unwrap_pose,
+        override_header=override_header,
+        override_subject_type=override_subject_type,
+        override_subject_pose=override_subject_pose,
+        flip_x=flip_x,
+        xyz_units=xyz_units,
+        t_units=t_units,
+    )
+
+
 def _resolve_metadata_spec(
     scan: "ScanLoader",
     spec: Optional[Union[Mapping[str, Any], str, Path]],
@@ -472,7 +513,7 @@ def _resolve_metadata_spec(
     raise TypeError(f"Unsupported spec type: {type(spec)!r}")
 
 
-def _get_metadata(
+def get_metadata(
     self,
     reco_id: Optional[int] = None,
     spec: Optional[Union[Mapping[str, Any], str, Path]] = None,
@@ -510,9 +551,17 @@ def _get_metadata(
         spec_data,
         transforms,
         validate=False,
-        context_map=context_map,
+        context_map=None,
         context={"scan_id": getattr(scan, "scan_id", None), "reco_id": resolved_reco_id},
     )
+    if context_map:
+        map_data = load_context_map(context_map)
+        metadata = apply_context_map(
+            metadata,
+            map_data,
+            target="metadata_spec",
+            context={"scan_id": getattr(scan, "scan_id", None), "reco_id": resolved_reco_id},
+        )
     if not return_spec:
         return metadata
     meta = spec_data.get("__meta__")
@@ -522,7 +571,7 @@ def _get_metadata(
     return metadata, spec_info
 
 
-def _apply_converter_hook(
+def apply_converter_hook(
     scan: "ScanLoader",
     converter_hook: Mapping[str, Any],
 ) -> None:
@@ -534,5 +583,5 @@ def _apply_converter_hook(
         scan.get_dataobj = MethodType(plugin["get_dataobj"], scan)
     if "get_affine" in plugin:
         scan.get_affine = MethodType(plugin["get_affine"], scan)
-    if "get_nifti1image" in plugin:
-        scan.get_nifti1image = MethodType(plugin["get_nifti1image"], scan)
+    if "convert" in plugin:
+        scan.convert = MethodType(plugin["convert"], scan)

@@ -53,7 +53,7 @@ def _load_schema() -> Dict[str, Any]:
 def _load_map_schema() -> Dict[str, Any]:
     if __package__ is None:
         raise RuntimeError("Package context required to load map schema.")
-    with resources.files("brkraw.schema").joinpath("map.yaml").open(
+    with resources.files("brkraw.schema").joinpath("context_map.yaml").open(
         "r", encoding="utf-8"
     ) as handle:
         return yaml.safe_load(handle)
@@ -218,6 +218,8 @@ def _validate_map_minimal(map_data: Any) -> List[str]:
         errors.append("map: must be a mapping.")
         return errors
     for key, value in map_data.items():
+        if key == "__meta__":
+            continue
         if not isinstance(key, str):
             errors.append(f"map[{key!r}]: key must be a string.")
         if isinstance(value, list):
@@ -294,4 +296,3 @@ def validate_context_map(path: Union[str, Path], *, raise_on_error: bool = True)
     map_path = Path(path)
     data = yaml.safe_load(map_path.read_text(encoding="utf-8"))
     return validate_map_data(data, raise_on_error=raise_on_error)
-

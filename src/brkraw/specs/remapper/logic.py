@@ -5,7 +5,7 @@ from collections.abc import Mapping
 import inspect
 import re
 from types import ModuleType
-from typing import Any, Callable, Optional, List, Dict, Tuple, Set, Union
+from typing import Any, Callable, Optional, List, Dict, Tuple, Set, Union, Iterable
 import yaml
 from .validator import validate_spec, validate_map_data
 
@@ -519,24 +519,89 @@ def map_parameters(
     return result
 
 
+def load_context_map(path: Union[str, Path]) -> Dict[str, Any]:
+    map_data, _ = load_context_map_data(path)
+    return map_data
+
+
+def load_context_map_data(
+    path: Union[str, Path],
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    resolved = _resolve_map_path(path, base=None)
+    if resolved is None:
+        return {}, {}
+    data = _read_map_file(resolved)
+    return _split_map_data(data)
+
+
+def load_context_map_meta(path: Union[str, Path]) -> Dict[str, Any]:
+    _, meta = load_context_map_data(path)
+    return meta
+
+
+def get_selector_keys(map_data: Mapping[str, Any], *, target: Optional[str] = None) -> List[str]:
+    selectors: List[str] = []
+    for out_key, raw_rule in map_data.items():
+        if not _rule_applies_to_target(raw_rule, target):
+            continue
+        if _is_selector_rule(raw_rule):
+            selectors.append(out_key)
+    return selectors
+
+
+def matches_context_map_selectors(
+    result: Union[Mapping[str, Any], Tuple[Mapping[str, Any], Mapping[str, Any]]],
+    map_data: Mapping[str, Any],
+    *,
+    target: Optional[str] = None,
+) -> bool:
+    selector_keys = get_selector_keys(map_data, target=None)
+    if not selector_keys:
+        return True
+    for key in selector_keys:
+        if not _selector_value_present(result, key):
+            return False
+    return True
+
+
+def _selector_value_present(
+    result: Union[Mapping[str, Any], Tuple[Mapping[str, Any], Mapping[str, Any]]],
+    out_key: str,
+) -> bool:
+    results: Iterable[Mapping[str, Any]]
+    if isinstance(result, tuple):
+        results = result
+    else:
+        results = (result,)
+    for item in results:
+        found, value = _get_output_value(dict(item), out_key)
+        if found and value is not None:
+            return True
+    return False
+
+
+def apply_context_map(
+    result: Mapping[str, Any],
+    map_data: Mapping[str, Any],
+    *,
+    target: Optional[str],
+    context: Optional[Mapping[str, Any]] = None,
+) -> Dict[str, Any]:
+    filtered = _filter_map_data(map_data, target=target)
+    if not filtered:
+        return dict(result)
+    return _apply_map_rules(dict(result), filtered, None, context=context)
+
+
 def _load_map_data(
     spec: Mapping[str, Any],
     *,
     context_map: Optional[Union[str, Path]],
 ) -> Dict[str, Any]:
-    meta = spec.get("__meta__") if isinstance(spec, Mapping) else None
     override_path = _resolve_map_path(context_map, base=None)
     if override_path is not None:
         return _read_map_file(override_path)
-    if not isinstance(meta, Mapping):
-        return {}
-    meta_path = meta.get("context_map")
-    spec_path = meta.get("__spec_path__")
-    base = Path(spec_path).parent if isinstance(spec_path, str) else None
-    resolved = _resolve_map_path(meta_path, base=base)
-    if resolved is None:
-        return {}
-    return _read_map_file(resolved)
+    return {}
 
 
 def _resolve_map_path(
@@ -563,6 +628,15 @@ def _read_map_file(path: Path) -> Dict[str, Any]:
         return {}
     validate_map_data(data)
     return dict(data) if isinstance(data, Mapping) else {}
+
+
+def _split_map_data(data: Mapping[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    meta: Dict[str, Any] = {}
+    raw_meta = data.get("__meta__")
+    if isinstance(raw_meta, Mapping):
+        meta = dict(raw_meta)
+    rules = {key: value for key, value in data.items() if key != "__meta__"}
+    return rules, meta
 
 
 def _apply_map_rules(
@@ -599,6 +673,49 @@ def _normalize_map_rules(raw_rule: Any) -> List[Dict[str, Any]]:
     if isinstance(raw_rule, Mapping):
         return [dict(raw_rule)]
     raise ValueError("Map rule must be a mapping or list of mappings.")
+
+
+def _is_selector_rule(raw_rule: Any) -> bool:
+    if isinstance(raw_rule, Mapping):
+        return bool(raw_rule.get("selector"))
+    if isinstance(raw_rule, list):
+        return any(isinstance(rule, Mapping) and rule.get("selector") for rule in raw_rule)
+    return False
+
+
+def _rule_targets(raw_rule: Any) -> Set[str]:
+    targets: Set[str] = set()
+    if isinstance(raw_rule, Mapping):
+        value = raw_rule.get("target")
+        if isinstance(value, str):
+            targets.add(value)
+    elif isinstance(raw_rule, list):
+        for rule in raw_rule:
+            if not isinstance(rule, Mapping):
+                continue
+            value = rule.get("target")
+            if isinstance(value, str):
+                targets.add(value)
+    return targets
+
+
+def _rule_applies_to_target(raw_rule: Any, target: Optional[str]) -> bool:
+    if target is None:
+        return True
+    targets = _rule_targets(raw_rule)
+    if not targets:
+        return target == "info_spec"
+    return target in targets
+
+
+def _filter_map_data(map_data: Mapping[str, Any], *, target: Optional[str]) -> Dict[str, Any]:
+    if target is None:
+        return dict(map_data)
+    return {
+        key: raw_rule
+        for key, raw_rule in map_data.items()
+        if _rule_applies_to_target(raw_rule, target)
+    }
 
 
 def _get_output_value(result: Dict[str, Any], out_key: str) -> Tuple[bool, Any]:
@@ -730,4 +847,10 @@ def _map_lookup(
 __all__ = [
     "load_spec",
     "map_parameters",
+    "load_context_map",
+    "get_selector_keys",
+    "matches_context_map_selectors",
+    "apply_context_map",
+    "load_context_map_data",
+    "load_context_map_meta",
 ]

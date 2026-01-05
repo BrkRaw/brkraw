@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, List
 
-CONVERTER_KEYS = {"get_dataobj", "get_affine", "get_nifti1image"}
+CONVERTER_KEYS = {"get_dataobj", "get_affine", "convert"}
 
 
 def validate_hook(hook: Any, *, raise_on_error: bool = True) -> List[str]:

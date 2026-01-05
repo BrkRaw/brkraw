@@ -28,14 +28,15 @@ from .formatter import format_info_tables
 logger = logging.getLogger("brkraw")
 from . import info as info_resolver
 from .helper import (
-    _get_affine,
-    _get_dataobj,
-    _get_metadata,
-    _get_nifti1image,
-    _resolve_data_and_affine,
-    _search_parameters,
+    get_affine as _get_affine,
+    get_dataobj as _get_dataobj,
+    get_metadata as _get_metadata,
+    get_nifti1image as _get_nifti1image,
+    convert as _convert,
+    resolve_data_and_affine as _resolve_data_and_affine,
+    search_parameters as _search_parameters,
     make_dir,
-    _apply_converter_hook,
+    apply_converter_hook as _apply_converter_hook,
 )
 
 if TYPE_CHECKING:
@@ -158,6 +159,7 @@ class BrukerLoader:
             scan.get_dataobj = MethodType(_get_dataobj, scan)
             scan.get_affine = MethodType(_get_affine, scan)
             scan.get_nifti1image = MethodType(_get_nifti1image, scan)
+            scan.convert = MethodType(_convert, scan)
             scan._converter_hook = None
             if rules:
                 try:
@@ -233,6 +235,7 @@ class BrukerLoader:
         scan.get_dataobj = MethodType(_get_dataobj, scan)
         scan.get_affine = MethodType(_get_affine, scan)
         scan.get_nifti1image = MethodType(_get_nifti1image, scan)
+        scan.convert = MethodType(_convert, scan)
         scan._converter_hook = None
 
     def get_scan(self, scan_id: int) -> "ScanLoader":
@@ -337,12 +340,45 @@ class BrukerLoader:
             Single NIfTI image when one slice pack exists; otherwise a tuple.
         """
         scan = self.get_scan(scan_id)
-        return scan.get_nifti1image(reco_id, 
-                                    unwrap_pose=unwrap_pose, 
-                                    override_header=override_header, 
-                                    override_subject_type=override_subject_type, 
-                                    override_subject_pose=override_subject_pose, 
-                                    flip_x=flip_x, xyz_units=xyz_units, t_units=t_units)
+        return scan.convert(
+            reco_id,
+            format="nifti",
+            unwrap_pose=unwrap_pose,
+            override_header=override_header,
+            override_subject_type=override_subject_type,
+            override_subject_pose=override_subject_pose,
+            flip_x=flip_x,
+            xyz_units=xyz_units,
+            t_units=t_units,
+        )
+
+    def convert(
+        self,
+        scan_id: int,
+        reco_id: Optional[int] = None,
+        *,
+        format: Literal["nifti", "nifti1"] = "nifti",
+        unwrap_pose: bool = False,
+        override_header: Optional[Nifti1HeaderContents] = None,
+        override_subject_type: Optional[SubjectType] = None,
+        override_subject_pose: Optional[SubjectPose] = None,
+        flip_x: bool = False,
+        xyz_units: XYZUNIT = "mm",
+        t_units: TUNIT = "sec",
+    ):
+        """Convert a scan/reco to the requested output format."""
+        scan = self.get_scan(scan_id)
+        return scan.convert(
+            reco_id,
+            format=format,
+            unwrap_pose=unwrap_pose,
+            override_header=override_header,
+            override_subject_type=override_subject_type,
+            override_subject_pose=override_subject_pose,
+            flip_x=flip_x,
+            xyz_units=xyz_units,
+            t_units=t_units,
+        )
 
     def get_metadata(
         self,
