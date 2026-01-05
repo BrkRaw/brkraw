@@ -22,27 +22,27 @@ Examples:
 
 - `brkraw session set -p /path/to/study -s 3 -r 1`
 
-- `brkraw session set --output-format nii.gz`
+- `brkraw session set --convert-option FORMAT=nifti --convert-option COMPRESS=1`
 
-- `brkraw session set --tonii-option OUTPUT=./out --tonii-option SIDECAR=1`
+- `brkraw session set --convert-option OUTPUT=./out --convert-option SIDECAR=1`
 
 - `eval "$(brkraw session set -p /path/to/study -s 3)"`
 
-Tonii options (set as `BRKRAW_TONII_<KEY>`):
+Convert options (set as `BRKRAW_CONVERT_<KEY>`):
 
 - `OUTPUT`, `PREFIX`, `SCAN_ID`, `RECO_ID`
 
-- `SIDECAR`, `UNWRAP_POSE`, `FLIP_X`
+- `SIDECAR`, `CONTEXT_MAP`, `COMPRESS`, `FORMAT`
 
-- `SIDECAR_CONTEXT_MAP`, `OUTPUT_CONTEXT_MAP`
+- `UNWRAP_POSE`, `FLIP_X`
 
 - `OVERRIDE_SUBJECT_TYPE`, `OVERRIDE_SUBJECT_POSE`
 
-- `XYZ_UNITS`, `T_UNITS`, `HEADER`, `OUTPUT_FORMAT`
+- `XYZ_UNITS`, `T_UNITS`, `HEADER`
 
-`OUTPUT_FORMAT` controls the NIfTI file extension (`nii` or `nii.gz`), not the
-filename format. The filename fields are configured via `output.format_fields`
-in `config.yaml`.
+`FORMAT`/`COMPRESS` control the NIfTI file extension (`nii` or `nii.gz`), not the
+filename layout. The filename entries are configured via `output.layout_entries`
+and `output.layout_template` in `config.yaml`.
 
 ## brkraw session unset
 
@@ -54,9 +54,9 @@ Examples:
 
 - `brkraw session unset --path --scan-id`
 
-- `brkraw session unset --tonii-option`
+- `brkraw session unset --convert-option`
 
-- `brkraw session unset --tonii-option OUTPUT --tonii-option SCAN_ID`
+- `brkraw session unset --convert-option OUTPUT --convert-option SCAN_ID`
 
 - `eval "$(brkraw session unset --path --scan-id)"`
 

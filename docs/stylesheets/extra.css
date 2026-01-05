@@ -2,3 +2,22 @@
   --md-primary-fg-color: #33658a;
   --md-accent-fg-color: #33658a;
 }
+
+/* Mobile drawer "source" strip background */
+.md-nav__source,
+.md-nav__source::before {
+  background-color: var(--md-primary-fg-color) !important;
+}
+
+/* (선택) 배경 바꾸면 글자색/아이콘 대비도 같이 */
+.md-nav__source,
+.md-nav__source a,
+.md-nav__source .md-source__repository,
+.md-nav__source .md-source__icon {
+  color: white !important;
+}
+
+.md-nav__source svg,
+.md-nav__source svg * {
+  fill: currentColor !important;
+}

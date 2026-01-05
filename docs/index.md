@@ -18,5 +18,7 @@ through add-on rules, specs, and plugins.
 - Getting started: Getting-Started.md
 - CLI usage: cli/CLI-info_and_params.md
 - Python API: Python-API.md
+- API workflows: api/API-Workflows.md
 - Rules and specs: RULE-Syntax.md and SPEC-Syntax.md
 - Addons and plugins: Addons-and-Plugins.md
+- Contribution: Contribution.md

@@ -1,8 +1,9 @@
 # Getting Started
 
-This guide covers the minimum setup steps and common first-run tasks.
+This guide covers the minimum setup steps and the quickest ways to run BrkRaw
+from both the CLI and Python.
 
-## Install BrkRaw
+## Installation
 
 Install from GitHub:
 
@@ -16,63 +17,25 @@ For development:
 pip install -e .
 ```
 
-## Initialize the config directory
+## Configuration
 
-Run the initializer to create the config root, `config.yaml`, and default
-folders for rules/specs/transforms/maps.
+Initialize the config root and defaults:
 
 ```bash
 brkraw init
 ```
 
-Optional flags:
+Common flags:
 
 - `--root` to override the config root.
-
 - `--no-config` to skip creating `config.yaml`.
+- `--install-example` to install example rules/specs.
+- `--shell-rc` to append shell helpers.
+- `--yes` to skip prompts.
 
-- `--no-exist-ok` to fail if the root already exists.
+The config reference lives in `docs/Config.md`.
 
-- `--install-example` to install the example rules/specs from `assets/examples`.
-
-- `--shell-rc` to append shell helper functions to a specific rc file.
-
-- `--yes` to skip prompts and accept defaults.
-
-By default, `brkraw init` prompts for config values and optional installs.
-
-## Add example specs and rules
-
-If you want the example rule/spec set, install them during init:
-
-```bash
-brkraw init --install-example
-```
-
-You can also add them later with:
-
-```bash
-brkraw addon add assets/examples/rules/10-metadata.yaml
-brkraw addon add assets/examples/specs/metadata_common.yaml
-```
-
-## Shell helper functions (optional)
-
-The init command can append `brkraw-set` and `brkraw-unset` helpers to your
-shell rc file (default: `~/.zshrc` or `~/.bashrc`).
-
-```bash
-brkraw init --shell-rc ~/.zshrc
-```
-
-After reloading your shell, you can use:
-
-```bash
-brkraw-set --path /path/to/dataset.zip --scan-id 1
-brkraw-unset --scan-id
-```
-
-## First conversions
+## CLI quickstart
 
 Inspect a dataset:
 
@@ -83,14 +46,35 @@ brkraw info /path/to/dataset.zip
 Convert a scan to NIfTI:
 
 ```bash
-brkraw tonii /path/to/dataset.zip -s 1
+brkraw convert /path/to/dataset.zip -s 1
 ```
 
-Prune a dataset:
+Convert everything under a root:
 
 ```bash
-brkraw prune /path/to/dataset.zip --spec specs/prune.yaml --output /path/to/pruned.zip
+brkraw convert-batch /path/to/root -o /path/to/out
 ```
 
-See `docs/cli/CLI-info_and_params.md` and `docs/cli/CLI-tonii_and_tonii_all.md` for
-additional options.
+See `docs/cli/CLI-info_and_params.md` and `docs/cli/CLI-convert.md` for full CLI
+options.
+
+## Python API quickstart
+
+Load a dataset and inspect metadata:
+
+```python
+import brkraw as brk
+
+loader = brk.load("/path/to/dataset.zip")
+info = loader.info(scope="study", as_dict=True)
+print(info["Study"])
+```
+
+Convert a scan and save:
+
+```python
+nii = loader.convert(3, reco_id=1, format="nifti")
+nii.to_filename("scan3.nii.gz")
+```
+
+For API mappings to CLI commands, see `docs/api/API-Workflows.md`.

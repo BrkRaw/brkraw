@@ -21,7 +21,7 @@ need:
 - **Rules**: selectors that decide which specs or hooks apply to a given scan.
 
 - **Converter hooks** (`brkraw.converter_hook` entrypoint): override
-  `get_dataobj`, `get_affine`, and/or `get_nifti1image` to integrate custom
+  `get_dataobj`, `get_affine`, and/or `convert` to integrate custom
   reconstruction pipelines, with full access to FID and sequence parameters.
 
 - **Specs**: remap parameter files into structured metadata for info tables or
@@ -29,11 +29,12 @@ need:
 
 - **Transforms**: Python snippets used by specs to derive or normalize values.
 
-- **Context maps** (`__meta__.context_map`): project-specific value mapping on
+- **Context maps** (runtime `context_map`): project-specific value mapping on
   top of spec outputs (e.g., subject/session/run mapping).
 
-- **Output formats**: use spec/transform/context-map outputs to generate
-  standardized filenames and folder structures.
+- **Output layouts**: use spec/transform/context-map outputs to generate
+  standardized filenames and folder structures (via `layout_entries` or
+  `layout_template`).
 
 ## Terminology
 
@@ -48,7 +49,7 @@ need:
 - **Context map**: a project-scoped mapping table applied after spec/transform
   resolution.
 
-- **Output format**: formatting rules for dataset paths and filenames.
+- **Output layout**: formatting rules for dataset paths and filenames.
 
 ### Rules
 
@@ -81,7 +82,7 @@ Converter hooks provide optional override callables for:
 
 - `get_affine`
 
-- `get_nifti1image`
+- `convert`
 
 This makes it possible to swap in sequence-specific conversion logic. For
 example, a rule can detect a particular sequence and route conversion through a
@@ -111,12 +112,9 @@ if method/acqp/visu parameters match X
 ## Managing addons
 
 Rules, specs, and transforms live in the config folder. Pruner specs are kept
-under `pruner_specs/`. Use the `addon` CLI to install, list, and remove them.
-Mapping files live in the `maps/` folder and are managed alongside specs:
+under `pruner_specs/`. Use the `addon` CLI to install, list, and remove them:
 
 - `brkraw addon add path/to/spec.yaml`
-
-- `brkraw addon attach-map path/to/maps.yaml metadata_common`
 
 - `brkraw addon list`
 

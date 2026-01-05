@@ -22,30 +22,6 @@ Example:
 
 Defaults are included even if the key is missing from `config.yaml`.
 
-## brkraw config where
-
-Print the config root path.
-
-Example:
-
-- `brkraw config where`
-
-## brkraw config clear
-
-Remove config data with optional selective retention.
-
-Examples:
-
-- `brkraw config clear`
-
-- `brkraw config clear --keep-specs --keep-rules`
-
-- `brkraw config clear --keep-pruner-specs`
-
-- `brkraw config clear --keep-maps`
-
-- `brkraw config clear --keep-shell-helpers`
-
 ## brkraw config path
 
 Print a specific config path.
@@ -56,7 +32,6 @@ Example:
 
 - `brkraw config path pruner_specs`
 
-- `brkraw config path maps`
 
 ## brkraw config set
 
@@ -64,9 +39,9 @@ Set a config key to a YAML value.
 
 Example:
 
-- `brkraw config set output.format_fields '[{key: Subject.ID, entry: sub, hide: false}]'`
+- `brkraw config set output.layout_entries '[{key: Subject.ID, entry: sub, hide: false}]'`
 
-- `brkraw config set output.format_spec=metadata_common`
+- `brkraw config set output.layout_template='sub-{Subject.ID}/study-{Study.ID}'`
 
 - `brkraw config set logging.level=DEBUG`
 
@@ -76,7 +51,7 @@ Remove a config key.
 
 Example:
 
-- `brkraw config unset output.format_spec`
+- `brkraw config unset output.layout_template`
 
 ## brkraw config reset
 

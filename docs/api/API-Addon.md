@@ -30,7 +30,7 @@ Notes:
 
 ## list_installed
 
-List installed specs, rules, transforms, and maps.
+List installed specs, rules, and transforms.
 
 ```python
 from brkraw.apps import addon
@@ -39,12 +39,11 @@ data = addon.list_installed()
 print(data["specs"])
 print(data["rules"])
 print(data["transforms"])
-print(data["maps"])
 ```
 
 Returns:
 
-- Dict with keys `specs`, `rules`, `transforms`, `maps`.
+- Dict with keys `specs`, `rules`, `transforms`.
 
 - Pruner specs are listed under `pruner_specs`.
 
@@ -52,7 +51,7 @@ Returns:
 
 ## remove
 
-Remove an installed spec/rule/transform/map.
+Remove an installed spec/rule/transform by filename (not `__meta__.name`).
 
 ```python
 from brkraw.apps import addon
@@ -60,7 +59,6 @@ from brkraw.apps import addon
 addon.remove("metadata_common.yaml", kind="spec")
 addon.remove("prune.yaml", kind="pruner")
 addon.remove("mrs_transforms.py", kind="transform")
-addon.remove("maps.yaml", kind="map", force=True)
 ```
 
 Returns:
@@ -108,30 +106,3 @@ from brkraw.apps import addon
 
 spec_path = addon.resolve_pruner_spec_reference("pruner_default", version="1.0.0")
 ```
-
-## install_context_map
-
-Attach a context map to an installed spec (and update `__meta__.context_map`).
-
-```python
-from brkraw.apps import addon
-
-addon.install_context_map(
-    "maps.yaml",
-    "metadata_common",
-    category="metadata_spec",
-    force=True,
-)
-```
-
-Returns:
-
-- List of installed/updated file paths (map + spec).
-
-Errors:
-
-- `FileNotFoundError`: context map or spec not found.
-
-- `RuntimeError`: map already attached (use `force=True`).
-
-- `ValueError`: target spec is not installed.

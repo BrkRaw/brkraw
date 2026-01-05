@@ -36,20 +36,24 @@ extra_css:
 nav:
   - Home: index.md
   - Getting Started: Getting-Started.md
-  - Configuration: Config.md
   - CLI:
       - Overview: cli/CLI-info_and_params.md
       - Session helpers: cli/CLI-set_unset_and_env.md
-      - Tonii commands: cli/CLI-tonii_and_tonii_all.md
+      - Convert command: cli/CLI-convert.md
       - Addons: cli/CLI-addon.md
       - Config: cli/CLI-config.md
       - Prune: cli/CLI-prune.md
-  - Python API: Python-API.md
-  - API Reference:
+  - API:
+      - Overview: Python-API.md
+      - CLI Equivalents: api/API-Workflows.md
+      - Layout API: api/API-Layout.md
       - Addon API: api/API-Addon.md
-      - Output Format API: api/API-Output-Format.md
       - Pruner API: api/API-Pruner.md
-  - Rules and Specs:
-      - Rule Syntax: RULE-Syntax.md
-      - Spec Syntax: SPEC-Syntax.md
-  - Addons and Plugins: Addons-and-Plugins.md
+  - Contribution:
+      - Extending BrkRaw: Contribution.md
+      - Rules: RULE-Syntax.md
+      - Specs: SPEC-Syntax.md
+      - Addons and Plugins: Addons-and-Plugins.md
+      - Contributors: Contributors.md
+  - Reference:
+      - Configuration: Config.md

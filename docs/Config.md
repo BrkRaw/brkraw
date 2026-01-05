@@ -15,7 +15,6 @@ The main file is `config.yaml`. It is created by `brkraw init` unless you pass
   specs/
   pruner_specs/
   transforms/
-  maps/
 ```
 
 ## `config.yaml` keys
@@ -30,7 +29,7 @@ logging:
   level: INFO
   print_width: 120
 output:
-  format_fields:
+  layout_entries:
 
     - key: Subject.ID
 
@@ -50,13 +49,12 @@ output:
     - key: Protocol
 
       hide: true
-  format_spec: null
+  layout_template: null
   float_decimals: 6
 rules_dir: rules
 specs_dir: specs
 pruner_specs_dir: pruner_specs
 transforms_dir: transforms
-maps_dir: maps
 ```
 
 `config_version` is managed by BrkRaw and should not be edited manually.
@@ -83,12 +81,12 @@ outputs (including affine formatting).
 
 Suffix template used when a scan produces multiple slice packs. Use `{index}`
 for the 1-based slice pack number. You can also reference fields resolved by
-the output format spec (e.g., `{SliceOrient}`), which allows per-slicepack labels
-when the value is an array. Default: `_slpack{index}`.
+the layout info (e.g., `{SliceOrient}`), which allows per-slicepack labels when
+the value is an array. Default: `_slpack{index}`.
 
 Notes:
 
-- The default output format spec is `src/brkraw/apps/loader/info/study.yaml`.
+- The default info fields come from built-in study/scan info specs.
 
 - `{SliceOrient}` resolves from `PVM_SPackArrSliceOrient`, which maps to
 
@@ -100,14 +98,21 @@ Notes:
 
 - To force numeric suffixes, keep the default or use `_slicepack{index}`.
 
-### `output.format_fields`
+### `output.layout_template`
 
-Filename parts used by `brkraw tonii` when an explicit output name is not
+Optional layout template string used to build output filenames. Tags like
+`{Subject.ID}` or `{Protocol}` are resolved from merged `info_spec` +
+`metadata_spec` results. When unset, BrkRaw falls back to `output.layout_entries`
+(or the context map `__meta__` if provided at runtime).
+
+### `output.layout_entries`
+
+Filename parts used by `brkraw convert` when an explicit output name is not
 provided. Each entry is appended in order if a value is present.
 
 Fields:
 
-- `key`: dotted key resolved from the output format spec (for example `Subject.ID`).
+- `key`: dotted key resolved from the layout info (for example `Subject.ID`).
 
 - `entry`: prefix label used to emit `entry-value` (optional when `hide` is true).
 
@@ -123,7 +128,7 @@ Fields:
 
 - `max_length`: truncate values longer than this length.
 
-Values are resolved via the output format spec (see below) and sanitized to
+Values are resolved via the layout info and sanitized to
 `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`. Missing values are skipped.
 Parts are joined with `_` in the order listed.
 If any `sep` values are provided, they control how the next field is joined.
@@ -135,7 +140,7 @@ Example with reuse + normalization:
 
 ```yaml
 output:
-  format_fields:
+  layout_entries:
 
     - key: Subject.ID
 
@@ -158,15 +163,9 @@ output:
       hide: true
 ```
 
-### `output.format_spec`
+### `rules_dir`, `specs_dir`, `pruner_specs_dir`, `transforms_dir`
 
-Optional info spec reference (name or path) used to generate values for
-`output.format_fields`. When omitted, BrkRaw uses the built-in study/scan info
-specs.
-
-### `rules_dir`, `specs_dir`, `pruner_specs_dir`, `transforms_dir`, `maps_dir`
-
-Relative paths under the config root where rule/spec/transform/context map files are
+Relative paths under the config root where rule/spec/transform files are
 installed. Most users should keep the defaults.
 
 ## Managing config from CLI

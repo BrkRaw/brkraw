@@ -31,8 +31,7 @@ like `study.yaml` with multiple sections, put `__meta__` under each section.
 relative/absolute spec paths to merge before the current spec. Keys in the
 current spec override included keys unless `__meta__.include_mode` is set to
 `strict`, which raises on conflicts.
-`__meta__.context_map` is optional. When present, it points to a YAML mapping file
-resolved relative to the spec file.
+Context maps are optional and are provided at runtime (not stored in `__meta__`).
 
 ## Meta Fields
 
@@ -62,21 +61,13 @@ Optional fields:
 
 - `citation`: citation text.
 
-- `context_map`: mapping file path with per-key mapping rules.
 
 ## Mapping Rules
 
 Specs can apply lookup tables without writing Python transforms. Provide
-`__meta__.context_map` and define per-key mapping rules inside the context map.
+`context_map` at runtime and define per-key mapping rules inside the context map.
 
 ```yaml
-__meta__:
-  name: "metadata_anat"
-  version: "1.0.0"
-  description: "..."
-  category: "metadata_spec"
-  context_map: "maps.yaml"
-
 Subject.ID:
   sources:
 
@@ -88,7 +79,21 @@ Subject.ID:
 `maps.yaml`:
 
 ```yaml
+__meta__:
+  layout_entries:
+    - key: Study.ID
+      entry: study
+      sep: "/"
+    - key: Subject.ID
+      entry: sub
+      sep: "/"
+    - key: Protocol
+      hide: true
+  layout_template: "study-{Study.ID}/sub-{Subject.ID}/{Protocol}"
+  slicepack_suffix: "_sl{index}"
+
 Subject.ID:
+  target: "info_spec"
   type: mapping
   values:
     1: "test1"
@@ -97,10 +102,17 @@ Subject.ID:
   override: false
 ```
 
+Notes:
+
+- `__meta__` is optional and does not affect mapping rules. It only supplies
+  layout defaults (fields/template/slicepack suffix) when a context map is used
+  at runtime.
+
 You can also use constants:
 
 ```yaml
 Study.ID:
+  target: "metadata_spec"
   type: const
   value: "1"
   override: true
@@ -128,6 +140,21 @@ Run:
       ScanID: 13
     value: 1
     override: true
+```
+
+You can mark a mapping key as a selector to filter conversions. When
+`selector: true` is set, only scans that produce a mapped value for that key
+are eligible for conversion. Selector evaluation uses the merged info+metadata
+results regardless of `target`. Use `target` to choose whether the mapping
+applies to `info_spec` or `metadata_spec` (defaults to `info_spec`).
+
+```yaml
+Modality:
+  selector: true
+  type: mapping
+  values:
+    1: "T1w"
+    2: "T2w"
 ```
 
 Condition operators:
@@ -179,7 +206,7 @@ Behavior:
 
 ## Map File Format
 
-Map files map output keys to rule objects or rule lists:
+Context maps map output keys to rule objects or rule lists:
 
 ```yaml
 Subject.ID:
@@ -203,10 +230,10 @@ To validate a context map:
 ```python
 from brkraw.specs.remapper import validate_context_map
 
-validate_context_map("specs/maps.yaml")
+validate_context_map("maps.yaml")
 ```
 
-Schema: `src/brkraw/schema/map.yaml`
+Schema: `src/brkraw/schema/context_map.yaml`
 
 Rules support:
 

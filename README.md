@@ -68,7 +68,7 @@ See `docs/Addons-and-Plugins.md` for a full overview and examples in
 
 - `docs/cli/CLI-set_unset_and_env.md`: `brkraw session` helpers
 
-- `docs/cli/CLI-tonii_and_tonii_all.md`: `brkraw tonii` and `brkraw tonii_all`
+- `docs/cli/CLI-convert.md`: `brkraw convert` and `brkraw convert-batch`
 
 - `docs/cli/CLI-addon.md`: addon management
 
@@ -80,11 +80,15 @@ See `docs/Addons-and-Plugins.md` for a full overview and examples in
 
 - `docs/Python-API.md`: Python API usage examples
 
+- `docs/api/API-Workflows.md`: CLI-equivalent API workflows
+
+- `docs/Contribution.md`: developer extension guide
+
 ## API documentation
 
 - `docs/api/API-Addon.md`: addon API
 
-- `docs/api/API-Output-Format.md`: output format API
+- `docs/api/API-Layout.md`: layout API
 
 - `docs/api/API-Pruner.md`: pruner API
 
