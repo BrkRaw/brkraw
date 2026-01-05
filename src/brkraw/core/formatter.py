@@ -267,7 +267,7 @@ def format_table(
     col_widths: Optional[Mapping[str, int]] = None,
     gap: int = 2,
     wrap_last: bool = True,
-    min_wrap_width: int = 0,
+    min_last_col_width: int = 30,
 ) -> str:
     if not columns:
         return ""
@@ -321,12 +321,14 @@ def format_table(
             indent = " " * (len(prefix_plain) + gap)
             wrap_width = max(1, width - len(prefix_plain) - gap)
             if desc:
-                if min_wrap_width and wrap_width < min_wrap_width:
-                    lines.append(f"{prefix}{' ' * gap}{_apply_color(desc, desc_color)}")
-                    continue
+                effective_width = max(
+                    wrap_width,
+                    len(indent) + min_last_col_width,
+                    width,
+                )
                 wrapped = textwrap.fill(
                     desc,
-                    width=wrap_width,
+                    width=effective_width,
                     initial_indent="",
                     subsequent_indent=indent,
                     break_long_words=False,

@@ -133,7 +133,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     )
     spec_widths = formatter.compute_column_widths(columns, spec_rows)
     col_widths = formatter.compute_column_widths(columns, spec_rows)
-    pruner_widths = formatter.compute_column_widths(pruner_columns, pruner_rows, wrap_last=False)
+    pruner_widths = formatter.compute_column_widths(pruner_columns, pruner_rows)
     spec_table = formatter.format_table(
         "Specs",
         columns,
@@ -160,7 +160,7 @@ def cmd_list(args: argparse.Namespace) -> int:
         colors={"file": "gray", "name": "magenta", "description": "gray"},
         title_color="magenta",
         col_widths=pruner_widths,
-        wrap_last=False,
+        min_last_col_width=40,
     )
     transforms_table = formatter.format_table(
         "Transforms",
