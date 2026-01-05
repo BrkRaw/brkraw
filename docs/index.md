@@ -10,15 +10,15 @@ through add-on rules, specs, and plugins.
 - Load Paravision datasets from directories or zip archives.
 - Inspect study and scan metadata with rich CLI tables.
 - Map parameters via remapper specs and rule-based selection.
-- Convert scans to NIfTI with configurable filename templates.
+- Convert scans to NIfTI with configurable layout entries/templates.
 - Extend behavior via rules, specs, and converter hooks.
 
 ## Quick links
 
-- Getting started: Getting-Started.md
-- CLI usage: cli/CLI-info_and_params.md
-- Python API: Python-API.md
-- API workflows: api/API-Workflows.md
-- Rules and specs: RULE-Syntax.md and SPEC-Syntax.md
-- Addons and plugins: Addons-and-Plugins.md
-- Contribution: Contribution.md
+- Getting started: getting-started.md
+- CLI usage: cli/info-and-params.md
+- Python API: python-api.md
+- API workflows: api/cli-workflows.md
+- Rules and specs: rule-syntax.md and spec-syntax.md
+- Addons and plugins: addons-and-plugins.md
+- Contribution: contribution.md

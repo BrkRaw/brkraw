@@ -11,7 +11,7 @@ separate package.
 - Entrypoint group: `brkraw.cli`
 - Use this to ship custom workflows or project-specific helpers.
 
-See `docs/Addons-and-Plugins.md` for the extension model overview.
+See `docs/addons-and-plugins.md` for the extension model overview.
 
 ## Rule/Spec/Transform workflow logic
 
@@ -21,8 +21,8 @@ spec evaluation.
 
 Recommended reading:
 
-- `docs/RULE-Syntax.md`
-- `docs/SPEC-Syntax.md`
+- `docs/rule-syntax.md`
+- `docs/spec-syntax.md`
 
 This pattern lets you implement conditional workflows (e.g., different metadata
 schemas per sequence) without editing core code.
@@ -45,8 +45,8 @@ The layout module builds output paths from metadata using either:
 - `layout_template` (string template with `{Key}` tags)
 
 You can define defaults in `config.yaml` or in `context_map.__meta__`, and
-override at runtime via the API/CLI. See `docs/api/API-Layout.md`.
+override at runtime via the API/CLI. See `docs/api/layout.md`.
 
 ## Contributors
 
-See `docs/Contributors.md` for the current list.
+See `docs/contributors.md` for the current list.

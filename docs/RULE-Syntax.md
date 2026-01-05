@@ -94,7 +94,7 @@ is available in the `if` expression using `$<name>`. If a variable binding uses
 `transform`, the transform name is resolved from the spec referenced by `use`
 via `__meta__.transforms_source`.
 
-See `docs/SPEC-Syntax.md` for details on remapper sources and transforms.
+See `docs/spec-syntax.md` for details on remapper sources and transforms.
 
 Example:
 

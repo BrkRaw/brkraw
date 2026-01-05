@@ -73,7 +73,7 @@ Each entry is appended in order when the value is present. Values are sanitized
 to `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`. Missing values are skipped.
 Use `sep: "/"` on a field to insert folder separators.
 
-See `docs/api/API-Layout.md` for the programmatic API.
+See `docs/api/layout.md` for the programmatic API.
 
 Example:
 

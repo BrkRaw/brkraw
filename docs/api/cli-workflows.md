@@ -69,5 +69,4 @@ addon.list_installed()
 addon.remove("spec.yaml", root=None)
 ```
 
-See `docs/api/API-Addon.md` for more details.
-
+See `docs/api/addon.md` for more details.

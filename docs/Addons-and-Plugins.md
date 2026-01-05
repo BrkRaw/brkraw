@@ -126,7 +126,7 @@ See `assets/examples/` for working examples, including:
 
 - `metadata_spec` for BIDS-like sidecar metadata
 
-See `docs/api/API-Addon.md` for the addon API reference.
+See `docs/api/addon.md` for the addon API reference.
 
 Rules can reference specs by name (recommended) or by path. When a name is
 used, the rule category must match `__meta__.category`, and `version` can be

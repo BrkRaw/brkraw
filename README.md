@@ -27,7 +27,7 @@ For development:
 pip install -e .
 ```
 
-See `docs/Getting-Started.md` for setup and first-run steps.
+See `docs/getting-started.md` for setup and first-run steps.
 
 ## Overview
 
@@ -39,7 +39,7 @@ Core capabilities:
 
 - Map parameters via remapper specs and rule-based selection.
 
-- Convert scans to NIfTI with configurable filename templates.
+- Convert scans to NIfTI with configurable layout entries/templates.
 
 - Manage installed specs, rules, and transforms.
 
@@ -57,46 +57,48 @@ BrkRaw is designed for extension without modifying the core repository:
 
 - CLI plugins can add commands via entrypoints.
 
-See `docs/Addons-and-Plugins.md` for a full overview and examples in
+See `docs/addons-and-plugins.md` for a full overview and examples in
 `assets/examples/`.
 
 ## CLI documentation
 
-- `docs/Getting-Started.md`: install and first-run steps
+- `docs/getting-started.md`: install and first-run steps
 
-- `docs/cli/CLI-info_and_params.md`: `brkraw info` and `brkraw params`
+- `docs/cli/info-and-params.md`: `brkraw info` and `brkraw params`
 
-- `docs/cli/CLI-set_unset_and_env.md`: `brkraw session` helpers
+- `docs/cli/session.md`: `brkraw session` helpers
 
-- `docs/cli/CLI-convert.md`: `brkraw convert` and `brkraw convert-batch`
+- `docs/cli/convert.md`: `brkraw convert` and `brkraw convert-batch`
 
-- `docs/cli/CLI-addon.md`: addon management
+- `docs/cli/addon.md`: addon management
 
-- `docs/cli/CLI-config.md`: config management
+- `docs/cli/config.md`: config management
 
-- `docs/Config.md`: `config.yaml` reference
+- `docs/configuration.md`: `config.yaml` reference
 
-- `docs/Addons-and-Plugins.md`: rules, specs, converters, and CLI plugins
+- `docs/addons-and-plugins.md`: rules, specs, converters, and CLI plugins
 
-- `docs/Python-API.md`: Python API usage examples
+- `docs/python-api.md`: Python API usage examples
 
-- `docs/api/API-Workflows.md`: CLI-equivalent API workflows
+- `docs/api/cli-workflows.md`: CLI-equivalent API workflows
 
-- `docs/Contribution.md`: developer extension guide
+- `docs/contribution.md`: developer extension guide
+
+- `docs/contributors.md`: contributor list
 
 ## API documentation
 
-- `docs/api/API-Addon.md`: addon API
+- `docs/api/addon.md`: addon API
 
-- `docs/api/API-Layout.md`: layout API
+- `docs/api/layout.md`: layout API
 
-- `docs/api/API-Pruner.md`: pruner API
+- `docs/api/pruner.md`: pruner API
 
 ## Rules and specs
 
-- `docs/RULE-Syntax.md` describes the rule syntax for selecting specs and plugins.
+- `docs/rule-syntax.md` describes the rule syntax for selecting specs and plugins.
 
-- `docs/SPEC-Syntax.md` describes the spec format and remapper behavior.
+- `docs/spec-syntax.md` describes the spec format and remapper behavior.
 
 ## Contributing
 

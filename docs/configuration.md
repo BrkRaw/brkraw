@@ -171,4 +171,4 @@ installed. Most users should keep the defaults.
 ## Managing config from CLI
 
 Use `brkraw config` to inspect or clear the config directory. See
-`docs/cli/CLI-config.md` for details.
+`docs/cli/config.md` for details.

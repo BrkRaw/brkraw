@@ -22,12 +22,12 @@ You can extend BrkRaw without modifying core code:
 
 - Ship CLI plugins through `brkraw.cli` entrypoints.
 
-See `docs/Addons-and-Plugins.md` for a detailed overview and examples in
+See `docs/addons-and-plugins.md` for a detailed overview and examples in
 `assets/examples/`.
 
 ## When core development is needed
 
-Most workflows can be covered by rules/specs/transforms/maps. Core changes are
+Most workflows can be covered by rules/specs/transforms. Core changes are
 needed when the logic depends on context outside a single scan/reco or when the
 API itself needs a new capability. Common cases:
 

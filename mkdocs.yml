@@ -35,25 +35,25 @@ extra_css:
 
 nav:
   - Home: index.md
-  - Getting Started: Getting-Started.md
+  - Getting Started: getting-started.md
   - CLI:
-      - Overview: cli/CLI-info_and_params.md
-      - Session helpers: cli/CLI-set_unset_and_env.md
-      - Convert command: cli/CLI-convert.md
-      - Addons: cli/CLI-addon.md
-      - Config: cli/CLI-config.md
-      - Prune: cli/CLI-prune.md
+      - Overview: cli/info-and-params.md
+      - Session helpers: cli/session.md
+      - Convert command: cli/convert.md
+      - Addons: cli/addon.md
+      - Config: cli/config.md
+      - Prune: cli/prune.md
   - API:
-      - Overview: Python-API.md
-      - CLI Equivalents: api/API-Workflows.md
-      - Layout API: api/API-Layout.md
-      - Addon API: api/API-Addon.md
-      - Pruner API: api/API-Pruner.md
+      - Overview: python-api.md
+      - CLI Equivalents: api/cli-workflows.md
+      - Layout API: api/layout.md
+      - Addon API: api/addon.md
+      - Pruner API: api/pruner.md
   - Contribution:
-      - Extending BrkRaw: Contribution.md
-      - Rules: RULE-Syntax.md
-      - Specs: SPEC-Syntax.md
-      - Addons and Plugins: Addons-and-Plugins.md
-      - Contributors: Contributors.md
+      - Extending BrkRaw: contribution.md
+      - Rules: rule-syntax.md
+      - Specs: spec-syntax.md
+      - Addons and Plugins: addons-and-plugins.md
+      - Contributors: contributors.md
   - Reference:
-      - Configuration: Config.md
+      - Configuration: configuration.md

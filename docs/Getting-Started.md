@@ -33,7 +33,7 @@ Common flags:
 - `--shell-rc` to append shell helpers.
 - `--yes` to skip prompts.
 
-The config reference lives in `docs/Config.md`.
+The config reference lives in `docs/configuration.md`.
 
 ## CLI quickstart
 
@@ -55,7 +55,7 @@ Convert everything under a root:
 brkraw convert-batch /path/to/root -o /path/to/out
 ```
 
-See `docs/cli/CLI-info_and_params.md` and `docs/cli/CLI-convert.md` for full CLI
+See `docs/cli/info-and-params.md` and `docs/cli/convert.md` for full CLI
 options.
 
 ## Python API quickstart
@@ -77,4 +77,4 @@ nii = loader.convert(3, reco_id=1, format="nifti")
 nii.to_filename("scan3.nii.gz")
 ```
 
-For API mappings to CLI commands, see `docs/api/API-Workflows.md`.
+For API mappings to CLI commands, see `docs/api/cli-workflows.md`.
