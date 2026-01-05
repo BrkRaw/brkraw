@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import List, Optional, Tuple
+from typing import List, Tuple, Optional
 
 import argparse
 import logging
-import os
 from pathlib import Path
 
 import yaml
@@ -43,44 +42,6 @@ def cmd_show(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_clear(args: argparse.Namespace) -> int:
-    paths = config_core.paths(root=args.root)
-    if not paths.root.exists():
-        return 0
-    logger.info("Config root: %s", paths.root)
-    logger.info("- config.yaml: %s", paths.config_file)
-    logger.info("- rules dir:   %s", paths.rules_dir)
-    logger.info("- specs dir:   %s", paths.specs_dir)
-    logger.info("- pruner specs: %s", paths.pruner_specs_dir)
-    logger.info("- transforms:  %s", paths.transforms_dir)
-    logger.info("- maps:        %s", paths.maps_dir)
-    shellrc = Path(args.shellrc) if args.shellrc else _default_shell_rc()
-    if shellrc is not None:
-        action = "remove helpers" if not args.keep_shell_helpers else "keep helpers"
-        logger.info("- shell rc (%s): %s", action, shellrc)
-    if not args.yes:
-        prompt = f"Remove brkraw config at {paths.root}? [y/N]: "
-        reply = input(prompt).strip().lower()
-        if reply not in {"y", "yes"}:
-            return 1
-    config_core.clear(
-        root=args.root,
-        keep_config=args.keep_config,
-        keep_rules=args.keep_rules,
-        keep_specs=args.keep_specs,
-        keep_pruner_specs=args.keep_pruner_specs,
-        keep_transforms=args.keep_transforms,
-        keep_maps=args.keep_maps,
-    )
-    if not args.keep_shell_helpers:
-        if shellrc is None:
-            logger.error("Could not determine shell rc path for removal.")
-            return 1
-        if not _remove_shell_helpers(shellrc):
-            logger.info("No brkraw shell helpers found in %s", shellrc)
-    return 0
-
-
 def cmd_path(args: argparse.Namespace) -> int:
     path = config_core.get_path(args.name, root=args.root)
     print(path)
@@ -116,12 +77,6 @@ def cmd_reset(args: argparse.Namespace) -> int:
         if reply not in {"y", "yes"}:
             return 1
     config_core.reset_config(root=args.root)
-    return 0
-
-
-def cmd_where(args: argparse.Namespace) -> int:
-    paths = config_core.paths(root=args.root)
-    print(paths.root)
     return 0
 
 
@@ -221,64 +176,13 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     show_parser = config_sub.add_parser("show", help="Print resolved config values.")
     show_parser.set_defaults(config_func=cmd_show)
 
-    clear_parser = config_sub.add_parser("clear", help="Remove brkraw config files.")
-    clear_parser.add_argument(
-        "--yes",
-        action="store_true",
-        help="Do not prompt for confirmation.",
-    )
-    clear_parser.add_argument(
-        "--keep-config",
-        action="store_true",
-        help="Keep config.yaml.",
-    )
-    clear_parser.add_argument(
-        "--keep-rules",
-        action="store_true",
-        help="Keep rules directory.",
-    )
-    clear_parser.add_argument(
-        "--keep-specs",
-        action="store_true",
-        help="Keep specs directory.",
-    )
-    clear_parser.add_argument(
-        "--keep-pruner-specs",
-        action="store_true",
-        help="Keep pruner specs directory.",
-    )
-    clear_parser.add_argument(
-        "--keep-transforms",
-        action="store_true",
-        help="Keep transforms directory.",
-    )
-    clear_parser.add_argument(
-        "--keep-maps",
-        action="store_true",
-        help="Keep maps directory.",
-    )
-    clear_parser.add_argument(
-        "--keep-shell-helpers",
-        action="store_true",
-        help="Keep brkraw-set/brkraw-unset helpers in shell rc.",
-    )
-    clear_parser.add_argument(
-        "--shell-rc",
-        dest="shellrc",
-        help="Shell rc file to update when removing helpers (defaults to ~/.zshrc or ~/.bashrc).",
-    )
-    clear_parser.set_defaults(config_func=cmd_clear)
-
     path_parser = config_sub.add_parser("path", help="Print a specific config path.")
     path_parser.add_argument(
         "name",
-        choices=["root", "config", "rules", "specs", "transforms", "maps"],
+        choices=["root", "config", "rules", "specs", "transforms"],
         help="Path key to print.",
     )
     path_parser.set_defaults(config_func=cmd_path)
-
-    where_parser = config_sub.add_parser("where", help="Print config root path.")
-    where_parser.set_defaults(config_func=cmd_where)
 
     edit_parser = config_sub.add_parser("edit", help="Edit config.yaml in an editor.")
     edit_parser.set_defaults(config_func=cmd_edit)
@@ -299,38 +203,3 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help="Do not prompt for confirmation.",
     )
     reset_parser.set_defaults(config_func=cmd_reset)
-
-
-def _remove_shell_helpers(path: Path) -> bool:
-    if not path.exists():
-        return False
-    marker = "# brkraw shell helpers"
-    lines = path.read_text(encoding="utf-8").splitlines()
-    new_lines: List[str] = []
-    removed = False
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        if line.startswith(marker):
-            removed = True
-            i += 1
-            while i < len(lines) and lines[i].strip() != "":
-                i += 1
-            if i < len(lines) and lines[i].strip() == "":
-                i += 1
-            continue
-        new_lines.append(line)
-        i += 1
-    if removed:
-        path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
-    return removed
-
-
-def _default_shell_rc() -> Optional[Path]:
-    shell = os.environ.get("SHELL", "")
-    home = Path.home()
-    if shell.endswith("zsh"):
-        return home / ".zshrc"
-    if shell.endswith("bash"):
-        return home / ".bashrc"
-    return None

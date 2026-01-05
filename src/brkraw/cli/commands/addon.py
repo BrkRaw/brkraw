@@ -6,7 +6,6 @@ import logging
 import shlex
 import subprocess
 from pathlib import Path
-import yaml
 from brkraw.core import config as config_core
 from brkraw.core import formatter
 from brkraw.apps import addon as addon_app
@@ -94,12 +93,10 @@ def cmd_list(args: argparse.Namespace) -> int:
     columns = ("file", "category", "name", "version", "description")
     rule_columns = ("file", "category", "name", "description")
     transform_columns = ("file", "spec")
-    map_columns = ("file", "spec")
     spec_rows = [_normalize_row(row) for row in data["specs"]]
     pruner_rows = [_normalize_row(row) for row in pruner_specs]
     rules_rows = [_normalize_rule_row(row) for row in rules]
     transform_rows = [_normalize_transform_row(row) for row in data["transforms"]]
-    map_rows = [_normalize_transform_row(row) for row in data["maps"]]
     category_order = {"info_spec": 0, "metadata_spec": 1, "converter_hook": 2, "<Unknown>": 9}
     spec_rows.sort(
         key=lambda row: (
@@ -154,14 +151,6 @@ def cmd_list(args: argparse.Namespace) -> int:
         colors={"file": "gray", "spec": "cyan"},
         title_color="cyan",
     )
-    maps_table = formatter.format_table(
-        "Maps",
-        map_columns,
-        map_rows,
-        width=width,
-        colors={"file": "gray", "spec": "cyan"},
-        title_color="cyan",
-    )
     logger.info("%s", rules_table)
     logger.info("")
     logger.info("%s", spec_table)
@@ -171,9 +160,6 @@ def cmd_list(args: argparse.Namespace) -> int:
     if transform_rows:
         logger.info("")
         logger.info("%s", transforms_table)
-    if map_rows:
-        logger.info("")
-        logger.info("%s", maps_table)
     return 0
 
 
@@ -195,33 +181,6 @@ def cmd_rm(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_install_map(args: argparse.Namespace) -> int:
-    spec_path = _resolve_spec_path(
-        args.spec,
-        category=args.category,
-        root=args.root,
-    )
-    existing = _read_spec_context_map(spec_path)
-    if existing is not None and not args.force:
-        prompt = f"Spec already has context_map ({existing.name}). Replace? [y/N]: "
-        response = input(prompt).strip().lower()
-        if response not in {"y", "yes"}:
-            logger.info("Cancelled.")
-            return 2
-        args.force = True
-    try:
-        installed = addon_app.install_context_map(
-            args.context_map,
-            args.spec,
-            category=args.category,
-            force=args.force,
-            root=args.root,
-        )
-    except (FileNotFoundError, ValueError, RuntimeError) as exc:
-        logger.error("%s", exc)
-        return 2
-    logger.info("Installed %d file(s).", len(installed))
-    return 0
 
 
 def cmd_edit(args: argparse.Namespace) -> int:
@@ -260,14 +219,9 @@ def _resolve_edit_target(
         return _resolve_rule_target(target, category=category, rules_dir=paths.rules_dir)
     if kind == "transform":
         return (paths.transforms_dir / target).resolve()
-    if kind == "map":
-        return (paths.maps_dir / target).resolve()
     transform_candidate = (paths.transforms_dir / target).resolve()
     if transform_candidate.exists():
         return transform_candidate
-    map_candidate = (paths.maps_dir / target).resolve()
-    if map_candidate.exists():
-        return map_candidate
     pruner_candidate = (paths.pruner_specs_dir / target).resolve()
     if pruner_candidate.exists():
         return pruner_candidate
@@ -284,22 +238,6 @@ def _resolve_spec_path(target: str, *, category: Optional[str], root: Optional[s
     return addon_app.resolve_spec_reference(target, category=category, root=root)
 
 
-def _read_spec_context_map(spec_path: Path) -> Optional[Path]:
-    data = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        return None
-    meta = data.get("__meta__")
-    if not isinstance(meta, dict):
-        return None
-    context_map = meta.get("context_map")
-    if not isinstance(context_map, str) or not context_map:
-        return None
-    path = Path(context_map)
-    if not path.is_absolute():
-        path = (spec_path.parent / path).resolve()
-    return path
-
-
 def _resolve_rule_target(target: str, *, category: Optional[str], rules_dir: Path) -> Path:
     candidate = (rules_dir / target).resolve()
     if candidate.exists():
@@ -309,7 +247,12 @@ def _resolve_rule_target(target: str, *, category: Optional[str], rules_dir: Pat
         entry for entry in rules
         if entry.get("name") == target and (category is None or entry.get("category") == category)
     ]
-    files = sorted({entry.get("file") for entry in matches if entry.get("file")})
+    file_set = {
+        file
+        for entry in matches
+        if isinstance((file := entry.get("file")), str) and file
+    }
+    files = sorted(file_set)
     if len(files) == 1:
         return (rules_dir / files[0]).resolve()
     if not files:
@@ -340,7 +283,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     rm_parser.add_argument("filename", help="Spec/rule filename to remove.")
     rm_parser.add_argument(
         "--kind",
-        choices=["spec", "pruner", "rule", "transform", "map"],
+        choices=["spec", "pruner", "rule", "transform"],
         help="Limit removal to a specific kind.",
     )
     rm_parser.add_argument(
@@ -350,79 +293,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     )
     rm_parser.set_defaults(addon_func=cmd_rm)
 
-    attach_map_parser = addon_sub.add_parser(
-        "attach-map",
-        help="Attach a map file to an installed spec.",
-    )
-    attach_map_parser.add_argument("context_map", help="Context map YAML file.")
-    attach_map_parser.add_argument("spec", help="Installed spec name or filename.")
-    attach_map_parser.add_argument(
-        "--category",
-        help="Spec category hint (e.g. info_spec, metadata_spec).",
-    )
-    attach_map_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Replace existing context_map without prompting.",
-    )
-    attach_map_parser.set_defaults(addon_func=cmd_install_map)
-
-    attach_map_alias = addon_sub.add_parser(
-        "attach_map",
-        help="Alias of attach-map.",
-    )
-    attach_map_alias.add_argument("context_map", help="Context map YAML file.")
-    attach_map_alias.add_argument("spec", help="Installed spec name or filename.")
-    attach_map_alias.add_argument(
-        "--category",
-        help="Spec category hint (e.g. info_spec, metadata_spec).",
-    )
-    attach_map_alias.add_argument(
-        "--force",
-        action="store_true",
-        help="Replace existing context_map without prompting.",
-    )
-    attach_map_alias.set_defaults(addon_func=cmd_install_map)
-
-    install_map_alias = addon_sub.add_parser(
-        "install-map",
-        help="Alias of attach-map.",
-    )
-    install_map_alias.add_argument("context_map", help="Context map YAML file.")
-    install_map_alias.add_argument("spec", help="Installed spec name or filename.")
-    install_map_alias.add_argument(
-        "--category",
-        help="Spec category hint (e.g. info_spec, metadata_spec).",
-    )
-    install_map_alias.add_argument(
-        "--force",
-        action="store_true",
-        help="Replace existing context_map without prompting.",
-    )
-    install_map_alias.set_defaults(addon_func=cmd_install_map)
-
-    install_map_underscore = addon_sub.add_parser(
-        "install_map",
-        help="Alias of attach-map.",
-    )
-    install_map_underscore.add_argument("context_map", help="Context map YAML file.")
-    install_map_underscore.add_argument("spec", help="Installed spec name or filename.")
-    install_map_underscore.add_argument(
-        "--category",
-        help="Spec category hint (e.g. info_spec, metadata_spec).",
-    )
-    install_map_underscore.add_argument(
-        "--force",
-        action="store_true",
-        help="Replace existing context_map without prompting.",
-    )
-    install_map_underscore.set_defaults(addon_func=cmd_install_map)
 
     edit_parser = addon_sub.add_parser("edit", help="Edit an installed spec or rule.")
     edit_parser.add_argument("target", help="Spec/rule name or filename.")
     edit_parser.add_argument(
         "--kind",
-        choices=["spec", "pruner", "rule", "transform", "map"],
+        choices=["spec", "pruner", "rule", "transform"],
         help="Target kind (default: auto-detect).",
     )
     edit_parser.add_argument(

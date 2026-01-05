@@ -22,9 +22,6 @@ properties:
   category:
     type: string
     minLength: 1
-  context_map:
-    type: string
-    minLength: 1
   authors:
     type: array
     items:

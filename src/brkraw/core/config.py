@@ -25,8 +25,8 @@ logging:
   print_width: 120
 
 output:
-  # output.format_fields defines how NIfTI filenames are built.
-  format_fields:
+  # output.layout_entries defines how NIfTI filenames are built.
+  layout_entries:
     - key: Subject.ID
       entry: sub
       hide: false
@@ -38,7 +38,7 @@ output:
       hide: false
     - key: Protocol
       hide: true
-  format_spec: null
+  layout_template: null
   slicepack_suffix: "_slpack{index}"
   # float_decimals: 6
 
@@ -46,7 +46,6 @@ output:
 # specs_dir: specs
 # pruner_specs_dir: pruner_specs
 # transforms_dir: transforms
-# maps_dir: maps
 """
 
 
@@ -58,7 +57,6 @@ class ConfigPaths:
     pruner_specs_dir: Path
     rules_dir: Path
     transforms_dir: Path
-    maps_dir: Path
 
 
 def resolve_root(root: Optional[Union[str, Path]] = None) -> Path:
@@ -79,7 +77,6 @@ def get_paths(root: Optional[Union[str, Path]] = None) -> ConfigPaths:
         pruner_specs_dir=base / "pruner_specs",
         rules_dir=base / "rules",
         transforms_dir=base / "transforms",
-        maps_dir=base / "maps",
     )
 
 
@@ -96,7 +93,6 @@ def get_path(name: str, root: Optional[Union[str, Path]] = None) -> Path:
         "pruner_specs": paths_obj.pruner_specs_dir,
         "rules": paths_obj.rules_dir,
         "transforms": paths_obj.transforms_dir,
-        "maps": paths_obj.maps_dir,
     }
     if name not in mapping:
         raise KeyError(f"Unknown config path: {name}")
@@ -122,7 +118,6 @@ def ensure_initialized(
     paths.pruner_specs_dir.mkdir(parents=True, exist_ok=True)
     paths.rules_dir.mkdir(parents=True, exist_ok=True)
     paths.transforms_dir.mkdir(parents=True, exist_ok=True)
-    paths.maps_dir.mkdir(parents=True, exist_ok=True)
     if create_config and not paths.config_file.exists():
         paths.config_file.write_text(DEFAULT_CONFIG_YAML, encoding="utf-8")
     return paths
@@ -208,7 +203,6 @@ def clear_config(
     keep_specs: bool = False,
     keep_pruner_specs: bool = False,
     keep_transforms: bool = False,
-    keep_maps: bool = False,
 ) -> None:
     paths = get_paths(root=root)
     if not paths.root.exists():
@@ -223,8 +217,6 @@ def clear_config(
         _remove_tree(paths.pruner_specs_dir)
     if paths.transforms_dir.exists() and not keep_transforms:
         _remove_tree(paths.transforms_dir)
-    if paths.maps_dir.exists() and not keep_maps:
-        _remove_tree(paths.maps_dir)
     try:
         paths.root.rmdir()
     except OSError:
@@ -239,7 +231,6 @@ def clear(
     keep_specs: bool = False,
     keep_pruner_specs: bool = False,
     keep_transforms: bool = False,
-    keep_maps: bool = False,
 ) -> None:
     clear_config(
         root=root,
@@ -248,7 +239,6 @@ def clear(
         keep_specs=keep_specs,
         keep_pruner_specs=keep_pruner_specs,
         keep_transforms=keep_transforms,
-        keep_maps=keep_maps,
     )
 
 
@@ -295,6 +285,17 @@ def affine_decimals(root: Optional[Union[str, Path]] = None, default: int = 6) -
     return float_decimals(root=root, default=default)
 
 
+def layout_template(
+    root: Optional[Union[str, Path]] = None,
+) -> Optional[str]:
+    config = resolve_config(root=root)
+    output_cfg = config.get("output", {})
+    value = output_cfg.get("layout_template")
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
 def output_format_template(
     root: Optional[Union[str, Path]] = None,
     default: str = "sub-<Subject.ID>_study-<Study.ID>_scan-<ScanID>_<Protocol>",
@@ -303,17 +304,29 @@ def output_format_template(
     return str(config.get("output_format", default))
 
 
-def output_format_fields(
+def layout_entries(
     root: Optional[Union[str, Path]] = None,
     default: Optional[list] = None,
 ) -> list:
     config = resolve_config(root=root)
-    fields = config.get("output", {}).get("format_fields")
+    output_cfg = config.get("output", {})
+    fields = output_cfg.get("layout_entries")
+    if fields is None:
+        fields = output_cfg.get("layout_fields")
+    if fields is None:
+        fields = output_cfg.get("format_fields")
     if isinstance(fields, list):
         return fields
     if default is None:
-        default = default_config().get("output", {}).get("format_fields", [])
+        default = default_config().get("output", {}).get("layout_entries", [])
     return list(default) if isinstance(default, list) else []
+
+
+def output_format_fields(
+    root: Optional[Union[str, Path]] = None,
+    default: Optional[list] = None,
+) -> list:
+    return layout_entries(root=root, default=default)
 
 
 def output_format_spec(root: Optional[Union[str, Path]] = None) -> Optional[str]:
@@ -341,10 +354,12 @@ def _normalize_config(data: Dict[str, Any]) -> Dict[str, Any]:
         logging_cfg["level"] = config.pop("log_level")
     if "output_width" in config and "print_width" not in logging_cfg:
         logging_cfg["print_width"] = config.pop("output_width")
-    if "output_format_fields" in config and "format_fields" not in output_cfg:
-        output_cfg["format_fields"] = config.pop("output_format_fields")
+    if "output_format_fields" in config and "layout_entries" not in output_cfg:
+        output_cfg["layout_entries"] = config.pop("output_format_fields")
     if "output_format_spec" in config and "format_spec" not in output_cfg:
         output_cfg["format_spec"] = config.pop("output_format_spec")
+    if "layout_fields" in output_cfg and "layout_entries" not in output_cfg:
+        output_cfg["layout_entries"] = output_cfg["layout_fields"]
     if "float_decimals" in config and "float_decimals" not in output_cfg:
         output_cfg["float_decimals"] = config.pop("float_decimals")
     if "editor_binary" in config and "editor" not in config:
