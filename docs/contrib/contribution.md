@@ -11,7 +11,8 @@ We welcome contributions across:
 - CLI plugins and tooling built on top of the BrkRaw API
 
 Before opening an issue or PR, start with a GitHub Discussion so we can align on
-scope and the right extension path.
+scope and the right extension path. For core changes, we follow a clear flow:
+Discussion proposal → Issue(s) → Pull request.
 
 ## Dev environment (VSCode recommended)
 
@@ -95,7 +96,8 @@ Paravision layouts and metadata conventions. All other customization should be
 implemented as addons (rules/specs/transforms/context_map) or plugins.
 
 If you think a change must live in core, start with a GitHub Discussion and
-explain why it cannot be handled through addons or plugins.
+explain why it cannot be handled through addons or plugins. Once agreed, open
+issue(s) for the scoped work, then combine them in a single PR.
 
 ## Defaults we want help with
 
@@ -127,8 +129,8 @@ tools to other labs and users.
 
 ## Community
 
-If you build something useful, please open a PR or start a discussion. We plan
-to periodically highlight community plugins on the BrkRaw main site.
+If you build something useful, please start a discussion. We plan to
+periodically highlight community plugins on the BrkRaw main site.
 
 ## Contributors
 

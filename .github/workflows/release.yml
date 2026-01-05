@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  discussions: write
 
 jobs:
   release:
@@ -31,3 +32,83 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
           prerelease: ${{ steps.prerelease.outputs.value }}
+      - name: Post release announcement
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
+          RELEASE_URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from urllib import request
+
+          token = os.environ.get("GITHUB_TOKEN")
+          repo = os.environ["GITHUB_REPOSITORY"]
+          tag = os.environ["TAG_NAME"]
+          release_url = os.environ["RELEASE_URL"]
+          owner, name = repo.split("/")
+
+          notes = Path("RELEASE_NOTES.md").read_text(encoding="utf-8").strip()
+          title = f"Release {tag}"
+          body = f"[Release {tag}]({release_url})\\n\\n{notes}"
+
+          query = {
+              "query": """
+              query($owner: String!, $name: String!) {
+                repository(owner: $owner, name: $name) {
+                  id
+                  discussionCategories(first: 50) {
+                    nodes { id name }
+                  }
+                }
+              }
+              """,
+              "variables": {"owner": owner, "name": name},
+          }
+
+          req = request.Request("https://api.github.com/graphql", method="POST")
+          req.add_header("Authorization", f"Bearer {token}")
+          req.add_header("Content-Type", "application/json")
+          data = json.dumps(query).encode("utf-8")
+          with request.urlopen(req, data=data) as resp:
+              payload = json.loads(resp.read().decode("utf-8"))
+
+          repo_data = payload.get("data", {}).get("repository", {})
+          category_id = None
+          for node in repo_data.get("discussionCategories", {}).get("nodes", []):
+              if node.get("name") == "Announcements":
+                  category_id = node.get("id")
+                  break
+          if not category_id:
+              print("Announcements category not found; skipping discussion.")
+              raise SystemExit(0)
+
+          mutation = {
+              "query": """
+              mutation($repoId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+                createDiscussion(input: {repositoryId: $repoId, categoryId: $categoryId, title: $title, body: $body}) {
+                  discussion { id url }
+                }
+              }
+              """,
+              "variables": {
+                  "repoId": repo_data.get("id"),
+                  "categoryId": category_id,
+                  "title": title,
+                  "body": body,
+              },
+          }
+
+          req = request.Request("https://api.github.com/graphql", method="POST")
+          req.add_header("Authorization", f"Bearer {token}")
+          req.add_header("Content-Type", "application/json")
+          data = json.dumps(mutation).encode("utf-8")
+          with request.urlopen(req, data=data) as resp:
+              result = json.loads(resp.read().decode("utf-8"))
+          url = result.get("data", {}).get("createDiscussion", {}).get("discussion", {}).get("url")
+          if url:
+              print(f"Created discussion: {url}")
+          PY
