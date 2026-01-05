@@ -336,7 +336,7 @@ def format_table(
                 else:
                     wrapped = textwrap.fill(
                         desc,
-                        width=width,
+                        width=wrap_width,
                         initial_indent="",
                         subsequent_indent=indent,
                         break_long_words=False,
