@@ -321,23 +321,31 @@ def format_table(
             indent = " " * (len(prefix_plain) + gap)
             wrap_width = max(1, width - len(prefix_plain) - gap)
             if desc:
-                effective_width = max(
-                    wrap_width,
-                    len(indent) + min_last_col_width,
-                    width,
-                )
-                wrapped = textwrap.fill(
-                    desc,
-                    width=effective_width,
-                    initial_indent="",
-                    subsequent_indent=indent,
-                    break_long_words=False,
-                    break_on_hyphens=False,
-                )
-                wrapped_lines = wrapped.splitlines()
-                lines.append(f"{prefix}{' ' * gap}{_apply_color(wrapped_lines[0], desc_color)}")
-                for extra in wrapped_lines[1:]:
-                    lines.append(f"{indent}{_apply_color(extra.strip(), desc_color)}")
+                if wrap_width < min_last_col_width:
+                    lines.append(prefix)
+                    wrapped = textwrap.fill(
+                        desc,
+                        width=width,
+                        initial_indent=" " * gap,
+                        subsequent_indent=" " * gap,
+                        break_long_words=False,
+                        break_on_hyphens=False,
+                    )
+                    for line in wrapped.splitlines():
+                        lines.append(_apply_color(line, desc_color))
+                else:
+                    wrapped = textwrap.fill(
+                        desc,
+                        width=width,
+                        initial_indent="",
+                        subsequent_indent=indent,
+                        break_long_words=False,
+                        break_on_hyphens=False,
+                    )
+                    wrapped_lines = wrapped.splitlines()
+                    lines.append(f"{prefix}{' ' * gap}{_apply_color(wrapped_lines[0], desc_color)}")
+                    for extra in wrapped_lines[1:]:
+                        lines.append(f"{indent}{_apply_color(extra.strip(), desc_color)}")
             else:
                 lines.append(prefix)
         else:
