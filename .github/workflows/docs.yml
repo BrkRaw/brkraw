@@ -1,8 +1,8 @@
 name: Deploy Docs
 
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    if: ${{ github.repository == 'BrkRaw/brkraw' }}
+    if: ${{ github.repository == 'BrkRaw/brkraw' && (github.event_name != 'release' || github.event.release.prerelease == false) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
