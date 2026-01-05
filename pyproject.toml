@@ -47,7 +47,7 @@ info = "brkraw.cli.commands.info:register"
 init = "brkraw.cli.commands.init:register"
 session = "brkraw.cli.commands.session:register"
 params = "brkraw.cli.commands.params:register"
-tonii = "brkraw.cli.commands.tonii:register"
+convert = "brkraw.cli.commands.convert:register"
 prune = "brkraw.cli.commands.prune:register"
 
 [project.optional-dependencies]

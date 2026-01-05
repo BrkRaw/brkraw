@@ -23,7 +23,7 @@ def _register_entry_point_commands(
             raise TypeError("entry point must be callable (register(subparsers)).")
         register(subparsers)
 
-    preferred = ["init", "config", "session", "info", "params", "tonii", "tonii_all", "prune", "addon"]
+    preferred = ["init", "config", "session", "info", "params", "convert", "convert-batch", "prune", "addon"]
     preferred_set = set(preferred)
     ordered = [name for name in preferred if name in subparsers.choices]
     ordered += [name for name in subparsers.choices if name not in preferred_set]

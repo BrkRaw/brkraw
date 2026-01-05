@@ -39,7 +39,7 @@ def cmd_set(args: argparse.Namespace) -> int:
         and not args.param_key
         and not args.param_file
         and not args.output_format
-        and not args.tonii_option
+        and not args.convert_option
     ):
         parser = getattr(args, "parser", None)
         if parser is not None:
@@ -70,15 +70,15 @@ def cmd_set(args: argparse.Namespace) -> int:
         lines.append(_format_export("BRKRAW_PARAM_FILE", _format_param_files(args.param_file)))
     if args.output_format:
         lines.append(_format_export("BRKRAW_OUTPUT_FORMAT", args.output_format))
-    if args.tonii_option:
-        tonii_items: List[str] = []
-        for item in args.tonii_option:
+    if args.convert_option:
+        convert_items: List[str] = []
+        for item in args.convert_option:
             if isinstance(item, list):
-                tonii_items.extend(item)
+                convert_items.extend(item)
             else:
-                tonii_items.append(item)
-        for key, value in _parse_tonii_options(tonii_items):
-            lines.append(_format_export(f"BRKRAW_TONII_{key}", value))
+                convert_items.append(item)
+        for key, value in _parse_convert_options(convert_items):
+            lines.append(_format_export(f"BRKRAW_CONVERT_{key}", value))
     if lines:
         print("\n".join(lines))
     return 0
@@ -93,22 +93,22 @@ def cmd_unset(args: argparse.Namespace) -> int:
         "BRKRAW_PARAM_FILE",
         "BRKRAW_OUTPUT_FORMAT",
     ]
-    tonii_vars = [
-        "BRKRAW_TONII_OUTPUT",
-        "BRKRAW_TONII_PREFIX",
-        "BRKRAW_TONII_SCAN_ID",
-        "BRKRAW_TONII_RECO_ID",
-        "BRKRAW_TONII_SIDECAR",
-        "BRKRAW_TONII_SIDECAR_CONTEXT_MAP",
-        "BRKRAW_TONII_OUTPUT_CONTEXT_MAP",
-        "BRKRAW_TONII_UNWRAP_POSE",
-        "BRKRAW_TONII_FLIP_X",
-        "BRKRAW_TONII_OVERRIDE_SUBJECT_TYPE",
-        "BRKRAW_TONII_OVERRIDE_SUBJECT_POSE",
-        "BRKRAW_TONII_XYZ_UNITS",
-        "BRKRAW_TONII_T_UNITS",
-        "BRKRAW_TONII_HEADER",
-        "BRKRAW_TONII_OUTPUT_FORMAT",
+    convert_vars = [
+        "BRKRAW_CONVERT_OUTPUT",
+        "BRKRAW_CONVERT_PREFIX",
+        "BRKRAW_CONVERT_SCAN_ID",
+        "BRKRAW_CONVERT_RECO_ID",
+        "BRKRAW_CONVERT_SIDECAR",
+        "BRKRAW_CONVERT_CONTEXT_MAP",
+        "BRKRAW_CONVERT_COMPRESS",
+        "BRKRAW_CONVERT_UNWRAP_POSE",
+        "BRKRAW_CONVERT_FLIP_X",
+        "BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE",
+        "BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE",
+        "BRKRAW_CONVERT_XYZ_UNITS",
+        "BRKRAW_CONVERT_T_UNITS",
+        "BRKRAW_CONVERT_HEADER",
+        "BRKRAW_CONVERT_FORMAT",
     ]
     targets: List[str] = []
     if args.path:
@@ -124,22 +124,22 @@ def cmd_unset(args: argparse.Namespace) -> int:
     if args.output_format:
         targets.append("BRKRAW_OUTPUT_FORMAT")
 
-    if args.tonii_option:
+    if args.convert_option:
         keys: List[str] = []
-        for item in args.tonii_option:
+        for item in args.convert_option:
             if item is None or item == "*":
                 keys = ["*"]
                 break
             keys.append(item)
         if "*" in keys:
-            targets.extend(tonii_vars)
+            targets.extend(convert_vars)
         else:
             targets.extend(
-                [f"BRKRAW_TONII_{key.strip().upper().replace('-', '_')}" for key in keys]
+                [f"BRKRAW_CONVERT_{key.strip().upper().replace('-', '_')}" for key in keys]
             )
 
     if not targets:
-        targets = base_vars + tonii_vars
+        targets = base_vars + convert_vars
     print("unset " + " ".join(targets))
     return 0
 
@@ -151,21 +151,21 @@ def cmd_env(_: argparse.Namespace) -> int:
     param_key = os.environ.get("BRKRAW_PARAM_KEY")
     param_file = os.environ.get("BRKRAW_PARAM_FILE")
     output_format = os.environ.get("BRKRAW_OUTPUT_FORMAT")
-    tonii_output = os.environ.get("BRKRAW_TONII_OUTPUT")
-    tonii_prefix = os.environ.get("BRKRAW_TONII_PREFIX")
-    tonii_scan_id = os.environ.get("BRKRAW_TONII_SCAN_ID")
-    tonii_reco_id = os.environ.get("BRKRAW_TONII_RECO_ID")
-    tonii_sidecar = os.environ.get("BRKRAW_TONII_SIDECAR")
-    tonii_sidecar_map_file = os.environ.get("BRKRAW_TONII_SIDECAR_CONTEXT_MAP")
-    tonii_output_map_file = os.environ.get("BRKRAW_TONII_OUTPUT_CONTEXT_MAP")
-    tonii_unwrap_pose = os.environ.get("BRKRAW_TONII_UNWRAP_POSE")
-    tonii_flip_x = os.environ.get("BRKRAW_TONII_FLIP_X")
-    tonii_subject_type = os.environ.get("BRKRAW_TONII_OVERRIDE_SUBJECT_TYPE")
-    tonii_subject_pose = os.environ.get("BRKRAW_TONII_OVERRIDE_SUBJECT_POSE")
-    tonii_xyz_units = os.environ.get("BRKRAW_TONII_XYZ_UNITS")
-    tonii_t_units = os.environ.get("BRKRAW_TONII_T_UNITS")
-    tonii_header = os.environ.get("BRKRAW_TONII_HEADER")
-    tonii_output_format = os.environ.get("BRKRAW_TONII_OUTPUT_FORMAT")
+    convert_output = os.environ.get("BRKRAW_CONVERT_OUTPUT")
+    convert_prefix = os.environ.get("BRKRAW_CONVERT_PREFIX")
+    convert_scan_id = os.environ.get("BRKRAW_CONVERT_SCAN_ID")
+    convert_reco_id = os.environ.get("BRKRAW_CONVERT_RECO_ID")
+    convert_sidecar = os.environ.get("BRKRAW_CONVERT_SIDECAR")
+    convert_context_map = os.environ.get("BRKRAW_CONVERT_CONTEXT_MAP")
+    convert_compress = os.environ.get("BRKRAW_CONVERT_COMPRESS")
+    convert_unwrap_pose = os.environ.get("BRKRAW_CONVERT_UNWRAP_POSE")
+    convert_flip_x = os.environ.get("BRKRAW_CONVERT_FLIP_X")
+    convert_subject_type = os.environ.get("BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE")
+    convert_subject_pose = os.environ.get("BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE")
+    convert_xyz_units = os.environ.get("BRKRAW_CONVERT_XYZ_UNITS")
+    convert_t_units = os.environ.get("BRKRAW_CONVERT_T_UNITS")
+    convert_header = os.environ.get("BRKRAW_CONVERT_HEADER")
+    convert_format = os.environ.get("BRKRAW_CONVERT_FORMAT")
     if (
         path is None
         and scan_id is None
@@ -173,21 +173,21 @@ def cmd_env(_: argparse.Namespace) -> int:
         and param_key is None
         and param_file is None
         and output_format is None
-        and tonii_output is None
-        and tonii_prefix is None
-        and tonii_scan_id is None
-        and tonii_reco_id is None
-        and tonii_sidecar is None
-        and tonii_sidecar_map_file is None
-        and tonii_output_map_file is None
-        and tonii_unwrap_pose is None
-        and tonii_flip_x is None
-        and tonii_subject_type is None
-        and tonii_subject_pose is None
-        and tonii_xyz_units is None
-        and tonii_t_units is None
-        and tonii_header is None
-        and tonii_output_format is None
+        and convert_output is None
+        and convert_prefix is None
+        and convert_scan_id is None
+        and convert_reco_id is None
+        and convert_sidecar is None
+        and convert_context_map is None
+        and convert_compress is None
+        and convert_unwrap_pose is None
+        and convert_flip_x is None
+        and convert_subject_type is None
+        and convert_subject_pose is None
+        and convert_xyz_units is None
+        and convert_t_units is None
+        and convert_header is None
+        and convert_format is None
     ):
         print("(none)")
         return 0
@@ -203,36 +203,36 @@ def cmd_env(_: argparse.Namespace) -> int:
         print(f"BRKRAW_PARAM_FILE={param_file}")
     if output_format is not None:
         print(f"BRKRAW_OUTPUT_FORMAT={output_format}")
-    if tonii_output is not None:
-        print(f"BRKRAW_TONII_OUTPUT={tonii_output}")
-    if tonii_prefix is not None:
-        print(f"BRKRAW_TONII_PREFIX={tonii_prefix}")
-    if tonii_scan_id is not None:
-        print(f"BRKRAW_TONII_SCAN_ID={tonii_scan_id}")
-    if tonii_reco_id is not None:
-        print(f"BRKRAW_TONII_RECO_ID={tonii_reco_id}")
-    if tonii_sidecar is not None:
-        print(f"BRKRAW_TONII_SIDECAR={tonii_sidecar}")
-    if tonii_sidecar_map_file is not None:
-        print(f"BRKRAW_TONII_SIDECAR_CONTEXT_MAP={tonii_sidecar_map_file}")
-    if tonii_output_map_file is not None:
-        print(f"BRKRAW_TONII_OUTPUT_CONTEXT_MAP={tonii_output_map_file}")
-    if tonii_unwrap_pose is not None:
-        print(f"BRKRAW_TONII_UNWRAP_POSE={tonii_unwrap_pose}")
-    if tonii_flip_x is not None:
-        print(f"BRKRAW_TONII_FLIP_X={tonii_flip_x}")
-    if tonii_subject_type is not None:
-        print(f"BRKRAW_TONII_OVERRIDE_SUBJECT_TYPE={tonii_subject_type}")
-    if tonii_subject_pose is not None:
-        print(f"BRKRAW_TONII_OVERRIDE_SUBJECT_POSE={tonii_subject_pose}")
-    if tonii_xyz_units is not None:
-        print(f"BRKRAW_TONII_XYZ_UNITS={tonii_xyz_units}")
-    if tonii_t_units is not None:
-        print(f"BRKRAW_TONII_T_UNITS={tonii_t_units}")
-    if tonii_header is not None:
-        print(f"BRKRAW_TONII_HEADER={tonii_header}")
-    if tonii_output_format is not None:
-        print(f"BRKRAW_TONII_OUTPUT_FORMAT={tonii_output_format}")
+    if convert_output is not None:
+        print(f"BRKRAW_CONVERT_OUTPUT={convert_output}")
+    if convert_prefix is not None:
+        print(f"BRKRAW_CONVERT_PREFIX={convert_prefix}")
+    if convert_scan_id is not None:
+        print(f"BRKRAW_CONVERT_SCAN_ID={convert_scan_id}")
+    if convert_reco_id is not None:
+        print(f"BRKRAW_CONVERT_RECO_ID={convert_reco_id}")
+    if convert_sidecar is not None:
+        print(f"BRKRAW_CONVERT_SIDECAR={convert_sidecar}")
+    if convert_context_map is not None:
+        print(f"BRKRAW_CONVERT_CONTEXT_MAP={convert_context_map}")
+    if convert_compress is not None:
+        print(f"BRKRAW_CONVERT_COMPRESS={convert_compress}")
+    if convert_unwrap_pose is not None:
+        print(f"BRKRAW_CONVERT_UNWRAP_POSE={convert_unwrap_pose}")
+    if convert_flip_x is not None:
+        print(f"BRKRAW_CONVERT_FLIP_X={convert_flip_x}")
+    if convert_subject_type is not None:
+        print(f"BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE={convert_subject_type}")
+    if convert_subject_pose is not None:
+        print(f"BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE={convert_subject_pose}")
+    if convert_xyz_units is not None:
+        print(f"BRKRAW_CONVERT_XYZ_UNITS={convert_xyz_units}")
+    if convert_t_units is not None:
+        print(f"BRKRAW_CONVERT_T_UNITS={convert_t_units}")
+    if convert_header is not None:
+        print(f"BRKRAW_CONVERT_HEADER={convert_header}")
+    if convert_format is not None:
+        print(f"BRKRAW_CONVERT_FORMAT={convert_format}")
     return 0
 
 
@@ -251,15 +251,15 @@ def _format_short_help(parser: argparse.ArgumentParser) -> str:
     return formatter.format_help()
 
 
-def _parse_tonii_options(items: List[str]) -> List[Tuple[str, str]]:
+def _parse_convert_options(items: List[str]) -> List[Tuple[str, str]]:
     pairs: List[Tuple[str, str]] = []
     for item in items:
         if "=" not in item:
-            raise ValueError(f"Invalid tonii option (expected KEY=VALUE): {item}")
+            raise ValueError(f"Invalid convert option (expected KEY=VALUE): {item}")
         key, value = item.split("=", 1)
         key = key.strip().upper().replace("-", "_")
         if not key:
-            raise ValueError(f"Invalid tonii option key in: {item}")
+            raise ValueError(f"Invalid convert option key in: {item}")
         pairs.append((key, value.strip()))
     return pairs
 
@@ -315,14 +315,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help="Default NIfTI output format (BRKRAW_OUTPUT_FORMAT).",
     )
     set_parser.add_argument(
-        "--tonii-option",
+        "--convert-option",
         action="append",
         metavar="KEY=VALUE",
         help=(
-            "Set BRKRAW_TONII_<OPTION> as KEY=VALUE (repeatable). "
-            "Keys: OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, UNWRAP_POSE, "
-            "FLIP_X, OVERRIDE_SUBJECT_TYPE, OVERRIDE_SUBJECT_POSE, XYZ_UNITS, "
-            "T_UNITS, HEADER, OUTPUT_FORMAT."
+            "Set BRKRAW_CONVERT_<OPTION> as KEY=VALUE (repeatable). "
+            "Keys: OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, CONTEXT_MAP, "
+            "COMPRESS, UNWRAP_POSE, FLIP_X, OVERRIDE_SUBJECT_TYPE, "
+            "OVERRIDE_SUBJECT_POSE, XYZ_UNITS, T_UNITS, HEADER, FORMAT."
         ),
     )
     set_parser.set_defaults(session_func=cmd_set, parser=set_parser)
@@ -367,14 +367,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help="Unset BRKRAW_OUTPUT_FORMAT.",
     )
     unset_parser.add_argument(
-        "--tonii-option",
+        "--convert-option",
         nargs="?",
         action="append",
         const="*",
         metavar="KEY",
         help=(
-            "Unset BRKRAW_TONII_<OPTION> by KEY (repeatable). "
-            "Use without KEY to unset all tonii variables."
+            "Unset BRKRAW_CONVERT_<OPTION> by KEY (repeatable). "
+            "Use without KEY to unset all convert variables."
         ),
     )
     unset_parser.set_defaults(session_func=cmd_unset)
