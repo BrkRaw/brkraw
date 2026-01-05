@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   build:
+    if: ${{ github.repository == 'BrkRaw/brkraw' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
