@@ -230,8 +230,9 @@ def unwrap_subject_pose(
             _affine = rotate_affine(_affine, rad_z=np.pi/2)
 
     elif subject_type == "Quadruped":
-        # Paravision convert affine to LIA+ of subject, but the scanner coordinate is RSA+(based on subject orientation)
-        _affine = rotate_affine(_affine, rad_z=np.pi)
+        # Paravision convert affine to match LSA+ of Quadruped subject, 
+        # but the scanner coordinate is RSA+(based on subject orientation)
+        _affine = flip_affine(_affine, flip_x=True)
         if gravity == "Supine":
             _affine = rotate_affine(_affine, rad_z=np.pi)
         elif gravity == "Left":
