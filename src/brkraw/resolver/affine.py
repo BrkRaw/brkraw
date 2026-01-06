@@ -200,13 +200,14 @@ def unwrap_subject_pose(
     Notes:
         - If the subject entered feet-first (``"Foot"``), the affine is rotated
           about Y by ``pi`` to align device back (head/foot).
-        - For "Biped", the default alignment is L-P-S in scanner coordinates
-          for "Head_Supine". The affine is first rotated about Z by ``pi`` to
-          convert L-P-S to L-A-S, then rotated by gravity:
+        - For "Biped", Paravision stores LPS+ while scanner coordinate
+          orientation is subject LAS+ (based on subject orientation). The
+          affine is flipped in Y to unwrap to scanner LAS+, then rotated by
+          gravity:
           ``Prone`` (Z +pi), ``Left`` (Z -pi/2), ``Right`` (Z +pi/2).
-        - For "Quadruped", the default alignment is Le-D-Ro in scanner
-          coordinates for "Head_Prone". The affine is flipped in X to convert
-          Le-D-Ro to Rt-D-Ro, then rotated by gravity:
+        - For "Quadruped", Paravision stores LIA+ while scanner coordinates are
+          RSA+ (based on subject orientation). The affine is rotated by Z +pi
+          to unwrap to scanner RSA+, then rotated by gravity:
           ``Supine`` (Z +pi), ``Left`` (Z +pi/2), ``Right`` (Z -pi/2).
     """
     _affine = np.asarray(affine)
@@ -217,7 +218,10 @@ def unwrap_subject_pose(
         _affine = rotate_affine(_affine, rad_y=np.pi)
 
     if subject_type == "Biped":
-        _affine = rotate_affine(_affine, rad_z=np.pi)
+        # Paravision stores affine based on LPS+, but scanner coordinate is LAS+(based on subject orientation)
+        # correspond to scanner left to right(x), buttom to top(y), front to back(z) according to the operation's view
+        # simply flip y axis unwrap subject to scanner orient
+        _affine = flip_affine(_affine, flip_y=True)
         if gravity == "Prone":
             _affine = rotate_affine(_affine, rad_z=np.pi)
         elif gravity == "Left":
@@ -226,7 +230,8 @@ def unwrap_subject_pose(
             _affine = rotate_affine(_affine, rad_z=np.pi/2)
 
     elif subject_type == "Quadruped":
-        _affine = flip_affine(_affine, flip_x=True)
+        # Paravision convert affine to LIA+ of subject, but the scanner coordinate is RSA+(based on subject orientation)
+        _affine = rotate_affine(_affine, rad_z=np.pi)
         if gravity == "Supine":
             _affine = rotate_affine(_affine, rad_z=np.pi)
         elif gravity == "Left":
@@ -244,7 +249,8 @@ def wrap_subject_pose(affine: np.ndarray,
     Args:
         affine: (4, 4) affine in world/scanner space.
         subject_type: Subject category. Supported values include "Biped",
-            "Quadruped", "Phantom", "OtherAnimal", and "Other".
+            "Quadruped", "Phantom", "OtherAnimal", and "Other". If ``None``,
+            it defaults to ``"Biped"`` for PV5.1 compatibility.
         subject_pose: Override pose string formatted as
             ``"Head|Foot" + "_" + "Supine|Prone|Left|Right"``. The prefix
             indicates head-first or feet-first entry; the suffix captures the
@@ -256,11 +262,13 @@ def wrap_subject_pose(affine: np.ndarray,
     Notes:
         - If the subject entered feet-first (``"Foot"``), the affine is rotated
           about Y by ``pi`` to align device back (head/foot).
-        - For "Biped", the scanner-aligned L-A-S is flipped in X to get R-A-S,
+        - For "Biped", starting from scanner LAS+ (after unwrap), the affine is
+          flipped in Z to LAI+ (subject/dicom), then rotated by Y +pi to RAS+,
           then rotated by gravity:
           ``Prone`` (Z +pi), ``Left`` (Z +pi/2), ``Right`` (Z -pi/2).
-        - For "Quadruped", the scanner-aligned Rt-D-Ro is kept as-is, then
-          rotated by gravity:
+        - For "Quadruped", starting from scanner RSA+ (after unwrap), the affine
+          is flipped in Z to RSP+, then rotated by X +pi/2 to RAS+, then rotated
+          by gravity:
           ``Supine`` (Z +pi), ``Left`` (Z -pi/2), ``Right`` (Z +pi/2).
     """
     _affine = np.asarray(affine)
@@ -269,12 +277,15 @@ def wrap_subject_pose(affine: np.ndarray,
     # device back: Head / foot
     if head_or_foot == "Foot":
         _affine = rotate_affine(_affine, rad_y=np.pi)
+    
+    subject_type = subject_type or 'Biped' # backward compatibility with PV5.1 (subject_type == None)
 
     if subject_type == "Biped":
-        # in operators view (scanner), patient is R to L, P to A, I to S in scanner coordinate in "Head_Supine" position
-        # step1. L-A-S to R-A-S
-        _affine = flip_affine(_affine, flip_x=True)
-        # step2. unwrap position
+        # in operators view (scanner), patient is LAS+ in scanner coordinate in "Head_Supine" position (after unwrap)
+        # step1. LAS+ (scanner coordinate) to LAI+ (subject coordinate, dicom)
+        _affine = flip_affine(_affine, flip_z=True)
+        # step2. LAI+ to RAS+
+        _affine = rotate_affine(_affine, rad_y=np.pi)
         if gravity == "Prone":
             _affine = rotate_affine(_affine, rad_z=np.pi)
         elif gravity == "Left":
@@ -283,10 +294,11 @@ def wrap_subject_pose(affine: np.ndarray,
             _affine = rotate_affine(_affine, rad_z=-np.pi/2)
 
     elif subject_type == "Quadruped":
-        # in operators view (scanner), patient is Le to Rt, V to D, Cd to Ro in scanner coordinate in "Head_Prone" position
-        # step1. Rt-D-Ro, we need to change it to Rt-Ro-D (correspond to RAS of human)
-        _affine = rotate_affine(_affine, rad_x=-np.pi/2)
-        # step2. unwrap position
+        # in unwrapped view (scanner), subject is RSA+ in "Head_Prone" position
+        # step1. RSA+ to RSP+
+        _affine = flip_affine(_affine, flip_z=True)
+        # step2. RSP+ to RAS+
+        _affine = rotate_affine(_affine, rad_x=np.pi/2)
         if gravity == "Supine":
             _affine = rotate_affine(_affine, rad_z=np.pi)
         elif gravity == "Left":
