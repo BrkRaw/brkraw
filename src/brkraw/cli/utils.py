@@ -6,12 +6,15 @@ Last updated: 2025-12-30
 from __future__ import annotations
 
 import itertools
+import logging
 import threading
 import time
 from contextlib import contextmanager
 from typing import Iterator, List
 
 from brkraw.apps.loader import BrukerLoader
+
+logger = logging.getLogger("brkraw")
 
 @contextmanager
 def spinner(prefix: str = "Loading") -> Iterator[None]:
@@ -23,6 +26,10 @@ def spinner(prefix: str = "Loading") -> Iterator[None]:
     Yields:
         None.
     """
+    if logger.isEnabledFor(logging.DEBUG):
+        yield
+        return
+
     stop_event = threading.Event()
     seq = itertools.cycle("|/-\\")
 

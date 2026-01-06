@@ -8,6 +8,9 @@ import yaml
 from ...core import config as config_module
 from ..remapper import load_spec, map_parameters
 from .validator import validate_rules
+import logging
+
+logger = logging.getLogger("brkraw")
 
 RULE_CATEGORIES = ("info_spec", "metadata_spec", "converter_hook")
 SPEC_CATEGORIES = ("info_spec", "metadata_spec")
@@ -129,6 +132,9 @@ def _load_rule_transforms(rule: Dict[str, Any], base: Path) -> Dict[str, Any]:
     transforms = rule.get("__transforms__")
     if isinstance(transforms, dict):
         return transforms
+    category = rule.get("__category__") if isinstance(rule.get("__category__"), str) else None
+    if category and category not in SPEC_CATEGORIES:
+        return {}
     use = rule.get("use")
     if not isinstance(use, str):
         return {}
@@ -151,13 +157,23 @@ def rule_matches(
 ) -> bool:
     when = rule.get("when")
     if when is None:
+        logger.debug("Rule %r: no 'when' clause, matches by default.", rule.get("name"))
         return True
     if not isinstance(when, dict):
         raise ValueError("Rule 'when' must be a mapping.")
     transforms = _load_rule_transforms(rule, base)
     bindings = map_parameters(source, when, transforms, validate=False)
+    logger.debug("Rule %r: when bindings=%s", rule.get("name"), bindings)
     try:
-        return _eval_expr(rule.get("if"), bindings)
+        matched = _eval_expr(rule.get("if"), bindings)
+        logger.debug(
+            "Rule %r: bindings=%s if=%s matched=%s",
+            rule.get("name"),
+            bindings,
+            rule.get("if"),
+            matched,
+        )
+        return matched
     except Exception as exc:
         name = rule.get("name", "<unnamed>")
         raise ValueError(f"Rule {name!r} evaluation failed: {exc}") from exc
@@ -174,7 +190,19 @@ def select_rule_use(
     for rule in rules:
         if not isinstance(rule, dict):
             continue
-        if rule_matches(source, rule, base=base):
+        logger.debug("Evaluating rule %r (use=%r).", rule.get("name"), rule.get("use"))
+        try:
+            matched = rule_matches(source, rule, base=base)
+        except Exception as exc:
+            logger.debug(
+                "Rule %r evaluation failed: %s",
+                rule.get("name"),
+                exc,
+                exc_info=True,
+            )
+            continue
+        logger.debug("Rule %r: match=%s", rule.get("name"), matched)
+        if matched:
             use = rule.get("use")
             if isinstance(use, str):
                 if not resolve_paths:
@@ -185,6 +213,12 @@ def select_rule_use(
                         selected = spec_path
                     else:
                         selected = _resolve_spec_path(use, base)
+                logger.debug("Rule %r matched, selected use=%r.", rule.get("name"), selected)
+            else:
+                logger.debug("Rule %r matched but has no usable 'use' entry.", rule.get("name"))
+        else:
+            logger.debug("Rule %r did not match.", rule.get("name"))
+    logger.debug("Rule selection result: %r", selected)
     return selected
 
 
@@ -207,11 +241,11 @@ def load_rules(
             if items:
                 if not isinstance(items, list):
                     raise ValueError(f"{path}: {key} must be a list.")
-                if key in SPEC_CATEGORIES:
-                    for item in items:
-                        if not isinstance(item, dict):
-                            continue
-                        item["__category__"] = key
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    item["__category__"] = key
+                    if key in SPEC_CATEGORIES:
                         use = item.get("use")
                         if not isinstance(use, str):
                             continue

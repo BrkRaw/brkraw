@@ -146,8 +146,9 @@ $defs:
     maxItems: 2
   inop:
     type: array
-    items:
+    prefixItems:
       - {}
       - type: array
+    items: false
     minItems: 2
     maxItems: 2

@@ -173,7 +173,13 @@ class BrukerLoader:
                         base=base,
                         resolve_paths=False,
                     )
-                except Exception:
+                except Exception as exc:
+                    logger.debug(
+                        "Converter hook rule selection failed for scan %s: %s",
+                        getattr(scan, "scan_id", "?"),
+                        exc,
+                        exc_info=True,
+                    )
                     hook_name = None
                 if isinstance(hook_name, str):
                     try:
@@ -186,11 +192,16 @@ class BrukerLoader:
                         )
                         entry = None
                     if entry:
+                        logger.debug("Applying converter hook: %s", hook_name)
                         _apply_converter_hook(
                             scan,
                             entry,
                             affine_decimals=self._affine_decimals,
                         )
+                    else:
+                        logger.debug("Converter hook %r resolved to no entry.", hook_name)
+                else:
+                    logger.debug("No converter hook selected for scan %s.", getattr(scan, "scan_id", "?"))
             scan.get_metadata = MethodType(_get_metadata, scan)
             scan.search_params = MethodType(_search_parameters, scan)
             for reco in scan.avail.values():
