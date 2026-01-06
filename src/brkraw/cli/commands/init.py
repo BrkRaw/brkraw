@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Optional, Dict, Any
+from pprint import pprint
 
 import argparse
 import logging
@@ -16,11 +17,42 @@ logger = logging.getLogger("brkraw")
 
 
 def cmd_init(args: argparse.Namespace) -> int:
+    if args.config:
+        config_core.init(
+            root=args.root,
+            create_config=False,
+            exist_ok=not args.no_exist_ok,
+        )
+        paths = config_core.paths(root=args.root)
+        existing = config_core.load(root=args.root)
+        if paths.config_file.exists():
+            pprint(existing or {})
+            replace = _prompt_bool(
+                "Replace existing config.yaml?",
+                default=False,
+            )
+            if not replace:
+                return 0
+            defaults = existing
+        else:
+            defaults = config_core.default_config()
+        config_values = _prompt_config_values(defaults=defaults)
+        config_core.write_config(config_values, root=args.root)
+        logger.info("Wrote config at %s", config_core.paths(root=args.root).config_file)
+        return 0
+
     interactive = not args.yes
-    create_config = not args.no_config
+    create_config = True
     install_defaults = args.install_default
     shellrc = Path(args.shellrc) if args.shellrc else _default_shell_rc()
+    explicit_actions = args.install_default or args.shellrc
     config_values: Optional[Dict[str, Any]] = None
+
+    if interactive and explicit_actions:
+        interactive = False
+        create_config = False
+        install_defaults = args.install_default
+        shellrc = Path(args.shellrc) if args.shellrc else None
 
     if interactive:
         create_config = _prompt_bool("Create config.yaml?", default=create_config)
@@ -69,14 +101,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help="Override config root directory (default: BRKRAW_CONFIG_HOME or ~/.brkraw).",
     )
     init_parser.add_argument(
-        "--no-config",
-        action="store_true",
-        help="Do not create config.yaml.",
-    )
-    init_parser.add_argument(
         "--no-exist-ok",
         action="store_true",
         help="Fail if the root directory already exists.",
+    )
+    init_parser.add_argument(
+        "--config",
+        action="store_true",
+        help="Create or replace config.yaml only.",
     )
     init_parser.add_argument(
         "--yes",
@@ -108,15 +140,17 @@ def _prompt_bool(label: str, *, default: bool) -> bool:
             return False
 
 
-def _prompt_config_values() -> Dict[str, Any]:
-    defaults = config_core.default_config()
+def _prompt_config_values(*, defaults: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    base = config_core.default_config()
+    if defaults:
+        base.update(defaults)
     result: Dict[str, Any] = {}
-    keys = list(defaults.keys())
+    keys = list(base.keys())
     for key in keys:
         if key == "config_version":
-            result[key] = defaults.get(key)
+            result[key] = base.get(key)
             continue
-        default = defaults.get(key)
+        default = base.get(key)
         display = "null" if default is None else str(default)
         reply = input(f"{key} [{display}]: ").strip()
         if reply == "":
