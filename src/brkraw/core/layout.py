@@ -310,7 +310,9 @@ def _render_fields(
                 if not _ENTRY_PATTERN.match(entry_clean):
                     continue
             elif not hide:
-                continue
+                entry_clean = key.replace(".", "").lower()
+                if not _ENTRY_PATTERN.match(entry_clean):
+                    continue
             value = _resolve_tag(key, info, scan_id)
             value_str = _format_value_with_options(
                 value,

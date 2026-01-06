@@ -3,6 +3,7 @@
 These commands convert Paravision datasets to NIfTI and optionally write JSON
 sidecars.
 
+
 ## brkraw convert
 
 Convert a single dataset. If `-s/--scan-id` is omitted, all scans and recos are
@@ -16,7 +17,6 @@ Examples:
 
 - `brkraw convert /path/to/study -o out` (all scans, all recos)
 
-- `brkraw convert /path/to/study --sidecar --context-map maps.yaml`
 
 Notes:
 
@@ -24,12 +24,7 @@ Notes:
 
 - `-o` without an extension is treated as a directory when converting all scans.
 
-- Multiple slice packs use `output.slicepack_suffix` from `config.yaml` or
-  `__meta__.slicepack_suffix` in the context map.
-
-- `--context-map` controls metadata/output mapping and selector filtering.
-  Selector keys in the map (`selector: true`) limit conversions to matching scans.
-  Use `target` in map rules to choose `info_spec` or `metadata_spec`.
+- Multiple slice packs use `output.slicepack_suffix` from `config.yaml`.
 
 - Output layout keys are resolved from the merged `info_spec` and `metadata_spec`
   results (metadata wins on conflicts).
@@ -39,6 +34,7 @@ Notes:
 
 - `--prefix` supports layout tags like `{Protocol}` or `{SliceOrient}` and
   overrides any layout template from config/context maps.
+
 
 ## brkraw convert-batch
 
@@ -55,6 +51,7 @@ Notes:
 - `convert-batch` always converts all scans and recos.
 
 - Each dataset path is logged before conversion.
+
 
 ## Output layout
 
@@ -73,27 +70,105 @@ Each entry is appended in order when the value is present. Values are sanitized
 to `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`. Missing values are skipped.
 Use `sep: "/"` on a field to insert folder separators.
 
-See `docs/api/layout.md` for the programmatic API.
 
-Example:
+### Practical naming examples
 
+Minimal `info_spec` context (from `src/brkraw/apps/loader/info/study.yaml`):
+```yaml
+Study.ID:
+  sources:
+    - file: subject
+      key: SUBJECT_study_name
+  transform: strip_jcamp_string
+Subject.ID:
+  sources:
+    - file: subject
+      key: SUBJECT_id
+  transform: strip_jcamp_string
+```
+Assume the mapped values are:
+```
+Study.ID = S001
+Subject.ID = 01
+Protocol = T1w
+```
+
+Minimal entries (default prefixing):
 ```yaml
 output:
   layout_entries:
-
-  - key: Study.ID
-
-    entry: study
-    hide: false
-
-  - key: Subject.ID
-
-    entry: sub
-    hide: false
-
-  - key: Protocol
-    hide: true
+    - key: Study.ID
+      entry: study
+      sep: "/"
+    - key: Subject.ID
+      entry: sub
+      sep: "/"
+    - key: Protocol
+      entry: acq
 ```
+Example result (when values exist):
+```
+study-S001/sub-sub-01/acq-T1w
+```
+
+Entry omitted (auto entry name):
+```yaml
+output:
+  layout_entries:
+    - key: Study.ID
+      sep: "/"
+    - key: Subject.ID
+      sep: "/"
+    - key: Protocol
+```
+Example result:
+```
+studyid-S001/subjectid-sub-01/protocol-T1w
+```
+
+Value-only entry (`hide: true`):
+```yaml
+output:
+  layout_entries:
+    - key: Study.ID
+      entry: study
+      sep: "/"
+    - key: Subject.ID
+      entry: sub
+      sep: "/"
+    - key: Protocol
+      hide: true
+```
+Example result:
+```
+study-S001/sub-sub-01/T1w
+```
+
+Single-file output override:
+```bash
+brkraw convert /path/to/study -s 3 -r 1 -o /tmp/myfile.nii.gz
+```
+This ignores layout entries and writes the file as provided.
+
+Template override:
+```yaml
+output:
+  layout_template: "study-{Study.ID}/sub-{Subject.ID}/{Protocol}"
+```
+Example result:
+```
+study-S001/sub-sub-01/T1w
+```
+
+Extension handling:
+- Layout outputs build the base filename only.
+- The extension is added automatically based on `--format` and `--no-compress`
+  (default: `.nii.gz`, `--no-compress` => `.nii`).
+- Supplying `--output` with a `.nii`/`.nii.gz` filename uses that extension as-is.
+
+Context map note:
+`context_map` layout overrides are intended for BIDS-oriented workflows and are
+under active development/testing/documentation.
 
 Context map layout overrides:
 
@@ -111,6 +186,7 @@ __meta__:
   layout_template: "study-{Study.ID}/sub-{Subject.ID}/{Protocol}"
   slicepack_suffix: "_sl{index}"
 ```
+
 
 ## Environment defaults
 
