@@ -100,8 +100,8 @@ def cmd_unset(args: argparse.Namespace) -> int:
         "BRKRAW_CONVERT_RECO_ID",
         "BRKRAW_CONVERT_SIDECAR",
         "BRKRAW_CONVERT_CONTEXT_MAP",
+        "BRKRAW_CONVERT_SPACE",
         "BRKRAW_CONVERT_COMPRESS",
-        "BRKRAW_CONVERT_UNWRAP_POSE",
         "BRKRAW_CONVERT_FLIP_X",
         "BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE",
         "BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE",
@@ -158,7 +158,7 @@ def cmd_env(_: argparse.Namespace) -> int:
     convert_sidecar = os.environ.get("BRKRAW_CONVERT_SIDECAR")
     convert_context_map = os.environ.get("BRKRAW_CONVERT_CONTEXT_MAP")
     convert_compress = os.environ.get("BRKRAW_CONVERT_COMPRESS")
-    convert_unwrap_pose = os.environ.get("BRKRAW_CONVERT_UNWRAP_POSE")
+    convert_space = os.environ.get("BRKRAW_CONVERT_SPACE")
     convert_flip_x = os.environ.get("BRKRAW_CONVERT_FLIP_X")
     convert_subject_type = os.environ.get("BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE")
     convert_subject_pose = os.environ.get("BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE")
@@ -180,7 +180,7 @@ def cmd_env(_: argparse.Namespace) -> int:
         and convert_sidecar is None
         and convert_context_map is None
         and convert_compress is None
-        and convert_unwrap_pose is None
+        and convert_space is None
         and convert_flip_x is None
         and convert_subject_type is None
         and convert_subject_pose is None
@@ -215,10 +215,10 @@ def cmd_env(_: argparse.Namespace) -> int:
         print(f"BRKRAW_CONVERT_SIDECAR={convert_sidecar}")
     if convert_context_map is not None:
         print(f"BRKRAW_CONVERT_CONTEXT_MAP={convert_context_map}")
+    if convert_space is not None:
+        print(f"BRKRAW_CONVERT_SPACE={convert_space}")
     if convert_compress is not None:
         print(f"BRKRAW_CONVERT_COMPRESS={convert_compress}")
-    if convert_unwrap_pose is not None:
-        print(f"BRKRAW_CONVERT_UNWRAP_POSE={convert_unwrap_pose}")
     if convert_flip_x is not None:
         print(f"BRKRAW_CONVERT_FLIP_X={convert_flip_x}")
     if convert_subject_type is not None:
@@ -321,7 +321,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help=(
             "Set BRKRAW_CONVERT_<OPTION> as KEY=VALUE (repeatable). "
             "Keys: OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, CONTEXT_MAP, "
-            "COMPRESS, UNWRAP_POSE, FLIP_X, OVERRIDE_SUBJECT_TYPE, "
+            "COMPRESS, SPACE, FLIP_X, OVERRIDE_SUBJECT_TYPE, "
             "OVERRIDE_SUBJECT_POSE, XYZ_UNITS, T_UNITS, HEADER, FORMAT."
         ),
     )

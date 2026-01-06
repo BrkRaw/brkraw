@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Convert a scan/reco to NIfTI with optional metadata sidecar.
 
-Last updated: 2025-12-30
+Last updated: 2026-01-06
 """
 
 import argparse
@@ -11,7 +11,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Mapping, Optional, cast, List, Dict, Tuple, get_args, Literal
+from typing import Any, Mapping, Optional, cast, List, Tuple, get_args, Literal
 
 import nibabel as nib
 import numpy as np
@@ -23,6 +23,8 @@ from brkraw.resolver import nifti as nifti_resolver
 from brkraw.specs import remapper as remapper_core
 from brkraw.resolver.nifti import XYZUNIT, TUNIT, Nifti1HeaderContents
 from brkraw.resolver.affine import SubjectPose, SubjectType
+from brkraw.apps.loader.types import AffineSpace
+
 
 logger = logging.getLogger("brkraw")
 
@@ -30,53 +32,56 @@ _INVALID_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 def cmd_convert(args: argparse.Namespace) -> int:
+    """Convert a scan/reco to NIfTI with optional metadata sidecars.
+
+    Args:
+        args: Parsed CLI arguments for the convert subcommand.
+
+    Returns:
+        Exit status code (0 on success, non-zero on failure).
+    """
+    # resolve core paths
     if args.path is None:
         args.path = os.environ.get("BRKRAW_PATH")
+    if args.path is None:
+        args.parser.print_help()
+        return 2
+    if not Path(args.path).exists():
+        logger.error("Path not found: %s", args.path)
+        return 2
+
     if args.output is None:
         args.output = os.environ.get("BRKRAW_CONVERT_OUTPUT")
     if args.prefix is None:
         args.prefix = os.environ.get("BRKRAW_CONVERT_PREFIX")
-    if args.path is None:
-        args.parser.print_help()
-        return 2
-    if args.scan_id is None:
-        env_scan = os.environ.get("BRKRAW_SCAN_ID")
-        if env_scan:
-            try:
-                args.scan_id = int(env_scan.split(",")[0])
-            except ValueError:
-                logger.error("Invalid BRKRAW_SCAN_ID: %s", env_scan)
-                return 2
-    if args.scan_id is None:
-        env_scan = os.environ.get("BRKRAW_CONVERT_SCAN_ID")
-        if env_scan:
-            try:
-                args.scan_id = int(env_scan)
-            except ValueError:
-                logger.error("Invalid BRKRAW_CONVERT_SCAN_ID: %s", env_scan)
-                return 2
-    if args.reco_id is None:
-        env_reco = os.environ.get("BRKRAW_RECO_ID")
-        if env_reco:
-            try:
-                args.reco_id = int(env_reco)
-            except ValueError:
-                logger.error("Invalid BRKRAW_RECO_ID: %s", env_reco)
-                return 2
-    if args.reco_id is None:
-        env_reco = os.environ.get("BRKRAW_CONVERT_RECO_ID")
-        if env_reco:
-            try:
-                args.reco_id = int(env_reco)
-            except ValueError:
-                logger.error("Invalid BRKRAW_CONVERT_RECO_ID: %s", env_reco)
-                return 2
+
+    # resolve scan/reco ids
+    id_sources = (
+        ("scan_id", "BRKRAW_SCAN_ID", True),
+        ("scan_id", "BRKRAW_CONVERT_SCAN_ID", False),
+        ("reco_id", "BRKRAW_RECO_ID", False),
+        ("reco_id", "BRKRAW_CONVERT_RECO_ID", False),
+    )
+    for attr, env_key, split_comma in id_sources:
+        if getattr(args, attr) is not None:
+            continue
+        value = os.environ.get(env_key)
+        if not value:
+            continue
+        text = value.split(",")[0] if split_comma else value
+        try:
+            setattr(args, attr, int(text))
+        except ValueError:
+            logger.error("Invalid %s: %s", env_key, value)
+            return 2
+
+    # resolve flags + spaces
     if not args.sidecar:
         args.sidecar = _env_flag("BRKRAW_CONVERT_SIDECAR")
-    if not args.unwrap_pose:
-        args.unwrap_pose = _env_flag("BRKRAW_CONVERT_UNWRAP_POSE")
     if not args.flip_x:
         args.flip_x = _env_flag("BRKRAW_CONVERT_FLIP_X")
+    if args.space is None:
+        args.space = os.environ.get("BRKRAW_CONVERT_SPACE")
     if args.override_subject_type is None:
         args.override_subject_type = _coerce_choice(
             "BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE",
@@ -103,21 +108,21 @@ def cmd_convert(args: argparse.Namespace) -> int:
             get_args(TUNIT),
             default=args.t_units,
         )
-    if args.format is None:
-        args.format = os.environ.get("BRKRAW_CONVERT_FORMAT")
-    if args.header is None:
-        args.header = os.environ.get("BRKRAW_CONVERT_HEADER")
-    if args.context_map is None:
-        args.context_map = os.environ.get("BRKRAW_CONVERT_CONTEXT_MAP")
+    if args.space is None:
+        args.space = "subject_ras"
+    for attr, env_key in (
+        ("format", "BRKRAW_CONVERT_FORMAT"),
+        ("header", "BRKRAW_CONVERT_HEADER"),
+        ("context_map", "BRKRAW_CONVERT_CONTEXT_MAP"),
+    ):
+        if getattr(args, attr) is None:
+            setattr(args, attr, os.environ.get(env_key))
     if args.compress is None:
         if "BRKRAW_CONVERT_COMPRESS" in os.environ:
             args.compress = _env_flag("BRKRAW_CONVERT_COMPRESS")
         else:
             args.compress = True
 
-    if not Path(args.path).exists():
-        logger.error("Path not found: %s", args.path)
-        return 2
     output_is_file = False
     if args.output:
         out_path = Path(args.output)
@@ -125,6 +130,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
         if output_is_file and args.prefix:
             logger.error("Cannot use --prefix when --output is a file path.")
             return 2
+
     args.format = _coerce_choice(
         "BRKRAW_CONVERT_FORMAT",
         args.format or "nifti",
@@ -137,6 +143,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
         override_header = nifti_resolver.load_header_overrides(args.header)
     except ValueError:
         return 2
+    
     batch_all = args.scan_id is None
     if batch_all and args.output and not output_is_file and not args.output.endswith(os.sep):
         args.output = f"{args.output}{os.sep}"
@@ -155,7 +162,17 @@ def cmd_convert(args: argparse.Namespace) -> int:
     layout_entries = config_core.layout_entries(root=root)
     layout_template = config_core.layout_template(root=root)
     layout_meta = {}
+
+    selector_map = None
     if args.context_map:
+        # resolve selector
+        try:
+            selector_map = remapper_core.load_context_map(args.context_map)
+        except Exception as exc:
+            logger.error("%s", exc)
+            return 2
+        
+        # resolve layout
         layout_meta = layout_core.load_layout_meta(args.context_map)
         if isinstance(layout_meta, dict):
             meta_entries = layout_meta.get("layout_entries")
@@ -166,18 +183,13 @@ def cmd_convert(args: argparse.Namespace) -> int:
             meta_template = layout_meta.get("layout_template")
             if isinstance(meta_template, str) and meta_template.strip():
                 layout_template = meta_template
+        
     slicepack_suffix = config_core.output_slicepack_suffix(root=root)
     if isinstance(layout_meta, dict):
         meta_suffix = layout_meta.get("slicepack_suffix")
         if isinstance(meta_suffix, str) and meta_suffix.strip():
             slicepack_suffix = meta_suffix
-    selector_map = None
-    if args.context_map:
-        try:
-            selector_map = remapper_core.load_context_map(args.context_map)
-        except Exception as exc:
-            logger.error("%s", exc)
-            return 2
+        
     total_written = 0
     for scan_id in scan_ids:
         if scan_id is None:
@@ -188,6 +200,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
             continue
         for reco_id in reco_ids:
             if selector_map is not None:
+                # convert selection by context_map
                 selector_info, selector_meta = layout_core.load_layout_info_parts(
                     loader,
                     scan_id,
@@ -195,19 +208,19 @@ def cmd_convert(args: argparse.Namespace) -> int:
                     reco_id=reco_id,
                 )
                 if not selector_info and not selector_meta:
-                    logger.info("Skipping scan %s reco %s (no metadata).", scan_id, reco_id)
+                    logger.debug("Skipping scan %s reco %s (no metadata).", scan_id, reco_id)
                     continue
                 if not remapper_core.matches_context_map_selectors(
                     (selector_info, selector_meta),
                     selector_map,
                 ):
-                    logger.info("Skipping scan %s reco %s (selector mismatch).", scan_id, reco_id)
+                    logger.debug("Skipping scan %s reco %s (selector mismatch).", scan_id, reco_id)
                     continue
             nii = loader.convert(
                 scan_id,
                 reco_id=reco_id,
                 format=cast(Literal["nifti", "nifti1"], args.format),
-                unwrap_pose=args.unwrap_pose,
+                space=cast(AffineSpace, args.space),
                 override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
                 override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
                 override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
@@ -298,6 +311,14 @@ def cmd_convert(args: argparse.Namespace) -> int:
 
 
 def cmd_convert_batch(args: argparse.Namespace) -> int:
+    """Convert all datasets under a root folder.
+
+    Args:
+        args: Parsed CLI arguments for the convert-batch subcommand.
+
+    Returns:
+        Exit status code (0 on success, non-zero on failure).
+    """
     if args.path is None:
         args.path = os.environ.get("BRKRAW_PATH")
     if args.path is None:
@@ -344,9 +365,15 @@ def cmd_convert_batch(args: argparse.Namespace) -> int:
     return 0
 
 
-
-
 def _sanitize_filename(name: str) -> str:
+    """Return a filesystem-safe name by replacing invalid characters.
+
+    Args:
+        name: Input filename or prefix.
+
+    Returns:
+        Sanitized filename string.
+    """
     parts = []
     for raw in re.split(r"[\\/]+", name.strip()):
         if not raw:
@@ -359,6 +386,14 @@ def _sanitize_filename(name: str) -> str:
 
 
 def _iter_dataset_paths(root: Path) -> List[Path]:
+    """Enumerate dataset roots under a folder or file input.
+
+    Args:
+        root: Root folder or dataset path.
+
+    Returns:
+        List of dataset paths.
+    """
     if root.is_file():
         return [root]
     candidates: List[Path] = []
@@ -375,21 +410,20 @@ def _iter_dataset_paths(root: Path) -> List[Path]:
 
 
 def _is_zip_file(path: Path) -> bool:
+    """Return True when a path looks like a zip archive.
+
+    Args:
+        path: Filesystem path to inspect.
+
+    Returns:
+        True if the file has a zip signature.
+    """
     try:
         with path.open("rb") as handle:
             sig = handle.read(4)
     except OSError:
         return False
     return sig in {b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"}
-
-
-def _split_nifti_name(path: Path) -> Tuple[str, str]:
-    name = path.name
-    if name.endswith(".nii.gz"):
-        return name[:-7], ".nii.gz"
-    if name.endswith(".nii"):
-        return name[:-4], ".nii"
-    return name, ".nii.gz"
 
 
 def _resolve_output_paths(
@@ -401,6 +435,19 @@ def _resolve_output_paths(
     slicepack_suffix: str,
     slicepack_suffixes: Optional[List[str]],
 ) -> Optional[List[Path]]:
+    """Resolve output file paths based on CLI inputs.
+
+    Args:
+        output: Output path from CLI.
+        base_name: Base filename without extension.
+        count: Number of slice packs to write.
+        compress: Whether to use .nii.gz.
+        slicepack_suffix: Default suffix template for slice packs.
+        slicepack_suffixes: Optional explicit suffix list.
+
+    Returns:
+        List of output paths or None when invalid.
+    """
     if output is None:
         base_dir = Path.cwd()
         base = base_name
@@ -429,7 +476,13 @@ def _resolve_output_paths(
             )
         if out_path.suffix in {".nii", ".gz"} or out_path.name.endswith(".nii.gz"):
             base_dir = out_path.parent
-            base, ext = _split_nifti_name(out_path)
+            name = out_path.name
+            if name.endswith(".nii.gz"):
+                base, ext = name[:-7], ".nii.gz"
+            elif name.endswith(".nii"):
+                base, ext = name[:-4], ".nii"
+            else:
+                base, ext = name, ".nii.gz"
             return _expand_output_paths(
                 base_dir,
                 base,
@@ -460,6 +513,19 @@ def _expand_output_paths(
     slicepack_suffix: str,
     slicepack_suffixes: Optional[List[str]],
 ) -> List[Path]:
+    """Expand output filenames for slice packs.
+
+    Args:
+        base_dir: Output directory.
+        base: Base filename.
+        ext: File extension.
+        count: Number of slice packs to write.
+        slicepack_suffix: Default suffix template for slice packs.
+        slicepack_suffixes: Optional explicit suffix list.
+
+    Returns:
+        List of output paths.
+    """
     base_dir.mkdir(parents=True, exist_ok=True)
     if count <= 1:
         return [base_dir / f"{base}{ext}"]
@@ -475,6 +541,14 @@ def _expand_output_paths(
 
 
 def _env_flag(name: str) -> bool:
+    """Return True when an env var is set to a truthy value.
+
+    Args:
+        name: Environment variable name.
+
+    Returns:
+        True if the env var is truthy.
+    """
     value = os.environ.get(name)
     if value is None:
         return False
@@ -482,6 +556,20 @@ def _env_flag(name: str) -> bool:
 
 
 def _coerce_choice(name: str, value: Optional[str], choices: Tuple[str, ...], *, default=None):
+    """Validate a value against allowed choices.
+
+    Args:
+        name: Label used for error reporting.
+        value: Input value to validate.
+        choices: Allowed string values.
+        default: Default when value is None.
+
+    Returns:
+        The validated value or default.
+
+    Raises:
+        ValueError: If value is not in choices.
+    """
     if value is None:
         return default
     value = value.strip()
@@ -492,6 +580,14 @@ def _coerce_choice(name: str, value: Optional[str], choices: Tuple[str, ...], *,
 
 
 def _to_json_safe(value: Any) -> Any:
+    """Convert values to JSON-serializable types.
+
+    Args:
+        value: Input value to normalize.
+
+    Returns:
+        JSON-serializable value.
+    """
     if isinstance(value, Mapping):
         return {str(k): _to_json_safe(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
@@ -502,6 +598,12 @@ def _to_json_safe(value: Any) -> Any:
 
 
 def _write_sidecar(path: Path, meta: Any) -> None:
+    """Write sidecar JSON metadata next to a NIfTI path.
+
+    Args:
+        path: NIfTI file path.
+        meta: Metadata to serialize.
+    """
     sidecar = path.with_suffix(".json")
     if path.name.endswith(".nii.gz"):
         sidecar = path.with_name(path.name[:-7] + ".json")
@@ -516,6 +618,13 @@ def _add_convert_args(
     output_help: str,
     include_scan_reco: bool = True,
 ) -> None:
+    """Register convert-related CLI arguments on a parser.
+
+    Args:
+        parser: Target argument parser.
+        output_help: Help text for the output argument.
+        include_scan_reco: Whether to add scan/reco options.
+    """
     if include_scan_reco:
         parser.add_argument(
             "-s",
@@ -529,6 +638,28 @@ def _add_convert_args(
             type=int,
             help="Reco id to convert (default: 1).",
         )
+        parser.add_argument(
+            "--flip-x",
+            action="store_true",
+            help="Flip x-axis in NIfTI header.",
+        )
+        parser.add_argument(
+            "--xyz-units",
+            choices=list(get_args(XYZUNIT)),
+            default="mm",
+            help="Spatial units for NIfTI header (default: mm).",
+        )
+        parser.add_argument(
+            "--t-units",
+            choices=list(get_args(TUNIT)),
+            default="sec",
+            help="Temporal units for NIfTI header (default: sec).",
+        )
+        parser.add_argument(
+            "--header",
+            help="Path to a YAML file containing NIfTI header overrides.",
+        )
+
     parser.add_argument(
         "-o",
         "--output",
@@ -549,36 +680,19 @@ def _add_convert_args(
         help="Context map YAML for metadata and output mapping.",
     )
     parser.add_argument(
-        "--unwrap-pose",
-        action="store_true",
-        help="Use scanner-view affines.",
+        "--space",
+        choices=list(get_args(AffineSpace)),
+        help="Affine space for conversion (default: subject_ras).",
     )
     parser.add_argument(
         "--override-subject-type",
         choices=list(get_args(SubjectType)),
-        help="Override subject type for subject-view affines.",
+        help="Override subject type for subject-view affines (space=subject_ras).",
     )
     parser.add_argument(
         "--override-subject-pose",
         choices=list(get_args(SubjectPose)),
-        help="Override subject pose for subject-view affines.",
-    )
-    parser.add_argument(
-        "--flip-x",
-        action="store_true",
-        help="Flip x-axis in NIfTI header.",
-    )
-    parser.add_argument(
-        "--xyz-units",
-        choices=list(get_args(XYZUNIT)),
-        default="mm",
-        help="Spatial units for NIfTI header (default: mm).",
-    )
-    parser.add_argument(
-        "--t-units",
-        choices=list(get_args(TUNIT)),
-        default="sec",
-        help="Temporal units for NIfTI header (default: sec).",
+        help="Override subject pose for subject-view affines (space=subject_ras).",
     )
     parser.add_argument(
         "--format",
@@ -591,13 +705,14 @@ def _add_convert_args(
         action="store_false",
         help="Write .nii instead of .nii.gz (default: compressed).",
     )
-    parser.add_argument(
-        "--header",
-        help="Path to a YAML file containing NIfTI header overrides.",
-    )
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
+    """Register convert subcommands on the main CLI parser.
+
+    Args:
+        subparsers: Subparser collection from argparse.
+    """
     convert_parser = subparsers.add_parser(
         "convert",
         help="Convert a scan/reco to NIfTI.",
@@ -617,7 +732,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     batch_parser.add_argument("path", help="Root folder containing datasets.")
     _add_convert_args(
         batch_parser,
-        output_help="Output directory (required for batch).",
+        output_help="Output directory.",
         include_scan_reco=False,
     )
     batch_parser.set_defaults(func=cmd_convert_batch, parser=batch_parser)

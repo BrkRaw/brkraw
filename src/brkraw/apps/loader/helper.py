@@ -20,7 +20,7 @@ from ...core.parameters import Parameters
 from ...specs.remapper import load_spec, map_parameters, load_context_map, apply_context_map
 from ...specs.rules import load_rules, select_rule_use
 from ...dataclasses import Reco, Scan, Study
-from .types import StudyLoader, ScanLoader
+from .types import ScanLoader
 from ...specs import converter as converter_core
 from ...resolver import affine as affine_resolver
 from ...resolver import image as image_resolver
@@ -30,7 +30,7 @@ from ...resolver.helpers import get_file
 
 if TYPE_CHECKING:
     from ...resolver.nifti import Nifti1HeaderContents
-    from .types import SubjectType, SubjectPose, XYZUNIT, TUNIT
+    from .types import SubjectType, SubjectPose, XYZUNIT, TUNIT, AffineReturn, AffineSpace
 
 logger = logging.getLogger("brkraw")
 
@@ -107,9 +107,9 @@ def resolve_data_and_affine(
             )
             continue
         image_info = image_resolver.resolve(scan, rid)
-        # force unwrap pose to scanner's view
+        # store subject-view affines (scanner unwrap happens in get_affine)
         affine_info = affine_resolver.resolve(
-            scan, rid, decimals=affine_decimals, unwrap_pose=True
+            scan, rid, decimals=affine_decimals, unwrap_pose=False,
         )
 
         if hasattr(scan, "image_info"):
@@ -261,6 +261,23 @@ def search_parameters(
     return None
 
 
+def _finalize_affines(
+    affines: list[np.ndarray],
+    num_slice_packs: int,
+    decimals: Optional[int],
+) -> AffineReturn:
+    if num_slice_packs == 1:
+        affine = affines[0]
+        if decimals is not None:
+            affine = np.round(affine, decimals=decimals)
+        return affine
+
+    if decimals is not None:
+        return tuple(np.round(a, decimals=decimals) for a in affines)
+
+    return tuple(affines)
+
+
 def get_dataobj(
     self: Union["Scan", "ScanLoader"], reco_id: Optional[int] = None
 ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
@@ -304,84 +321,92 @@ def get_affine(
     self: Union["Scan", "ScanLoader"],
     reco_id: Optional[int] = None,
     *,
-    unwrap_pose: bool = False,
-    override_subject_type: Optional[SubjectType] = None,
-    override_subject_pose: Optional[SubjectPose] = None,
+    space: AffineSpace = "subject_ras",
+    override_subject_type: Optional["SubjectType"] = None,
+    override_subject_pose: Optional["SubjectPose"] = None,
     decimals: Optional[int] = None,
-) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
-    """Return affine(s) for a reco, optionally in scanner view.
+) -> AffineReturn:
+    """
+    Return affine(s) for a reco in the requested coordinate space.
 
-    When unwrap_pose=False (default), return subject-view affines aligned to
-    RAS (subject space). When unwrap_pose=True, return scanner-view affines.
-    Subject pose/type overrides apply only in subject view and are rejected
-    when unwrap_pose=True.
+    Spaces:
+      - "raw": Return the affine(s) as stored (no transforms applied).
+      - "scanner": Return affine(s) in scanner XYZ (unwrapped).
+      - "subject_ras": Return affine(s) in subject-view RAS (wrap to subject pose/type).
+
+    Overrides:
+      - override_subject_type and override_subject_pose are only valid when space="subject_ras".
+        Overrides are applied during wrapping to subject RAS.
 
     Args:
         self: Scan or ScanLoader instance.
-    reco_id: Reco identifier to read (defaults to the first available).
-        unwrap_pose: If True, return scanner-view affines. If False, return
-            subject-view affines aligned to RAS (default: False).
-        override_subject_type: Subject type override used for subject-view
-            pose wrapping. Ignored when unwrap_pose=True.
-        override_subject_pose: Subject pose override used for subject-view
-            pose wrapping. Ignored when unwrap_pose=True.
+        reco_id: Reco identifier to read (defaults to the first available).
+        space: Output space: "raw", "scanner", or "subject_ras" (default: "subject_ras").
+        override_subject_type: Optional subject type override (only for "subject_ras").
+        override_subject_pose: Optional subject pose override (only for "subject_ras").
         decimals: Optional decimal rounding applied to returned affines.
 
     Returns:
-        Single affine matrix when one slice pack exists; otherwise a tuple of
-        affines. Returns None when affine info is unavailable.
+        Single affine matrix when one slice pack exists; otherwise a tuple of affines.
+        Returns None when affine info is unavailable.
 
     Raises:
-        ValueError: If override_subject_type/override_subject_pose is provided
-            when unwrap_pose=True.
+        ValueError: If overrides are provided when space is not "subject_ras".
     """
     if not hasattr(self, "affine_info"):
         return None
 
-    self = cast(ScanLoader, self)
+    self = cast("ScanLoader", self)
     resolved_reco_id = _resolve_reco_id(self, reco_id)
     if resolved_reco_id is None:
         return None
+
     affine_info = self.affine_info.get(resolved_reco_id)
     if affine_info is None:
         return None
+
     num_slice_packs = affine_info["num_slice_packs"]
-    affines = affine_info["affines"]
+    affines = list(affine_info["affines"])  # make a copy-like list
 
-    if not unwrap_pose:
-        visu_pars = get_file(self.avail[resolved_reco_id], "visu_pars")
-        subj_type, subj_pose = affine_resolver.get_subject_type_and_position(visu_pars)
-        override_subject_type = override_subject_type or subj_type
-        override_subject_pose = override_subject_pose or subj_pose
+    is_override = (override_subject_type is not None) or (override_subject_pose is not None)
+    if is_override and space != "subject_ras":
+        raise ValueError(
+            "override_subject_type/override_subject_pose is only supported when space='subject_ras'."
+        )
 
-        affines = [
-            affine_resolver.wrap_subject_pose(
-                affine, override_subject_type, override_subject_pose
-            )
-            for affine in affines
-        ]
-    else:
-        if override_subject_pose is not None or override_subject_type is not None:
-            raise ValueError(
-                "override_subject_type/override_subject_pose cannot be used with "
-                "unwrap_pose=True. Use either subject-view overrides or scanner-view "
-                "unwrap, not both."
-            )
-    if num_slice_packs == 1:
-        affine = affines[0]
-        if decimals is not None:
-            affine = np.round(affine, decimals=decimals)
-        return affine
-    if decimals is not None:
-        return tuple(np.round(affine, decimals=decimals) for affine in affines)
-    return tuple(affines)
+    # "raw" does not need subject info
+    if space == "raw":
+        return _finalize_affines(affines, num_slice_packs, decimals)
+
+    # Need subject type/pose for unwrap and wrap
+    visu_pars = get_file(self.avail[resolved_reco_id], "visu_pars")
+    subj_type, subj_pose = affine_resolver.get_subject_type_and_position(visu_pars)
+
+    # Step 1: unwrap to scanner XYZ
+    affines_scanner = [
+        affine_resolver.unwrap_to_scanner_xyz(affine, subj_type, subj_pose)
+        for affine in affines
+    ]
+
+    if space == "scanner":
+        return _finalize_affines(affines_scanner, num_slice_packs, decimals)
+
+    # Step 2: wrap to subject RAS (optionally with override)
+    use_type = override_subject_type or subj_type
+    use_pose = override_subject_pose or subj_pose
+
+    affines_subject_ras = [
+        affine_resolver.wrap_to_subject_ras(affine, use_type, use_pose)
+        for affine in affines_scanner
+    ]
+    return _finalize_affines(affines_subject_ras, num_slice_packs, decimals)
 
 
 def get_nifti1image(
     self: Union["Scan", "ScanLoader"],
     reco_id: Optional[int] = None,
     *,
-    unwrap_pose: bool = False,
+    space: AffineSpace = "subject_ras",
     override_header: Optional[Nifti1HeaderContents] = None,
     override_subject_type: Optional[SubjectType] = None,
     override_subject_pose: Optional[SubjectPose] = None,
@@ -393,9 +418,8 @@ def get_nifti1image(
 
     Args:
         self: Scan or ScanLoader instance.
-    reco_id: Reco identifier to read (defaults to the first available).
-        unwrap_pose: If True, use scanner-view affines. If False, use
-            subject-view affines (default: False).
+        reco_id: Reco identifier to read (defaults to the first available).
+        space: Output affine space ("raw", "scanner", "subject_ras").
         override_header: Optional header values to apply.
         override_subject_type: Subject type override for subject-view wrapping.
         override_subject_pose: Subject pose override for subject-view wrapping.
@@ -420,7 +444,7 @@ def get_nifti1image(
     dataobjs = self.get_dataobj(resolved_reco_id)
     affines = self.get_affine(
         resolved_reco_id,
-        unwrap_pose=unwrap_pose,
+        space=space,
         override_subject_type=override_subject_type,
         override_subject_pose=override_subject_pose,
     )
@@ -457,7 +481,7 @@ def convert(
     reco_id: Optional[int] = None,
     *,
     format: Literal["nifti", "nifti1"] = "nifti",
-    unwrap_pose: bool = False,
+    space: AffineSpace = "subject_ras",
     override_header: Optional[Nifti1HeaderContents] = None,
     override_subject_type: Optional[SubjectType] = None,
     override_subject_pose: Optional[SubjectPose] = None,
@@ -471,7 +495,7 @@ def convert(
     return get_nifti1image(
         self,
         reco_id,
-        unwrap_pose=unwrap_pose,
+        space=space,
         override_header=override_header,
         override_subject_type=override_subject_type,
         override_subject_pose=override_subject_pose,

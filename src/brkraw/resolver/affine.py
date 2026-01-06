@@ -177,7 +177,7 @@ def flip_voxel_axis_affine(
     return out
 
 
-def unwrap_subject_pose(
+def unwrap_to_scanner_xyz(
         affine: np.ndarray,
         subject_type: Optional[SubjectType], 
         subject_pose: SubjectPose) -> np.ndarray:
@@ -196,19 +196,6 @@ def unwrap_subject_pose(
 
     Returns:
         Affine reoriented to scanner L-R, bottom-to-top, front-to-back.
-
-    Notes:
-        - If the subject entered feet-first (``"Foot"``), the affine is rotated
-          about Y by ``pi`` to align device back (head/foot).
-        - For "Biped", Paravision stores LPS+ while scanner coordinate
-          orientation is subject LAS+ (based on subject orientation). The
-          affine is flipped in Y to unwrap to scanner LAS+, then rotated by
-          gravity:
-          ``Prone`` (Z +pi), ``Left`` (Z -pi/2), ``Right`` (Z +pi/2).
-        - For "Quadruped", Paravision stores LIA+ while scanner coordinates are
-          RSA+ (based on subject orientation). The affine is rotated by Z +pi
-          to unwrap to scanner RSA+, then rotated by gravity:
-          ``Supine`` (Z +pi), ``Left`` (Z +pi/2), ``Right`` (Z -pi/2).
     """
     _affine = np.asarray(affine)
     head_or_foot, gravity = subject_pose.split('_', 1)
@@ -242,7 +229,7 @@ def unwrap_subject_pose(
     
     return _affine
 
-def wrap_subject_pose(affine: np.ndarray, 
+def wrap_to_subject_ras(affine: np.ndarray, 
                       subject_type: Optional[SubjectType], 
                       subject_pose: SubjectPose) -> np.ndarray:
     """Reorient an affine from scanner space back to a subject pose.
@@ -258,19 +245,7 @@ def wrap_subject_pose(affine: np.ndarray,
             gravity orientation.
 
     Returns:
-        Affine reoriented to subject L-R, P-A (or V-D), I-S (or Cd-Ro).
-
-    Notes:
-        - If the subject entered feet-first (``"Foot"``), the affine is rotated
-          about Y by ``pi`` to align device back (head/foot).
-        - For "Biped", starting from scanner LAS+ (after unwrap), the affine is
-          flipped in Z to LAI+ (subject/dicom), then rotated by Y +pi to RAS+,
-          then rotated by gravity:
-          ``Prone`` (Z +pi), ``Left`` (Z +pi/2), ``Right`` (Z -pi/2).
-        - For "Quadruped", starting from scanner RSA+ (after unwrap), the affine
-          is flipped in Z to RSP+, then rotated by X +pi/2 to RAS+, then rotated
-          by gravity:
-          ``Supine`` (Z +pi), ``Left`` (Z -pi/2), ``Right`` (Z +pi/2).
+        Affine reoriented to subject RAS+.
     """
     _affine = np.asarray(affine)
     head_or_foot, gravity = subject_pose.split('_', 1)
@@ -498,7 +473,7 @@ def resolve(
         if spack_slice_orient == 'coronal':
             affine = flip_voxel_axis_affine(affine[:], axis=2, shape=shape)
         if unwrap_pose:
-            affine = unwrap_subject_pose(affine[:], subj_type, subj_position)
+            affine = unwrap_to_scanner_xyz(affine[:], subj_type, subj_position)
         affines.append(np.round(affine, decimals=decimals))
 
     if shape is not None and num_slice_packs == 1 and num_slices[0] == 1 and shape[2] != num_slices[0]:

@@ -16,6 +16,7 @@ else:
 from ...dataclasses.study import Study
 from ...dataclasses.scan import Scan
 from ...dataclasses.reco import Reco
+import numpy as np
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,10 +25,12 @@ if TYPE_CHECKING:
     from ...resolver.affine import ResolvedAffine, SubjectType, SubjectPose
     from ...resolver.nifti import Nifti1HeaderContents, XYZUNIT, TUNIT
     from nibabel.nifti1 import Nifti1Image
-    import numpy as np
+    
 
 
 InfoScope = Literal['full', 'study', 'scan']
+AffineReturn = Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]]
+AffineSpace = Literal["raw", "scanner", "subject_ras"]
 
 P = ParamSpec("P")
 
@@ -51,7 +54,7 @@ class GetAffineType(Protocol):
         scan: "Scan",
         reco_id: Optional[int],
         *,
-        unwrap_pose: bool,
+        space: AffineSpace,
         override_subject_type: Optional[SubjectType],
         override_subject_pose: Optional[SubjectPose],
         decimals: Optional[int] = None,
@@ -68,7 +71,7 @@ class GetNifti1ImageType(Protocol):
         reco_id: Optional[int] = None,
         *,
         override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
-        unwrap_pose: bool,
+        space: AffineSpace,
         override_subject_type: Optional[SubjectType],
         override_subject_pose: Optional[SubjectPose],
         flip_x: bool,
@@ -86,9 +89,9 @@ class ConvertType(Protocol):
         scan: "Scan",
         reco_id: Optional[int] = None,
         *,
-        format: Literal["nifti", "nifti1"],
+        format: Union[Literal["nifti", "nifti1"], str],
         override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
-        unwrap_pose: bool,
+        space: AffineSpace,
         override_subject_type: Optional[SubjectType],
         override_subject_pose: Optional[SubjectPose],
         flip_x: bool,
@@ -141,7 +144,7 @@ class ScanLoader(Scan, BaseLoader):
             self, 
             reco_id: Optional[int] = None,
             *,
-            unwrap_pose: bool,
+            space: AffineSpace = "subject_ras",
             override_subject_type: Optional[SubjectType],
             override_subject_pose: Optional[SubjectPose],
             decimals: Optional[int] = None
@@ -153,7 +156,7 @@ class ScanLoader(Scan, BaseLoader):
             reco_id: Optional[int] = None, 
             *, 
             override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
-            unwrap_pose: bool,
+            space: AffineSpace = "subject_ras",
             override_subject_type: Optional[SubjectType],
             override_subject_pose: Optional[SubjectPose],
             flip_x: bool, 
@@ -168,7 +171,7 @@ class ScanLoader(Scan, BaseLoader):
             *,
             format: Literal["nifti", "nifti1"],
             override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
-            unwrap_pose: bool,
+            space: AffineSpace = "subject_ras",
             override_subject_type: Optional[SubjectType],
             override_subject_pose: Optional[SubjectPose],
             flip_x: bool,

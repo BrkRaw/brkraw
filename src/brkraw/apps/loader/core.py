@@ -22,29 +22,29 @@ from ...core.config import resolve_root
 from ...specs import converter as converter_core
 from ...specs.pruner import prune_dataset_to_zip
 from ...specs.rules import load_rules, select_rule_use
-from ...dataclasses import Reco, Scan, Study
+from ...dataclasses import Scan, Study
 from .types import StudyLoader, ScanLoader, RecoLoader
 from .formatter import format_info_tables
 
 logger = logging.getLogger("brkraw")
 from . import info as info_resolver
 from .helper import (
+    make_dir,
+    convert as _convert,
     get_affine as _get_affine,
     get_dataobj as _get_dataobj,
     get_metadata as _get_metadata,
     get_nifti1image as _get_nifti1image,
-    convert as _convert,
-    resolve_data_and_affine as _resolve_data_and_affine,
     search_parameters as _search_parameters,
-    make_dir,
     apply_converter_hook as _apply_converter_hook,
+    resolve_data_and_affine as _resolve_data_and_affine,
 )
 
 if TYPE_CHECKING:
     import numpy as np
     from pathlib import Path
     from ...resolver.nifti import Nifti1HeaderContents
-    from .types import XYZUNIT, TUNIT, SubjectType, SubjectPose, InfoScope
+    from .types import XYZUNIT, TUNIT, SubjectType, SubjectPose, InfoScope, AffineSpace
     
 
 
@@ -53,8 +53,7 @@ class BrukerLoader:
 
     def __init__(self, 
                  path: Union[str, Path], 
-                 affine_decimals: Optional[int] = None, 
-                 unwrap_pose: bool = False):
+                 affine_decimals: Optional[int] = None):
         """
         Create a loader for a Bruker study rooted at `path`.
 
@@ -65,13 +64,11 @@ class BrukerLoader:
         Args:
             path: Path to the study root.
             affine_decimals: Decimal rounding applied to resolved affines.
-            unwrap_pose: If True, resolve affines in scanner view.
         """
         self._study: Union["Study", "StudyLoader"] = Study.from_path(path)
         if affine_decimals is None:
             affine_decimals = config_core.float_decimals(root=resolve_root(None))
         self._affine_decimals = affine_decimals
-        self._unwrap_pose : bool = unwrap_pose
         self._sw_version: Optional[str] = self._parse_sw_version()
         self._attach_helpers()
 
@@ -318,7 +315,7 @@ class BrukerLoader:
                    scan_id: int, 
                    reco_id: Optional[int] = None,
                    *,
-                   unwrap_pose: bool = False,
+                   space: AffineSpace = 'subject_ras',
                    override_subject_type: Optional[SubjectType] = None,
                    override_subject_pose: Optional[SubjectPose] = None,
                    decimals: Optional[int] = None
@@ -328,7 +325,7 @@ class BrukerLoader:
         Args:
             scan_id: Scan identifier.
             reco_id: Reco identifier (defaults to the first available).
-            unwrap_pose: If True, return scanner-view affines.
+            space: Output affine space ("raw", "scanner", "subject_ras").
             override_subject_type: Subject type override for subject view.
             override_subject_pose: Subject pose override for subject view.
             decimals: Optional decimal rounding applied to returned affines.
@@ -339,14 +336,14 @@ class BrukerLoader:
         scan = self.get_scan(scan_id)
         decimals = decimals or self._affine_decimals
         return scan.get_affine(reco_id, 
-                               unwrap_pose=unwrap_pose, 
+                               space=space, 
                                override_subject_pose=override_subject_pose, 
                                override_subject_type=override_subject_type,
                                decimals=decimals)
     
     def get_nifti1image(self, scan_id: int, reco_id: Optional[int] = None,
                         *, 
-                        unwrap_pose: bool = False, 
+                        space: AffineSpace = 'subject_ras',
                         override_header: Optional[Nifti1HeaderContents] = None,
                         override_subject_type: Optional[SubjectType] = None,
                         override_subject_pose: Optional[SubjectPose] = None,
@@ -358,7 +355,7 @@ class BrukerLoader:
         Args:
             scan_id: Scan identifier.
             reco_id: Reco identifier (defaults to the first available).
-            unwrap_pose: If True, use scanner-view affines.
+            space: Output affine space ("raw", "scanner", "subject_ras").
             override_header: Optional header values to apply.
             override_subject_type: Subject type override for subject view.
             override_subject_pose: Subject pose override for subject view.
@@ -373,7 +370,7 @@ class BrukerLoader:
         return scan.convert(
             reco_id,
             format="nifti",
-            unwrap_pose=unwrap_pose,
+            space=space,
             override_header=override_header,
             override_subject_type=override_subject_type,
             override_subject_pose=override_subject_pose,
@@ -388,7 +385,7 @@ class BrukerLoader:
         reco_id: Optional[int] = None,
         *,
         format: Literal["nifti", "nifti1"] = "nifti",
-        unwrap_pose: bool = False,
+        space: AffineSpace = 'subject_ras',
         override_header: Optional[Nifti1HeaderContents] = None,
         override_subject_type: Optional[SubjectType] = None,
         override_subject_pose: Optional[SubjectPose] = None,
@@ -401,7 +398,7 @@ class BrukerLoader:
         return scan.convert(
             reco_id,
             format=format,
-            unwrap_pose=unwrap_pose,
+            space=space,
             override_header=override_header,
             override_subject_type=override_subject_type,
             override_subject_pose=override_subject_pose,
@@ -472,7 +469,7 @@ class BrukerLoader:
             add_root=add_root,
             root_name=root_name,
         )
-        return BrukerLoader(out_path, affine_decimals=self._affine_decimals, unwrap_pose=self._unwrap_pose)
+        return BrukerLoader(out_path, affine_decimals=self._affine_decimals)
 
     @property
     def avail(self) -> Mapping[int, Union["Scan", "ScanLoader"]]:
