@@ -33,6 +33,8 @@ update_params:
     VisuStudyUid: "<1.2.3.4.5>"
     VisuSeriesUid: "<1.2.3.4.5.1>"
     VisuFrameUid: "<1.2.3.4.5.2>"
+    VisuSystemOrderNumber: "<>"
+    VisuInstitution: "<>"
 
   reco:
     RECO_base_image_uid: "<1.2.3.4.5.6>"
