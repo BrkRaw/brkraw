@@ -28,7 +28,6 @@ brkraw init
 Common flags:
 
 - `--root` to override the config root.
-- `--no-config` to skip creating `config.yaml`.
 - `--install-default` to install default rules/specs.
 - `--shell-rc` to append shell helpers.
 - `--yes` to skip prompts.
@@ -78,3 +77,8 @@ nii.to_filename("scan3.nii.gz")
 ```
 
 For API mappings to CLI commands, see `docs/api/cli-workflows.md`.
+
+## Tutorials
+
+See https://github.com/BrkRaw/brkraw-tutorial.git for Jupyter Notebook and
+Binder examples covering basic CLI and API workflows.
