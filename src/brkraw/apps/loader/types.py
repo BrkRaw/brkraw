@@ -54,6 +54,7 @@ class GetAffineType(Protocol):
         unwrap_pose: bool,
         override_subject_type: Optional[SubjectType],
         override_subject_pose: Optional[SubjectPose],
+        decimals: Optional[int] = None,
         **kwargs: Any
     ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
         ...
@@ -142,7 +143,8 @@ class ScanLoader(Scan, BaseLoader):
             *,
             unwrap_pose: bool,
             override_subject_type: Optional[SubjectType],
-            override_subject_pose: Optional[SubjectPose]
+            override_subject_pose: Optional[SubjectPose],
+            decimals: Optional[int] = None
             ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
         ...
 

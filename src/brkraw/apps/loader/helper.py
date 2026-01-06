@@ -6,6 +6,7 @@ Last updated: 2025-12-30
 from __future__ import annotations
 
 from types import MethodType
+from functools import partial
 from typing import TYPE_CHECKING, Optional, Tuple, Union, Any, Mapping, cast, List, Dict, Literal
 from pathlib import Path
 from warnings import warn
@@ -306,6 +307,7 @@ def get_affine(
     unwrap_pose: bool = False,
     override_subject_type: Optional[SubjectType] = None,
     override_subject_pose: Optional[SubjectPose] = None,
+    decimals: Optional[int] = None,
 ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
     """Return affine(s) for a reco, optionally in scanner view.
 
@@ -323,6 +325,7 @@ def get_affine(
             pose wrapping. Ignored when unwrap_pose=True.
         override_subject_pose: Subject pose override used for subject-view
             pose wrapping. Ignored when unwrap_pose=True.
+        decimals: Optional decimal rounding applied to returned affines.
 
     Returns:
         Single affine matrix when one slice pack exists; otherwise a tuple of
@@ -365,7 +368,12 @@ def get_affine(
                 "unwrap, not both."
             )
     if num_slice_packs == 1:
-        return affines[0]
+        affine = affines[0]
+        if decimals is not None:
+            affine = np.round(affine, decimals=decimals)
+        return affine
+    if decimals is not None:
+        return tuple(np.round(affine, decimals=decimals) for affine in affines)
     return tuple(affines)
 
 
@@ -574,6 +582,8 @@ def get_metadata(
 def apply_converter_hook(
     scan: "ScanLoader",
     converter_hook: Mapping[str, Any],
+    *,
+    affine_decimals: Optional[int] = None,
 ) -> None:
     """Override scan conversion helpers using a converter hook."""
     converter_core.validate_hook(converter_hook)
@@ -582,6 +592,9 @@ def apply_converter_hook(
     if "get_dataobj" in plugin:
         scan.get_dataobj = MethodType(plugin["get_dataobj"], scan)
     if "get_affine" in plugin:
-        scan.get_affine = MethodType(plugin["get_affine"], scan)
+        get_affine = plugin["get_affine"]
+        if affine_decimals is not None:
+            get_affine = partial(get_affine, decimals=affine_decimals)
+        scan.get_affine = MethodType(get_affine, scan)
     if "convert" in plugin:
         scan.convert = MethodType(plugin["convert"], scan)

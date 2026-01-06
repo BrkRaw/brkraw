@@ -13,6 +13,7 @@ from types import MethodType
 import re
 import logging
 import sys
+from functools import partial
 from typing import TYPE_CHECKING, Optional, Tuple, Union, Any, Mapping, Callable, cast, List, Dict, Iterable, Literal
 from pathlib import Path
 
@@ -157,7 +158,10 @@ class BrukerLoader:
 
             # bind helper functions as methods on the scan instance
             scan.get_dataobj = MethodType(_get_dataobj, scan)
-            scan.get_affine = MethodType(_get_affine, scan)
+            scan.get_affine = MethodType(
+                partial(_get_affine, decimals=self._affine_decimals),
+                scan,
+            )
             scan.get_nifti1image = MethodType(_get_nifti1image, scan)
             scan.convert = MethodType(_convert, scan)
             scan._converter_hook = None
@@ -182,7 +186,11 @@ class BrukerLoader:
                         )
                         entry = None
                     if entry:
-                        _apply_converter_hook(scan, entry)
+                        _apply_converter_hook(
+                            scan,
+                            entry,
+                            affine_decimals=self._affine_decimals,
+                        )
             scan.get_metadata = MethodType(_get_metadata, scan)
             scan.search_params = MethodType(_search_parameters, scan)
             for reco in scan.avail.values():
@@ -222,7 +230,11 @@ class BrukerLoader:
         """
         scan = self.avail[scan_id]
         scan = cast(ScanLoader, scan)
-        _apply_converter_hook(scan, converter_hook)
+        _apply_converter_hook(
+            scan,
+            converter_hook,
+            affine_decimals=self._affine_decimals,
+        )
 
     def restore_converter(self, scan_id: int) -> None:
         """Restore default conversion methods for a scan.
@@ -233,7 +245,10 @@ class BrukerLoader:
         scan = self.avail[scan_id]
         scan = cast(ScanLoader, scan)
         scan.get_dataobj = MethodType(_get_dataobj, scan)
-        scan.get_affine = MethodType(_get_affine, scan)
+        scan.get_affine = MethodType(
+            partial(_get_affine, decimals=self._affine_decimals),
+            scan,
+        )
         scan.get_nifti1image = MethodType(_get_nifti1image, scan)
         scan.convert = MethodType(_convert, scan)
         scan._converter_hook = None
@@ -294,7 +309,8 @@ class BrukerLoader:
                    *,
                    unwrap_pose: bool = False,
                    override_subject_type: Optional[SubjectType] = None,
-                   override_subject_pose: Optional[SubjectPose] = None
+                   override_subject_pose: Optional[SubjectPose] = None,
+                   decimals: Optional[int] = None
                    ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
         """Return affine(s) for a scan/reco via attached helper.
 
@@ -304,15 +320,18 @@ class BrukerLoader:
             unwrap_pose: If True, return scanner-view affines.
             override_subject_type: Subject type override for subject view.
             override_subject_pose: Subject pose override for subject view.
+            decimals: Optional decimal rounding applied to returned affines.
 
         Returns:
             Single affine matrix when one slice pack exists; otherwise a tuple.
         """
         scan = self.get_scan(scan_id)
+        decimals = decimals or self._affine_decimals
         return scan.get_affine(reco_id, 
                                unwrap_pose=unwrap_pose, 
                                override_subject_pose=override_subject_pose, 
-                               override_subject_type=override_subject_type)
+                               override_subject_type=override_subject_type,
+                               decimals=decimals)
     
     def get_nifti1image(self, scan_id: int, reco_id: Optional[int] = None,
                         *, 
