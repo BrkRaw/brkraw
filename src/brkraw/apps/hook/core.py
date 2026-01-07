@@ -389,7 +389,7 @@ def _find_manifest(dist: importlib.metadata.Distribution) -> Optional[Path]:
     for name in MANIFEST_NAMES:
         for entry in files:
             if entry.name == name:
-                return Path(dist.locate_file(entry))
+                return Path(str(dist.locate_file(entry)))
     top_level = _dist_top_level(dist)
     for package in top_level:
         for name in MANIFEST_NAMES:
@@ -398,7 +398,7 @@ def _find_manifest(dist: importlib.metadata.Distribution) -> Optional[Path]:
             except Exception:
                 continue
             if candidate.is_file():
-                return Path(candidate)
+                return Path(str(candidate))
     return None
 
 
