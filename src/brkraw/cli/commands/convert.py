@@ -638,27 +638,27 @@ def _add_convert_args(
             type=int,
             help="Reco id to convert (default: 1).",
         )
-        parser.add_argument(
-            "--flip-x",
-            action="store_true",
-            help="Flip x-axis in NIfTI header.",
-        )
-        parser.add_argument(
-            "--xyz-units",
-            choices=list(get_args(XYZUNIT)),
-            default="mm",
-            help="Spatial units for NIfTI header (default: mm).",
-        )
-        parser.add_argument(
-            "--t-units",
-            choices=list(get_args(TUNIT)),
-            default="sec",
-            help="Temporal units for NIfTI header (default: sec).",
-        )
-        parser.add_argument(
-            "--header",
-            help="Path to a YAML file containing NIfTI header overrides.",
-        )
+    parser.add_argument(
+        "--flip-x",
+        action="store_true",
+        help="Flip x-axis in NIfTI header.",
+    )
+    parser.add_argument(
+        "--xyz-units",
+        choices=list(get_args(XYZUNIT)),
+        default="mm",
+        help="Spatial units for NIfTI header (default: mm).",
+    )
+    parser.add_argument(
+        "--t-units",
+        choices=list(get_args(TUNIT)),
+        default="sec",
+        help="Temporal units for NIfTI header (default: sec).",
+    )
+    parser.add_argument(
+        "--header",
+        help="Path to a YAML file containing NIfTI header overrides.",
+    )
 
     parser.add_argument(
         "-o",
