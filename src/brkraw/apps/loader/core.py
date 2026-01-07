@@ -162,6 +162,7 @@ class BrukerLoader:
             scan.get_nifti1image = MethodType(_get_nifti1image, scan)
             scan.convert = MethodType(_convert, scan)
             scan._converter_hook = None
+            scan._converter_hook_name = None
             if rules:
                 try:
                     hook_name = select_rule_use(
@@ -190,6 +191,7 @@ class BrukerLoader:
                         entry = None
                     if entry:
                         logger.debug("Applying converter hook: %s", hook_name)
+                        scan._converter_hook_name = hook_name
                         _apply_converter_hook(
                             scan,
                             entry,
@@ -392,6 +394,7 @@ class BrukerLoader:
         flip_x: bool = False,
         xyz_units: XYZUNIT = "mm",
         t_units: TUNIT = "sec",
+        hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
     ):
         """Convert a scan/reco to the requested output format."""
         scan = self.get_scan(scan_id)
@@ -405,6 +408,7 @@ class BrukerLoader:
             flip_x=flip_x,
             xyz_units=xyz_units,
             t_units=t_units,
+            hook_args_by_name=hook_args_by_name,
         )
 
     def get_metadata(

@@ -647,13 +647,14 @@ def _apply_map_rules(
     context: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     ids = _get_source_ids(source, context=context)
+    base = dict(result)
     for out_key, raw_rule in map_data.items():
         rules = _normalize_map_rules(raw_rule)
         if not rules:
             continue
-        found, current = _get_output_value(result, out_key)
+        found, current = _get_output_value(base, out_key)
         for rule in rules:
-            if "when" in rule and not _matches_when(rule["when"], result, ids):
+            if "when" in rule and not _matches_when(rule["when"], base, ids):
                 continue
             new_value, has_value = _resolve_rule_value(rule, current if found else None)
             if not has_value:

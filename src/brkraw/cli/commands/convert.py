@@ -138,6 +138,12 @@ def cmd_convert(args: argparse.Namespace) -> int:
         default="nifti",
     )
 
+    try:
+        hook_args_by_name = _parse_hook_args(args.hook_arg or [])
+    except ValueError as exc:
+        logger.error("%s", exc)
+        return 2
+
     loader = load(args.path, prefix="Loading")
     try:
         override_header = nifti_resolver.load_header_overrides(args.header)
@@ -227,6 +233,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
                 flip_x=args.flip_x,
                 xyz_units=cast(XYZUNIT, args.xyz_units),
                 t_units=cast(TUNIT, args.t_units),
+                hook_args_by_name=hook_args_by_name,
             )
             if nii is None:
                 if not batch_all and args.reco_id is not None:
@@ -579,6 +586,34 @@ def _coerce_choice(name: str, value: Optional[str], choices: Tuple[str, ...], *,
     raise ValueError(f"Invalid {name}: {value}")
 
 
+def _parse_hook_args(values: List[str]) -> Dict[str, Dict[str, Any]]:
+    parsed: Dict[str, Dict[str, Any]] = {}
+    for raw in values:
+        if ":" not in raw or "=" not in raw:
+            raise ValueError("Hook args must be in HOOK:KEY=VALUE format.")
+        hook_name, rest = raw.split(":", 1)
+        key, value = rest.split("=", 1)
+        hook_name = hook_name.strip()
+        key = key.strip()
+        if not hook_name or not key:
+            raise ValueError("Hook args must include hook name and key.")
+        parsed.setdefault(hook_name, {})[key] = _coerce_scalar(value.strip())
+    return parsed
+
+
+def _coerce_scalar(value: str) -> Any:
+    if value.lower() in {"true", "false"}:
+        return value.lower() == "true"
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
+
 def _to_json_safe(value: Any) -> Any:
     """Convert values to JSON-serializable types.
 
@@ -678,6 +713,12 @@ def _add_convert_args(
         "--context-map",
         dest="context_map",
         help="Context map YAML for metadata and output mapping.",
+    )
+    parser.add_argument(
+        "--hook-arg",
+        action="append",
+        default=[],
+        help="Hook argument in HOOK:KEY=VALUE format (repeatable).",
     )
     parser.add_argument(
         "--space",

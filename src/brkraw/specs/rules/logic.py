@@ -19,7 +19,7 @@ SPEC_CATEGORIES = ("info_spec", "metadata_spec")
 def _iter_rule_files(rules_dir: Path) -> List[Path]:
     if not rules_dir.exists():
         return []
-    files = list(rules_dir.glob("*.yaml")) + list(rules_dir.glob("*.yml"))
+    files = list(rules_dir.rglob("*.yaml")) + list(rules_dir.rglob("*.yml"))
     return sorted({p.resolve() for p in files})
 
 

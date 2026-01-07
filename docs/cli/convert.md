@@ -34,6 +34,8 @@ Notes:
 
 - `--prefix` supports layout tags like `{Protocol}` or `{SliceOrient}` and
   overrides any layout template from config/context maps.
+- `--hook-arg` passes hook-specific options to converter hooks using
+  `HOOK:KEY=VALUE` format (repeatable).
 
 
 ## brkraw convert-batch

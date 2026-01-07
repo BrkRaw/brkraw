@@ -53,7 +53,7 @@ def rules_using_spec(spec_name: str, rules_dir: Path) -> Set[str]:
     used_by: Set[str] = set()
     if not rules_dir.exists():
         return used_by
-    files = list(rules_dir.glob("*.yaml")) + list(rules_dir.glob("*.yml"))
+    files = list(rules_dir.rglob("*.yaml")) + list(rules_dir.rglob("*.yml"))
     for path in files:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
@@ -74,7 +74,7 @@ def specs_including_spec(spec_name: str, specs_dir: Path) -> Set[str]:
     included_by: Set[str] = set()
     if not specs_dir.exists():
         return included_by
-    files = list(specs_dir.glob("*.yaml")) + list(specs_dir.glob("*.yml"))
+    files = list(specs_dir.rglob("*.yaml")) + list(specs_dir.rglob("*.yml"))
     for path in files:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
@@ -153,15 +153,35 @@ def collect_transforms_sources(spec_path: Path, stack: Optional[Set[Path]] = Non
         stack.remove(spec_path)
 
 
-def specs_using_transform(transform_name: str, specs_dir: Path) -> Set[str]:
+def normalize_transform_ref(
+    src: str,
+    *,
+    spec_path: Path,
+    transforms_dir: Path,
+) -> str:
+    candidate = Path(src)
+    if not candidate.is_absolute():
+        candidate = (spec_path.parent / candidate).resolve()
+    try:
+        return str(candidate.relative_to(transforms_dir))
+    except ValueError:
+        return candidate.name
+
+
+def specs_using_transform(transform_ref: str, specs_dir: Path) -> Set[str]:
     used_by: Set[str] = set()
     if not specs_dir.exists():
         return used_by
-    files = list(specs_dir.glob("*.yaml")) + list(specs_dir.glob("*.yml"))
+    files = list(specs_dir.rglob("*.yaml")) + list(specs_dir.rglob("*.yml"))
     for path in files:
         for src in collect_transforms_sources(path):
-            if Path(src).name == transform_name:
-                used_by.add(path.name)
+            normalized = normalize_transform_ref(
+                src,
+                spec_path=path,
+                transforms_dir=specs_dir.parent / "transforms",
+            )
+            if normalized == transform_ref:
+                used_by.add(str(path.relative_to(specs_dir)))
                 break
     return used_by
 
@@ -238,12 +258,13 @@ def load_spec_records(specs_dir: Path) -> List[Dict[str, Any]]:
     records: List[Dict[str, Any]] = []
     if not specs_dir.exists():
         return records
-    spec_files = list(specs_dir.glob("*.yml")) + list(specs_dir.glob("*.yaml"))
+    spec_files = list(specs_dir.rglob("*.yml")) + list(specs_dir.rglob("*.yaml"))
     for spec_path in sorted(spec_files):
+        relpath = str(spec_path.relative_to(specs_dir))
         meta = load_spec_meta(spec_path)
         records.append(
             {
-                "file": spec_path.name,
+                "file": relpath,
                 "path": spec_path,
                 "name": meta.get("name"),
                 "version": meta.get("version"),
@@ -258,12 +279,13 @@ def load_pruner_spec_records(specs_dir: Path) -> List[Dict[str, Any]]:
     records: List[Dict[str, Any]] = []
     if not specs_dir.exists():
         return records
-    spec_files = list(specs_dir.glob("*.yml")) + list(specs_dir.glob("*.yaml"))
+    spec_files = list(specs_dir.rglob("*.yml")) + list(specs_dir.rglob("*.yaml"))
     for spec_path in sorted(spec_files):
+        relpath = str(spec_path.relative_to(specs_dir))
         meta = load_spec_meta(spec_path)
         records.append(
             {
-                "file": spec_path.name,
+                "file": relpath,
                 "path": spec_path,
                 "name": meta.get("name"),
                 "version": meta.get("version"),

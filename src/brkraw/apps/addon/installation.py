@@ -25,6 +25,7 @@ from .dependencies import (
     extract_transforms_source as _extract_transforms_source,
     load_pruner_spec_records as _load_pruner_spec_records,
     load_spec_records as _load_spec_records,
+    normalize_transform_ref as _normalize_transform_ref,
     warn_dependencies as _warn_dependencies,
     resolve_spec_reference,
 )
@@ -49,6 +50,7 @@ def add_spec_data(
     filename: Optional[str] = None,
     source_path: Optional[Path] = None,
     root: Optional[Union[str, Path]] = None,
+    transforms_dir: Optional[Path] = None,
 ) -> List[Path]:
     """Install a spec from parsed data."""
     if not isinstance(spec_data, dict):
@@ -67,6 +69,7 @@ def add_spec_data(
         base_dir=source_path.parent if source_path else None,
         target_spec=target,
         root=root,
+        target_transforms_dir=transforms_dir,
     )
     installed += installed_transforms
     content = yaml.safe_dump(spec_data, sort_keys=False)
@@ -207,7 +210,12 @@ def list_installed(root: Optional[Union[str, Path]] = None) -> Dict[str, List[Di
         spec_path = record["path"]
         spec_label = record["file"]
         for src in _collect_transforms_sources(spec_path):
-            transforms_map.setdefault(Path(src).name, set()).add(spec_label)
+            normalized = _normalize_transform_ref(
+                src,
+                spec_path=spec_path,
+                transforms_dir=paths.transforms_dir,
+            )
+            transforms_map.setdefault(normalized, set()).add(spec_label)
 
     for entry in rule_entries:
         result["rules"].append(entry)
@@ -225,11 +233,12 @@ def list_installed(root: Optional[Union[str, Path]] = None) -> Dict[str, List[Di
             }
         )
 
-    for path in sorted(paths.transforms_dir.glob("*.py")):
-        mapped = transforms_map.get(path.name)
+    for path in sorted(paths.transforms_dir.rglob("*.py")):
+        relpath = str(path.relative_to(paths.transforms_dir))
+        mapped = transforms_map.get(relpath)
         result["transforms"].append(
             {
-                "file": path.name,
+                "file": relpath,
                 "spec": ", ".join(sorted(mapped)) if mapped else "<Unknown>",
                 "spec_unknown": "1" if not mapped else "0",
             }
@@ -290,7 +299,11 @@ def resolve_targets(
             raise ValueError("kind must be 'spec' or 'pruner' or 'rule' or 'transform'.")
         if not base.exists():
             continue
-        matches = [path for path in base.glob(name) if path.is_file()]
+        candidate = (base / name).resolve()
+        if candidate.exists():
+            matches = [candidate]
+        else:
+            matches = [path for path in base.rglob(name) if path.is_file()]
         for path in matches:
             targets.append((path, item))
     return targets
@@ -351,17 +364,19 @@ def install_transforms_from_spec(
     base_dir: Optional[Path],
     target_spec: Path,
     root: Optional[Union[str, Path]],
+    target_transforms_dir: Optional[Path] = None,
 ) -> Tuple[List[Path], bool]:
     """Install transforms referenced by a spec and rewrite paths."""
     sources = _extract_transforms_source(spec_data)
     if not sources:
         return [], False
     paths = config_core.paths(root=root)
+    transforms_dir = target_transforms_dir or paths.transforms_dir
     installed: List[Path] = []
     rel_paths: List[str] = []
     for src in sources:
         src_path = Path(src)
-        target = paths.transforms_dir / src_path.name
+        target = transforms_dir / src_path.name
         if base_dir is not None:
             candidate = (base_dir / src_path).resolve()
             if not candidate.exists():
@@ -425,8 +440,9 @@ def load_rule_entries(rules_dir: Path) -> List[Dict[str, str]]:
     entries: List[Dict[str, str]] = []
     if not rules_dir.exists():
         return entries
-    files = list(rules_dir.glob("*.yaml")) + list(rules_dir.glob("*.yml"))
+    files = list(rules_dir.rglob("*.yaml")) + list(rules_dir.rglob("*.yml"))
     for path in sorted(files):
+        relpath = str(path.relative_to(rules_dir))
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             continue
@@ -436,7 +452,7 @@ def load_rule_entries(rules_dir: Path) -> List[Dict[str, str]]:
                     continue
                 entries.append(
                     {
-                        "file": path.name,
+                        "file": relpath,
                         "category": key,
                         "name": str(item.get("name", "")),
                         "description": str(item.get("description", "")),

@@ -196,6 +196,9 @@ Behavior:
 - `override: true` replaces existing values; set `override: false` to only fill
   missing values when the spec/transform already produced a value (default: true).
 
+- `when` conditions are evaluated against the original spec/transform outputs,
+  not against values that have already been remapped by earlier context map rules.
+
 - `when` supports exact match, `in`, `regex`, and `not` conditions.
 
 - If no match and `default` is provided in the map rule, `default` is used.

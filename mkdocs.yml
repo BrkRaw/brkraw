@@ -45,6 +45,7 @@ nav:
       - Session helpers: cli/session.md
       - Convert command: cli/convert.md
       - Addons: cli/addon.md
+      - Hooks: cli/hook.md
       - Config: cli/config.md
       - Prune: cli/prune.md
   - API:
@@ -58,6 +59,7 @@ nav:
       - Rule Syntax: contrib/rule-syntax.md
       - Spec Syntax: contrib/spec-syntax.md
       - Addons and Plugins: contrib/addons-and-plugins.md
+      - Hook Packages: contrib/hook-packages.md
       - Core vs Addon Development: contrib/development-model.md
       - Contributors: contrib/contributors.md
   - Reference:

@@ -54,6 +54,7 @@ brkraw = "brkraw.cli:main"
 
 [project.entry-points."brkraw.cli"]
 addon = "brkraw.cli.commands.addon:register"
+hook = "brkraw.cli.commands.hook:register"
 config = "brkraw.cli.commands.config:register"
 info = "brkraw.cli.commands.info:register"
 init = "brkraw.cli.commands.init:register"
@@ -70,6 +71,9 @@ dev = [
     "pytest",
 ]
 minimal = []
+docs = [
+    "rich",
+]
 
 [tool.hatch.version]
 path = "src/brkraw/__init__.py"

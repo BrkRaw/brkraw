@@ -279,7 +279,9 @@ def _finalize_affines(
 
 
 def get_dataobj(
-    self: Union["Scan", "ScanLoader"], reco_id: Optional[int] = None
+    self: Union["Scan", "ScanLoader"],
+    reco_id: Optional[int] = None,
+    **_: Any,
 ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
     """Return reconstructed data for a reco, split by slice pack if needed.
 
@@ -325,6 +327,7 @@ def get_affine(
     override_subject_type: Optional["SubjectType"] = None,
     override_subject_pose: Optional["SubjectPose"] = None,
     decimals: Optional[int] = None,
+    **_: Any,
 ) -> AffineReturn:
     """
     Return affine(s) for a reco in the requested coordinate space.
@@ -413,6 +416,7 @@ def get_nifti1image(
     flip_x: bool = False,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
+    hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
 ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
     """Return NIfTI image(s) for a reco.
 
@@ -441,13 +445,26 @@ def get_nifti1image(
     resolved_reco_id = _resolve_reco_id(self, reco_id)
     if resolved_reco_id is None:
         return None
-    dataobjs = self.get_dataobj(resolved_reco_id)
-    affines = self.get_affine(
-        resolved_reco_id,
-        space=space,
-        override_subject_type=override_subject_type,
-        override_subject_pose=override_subject_pose,
-    )
+    hook_kwargs = _resolve_hook_kwargs(self, hook_args_by_name)
+    if hook_kwargs:
+        dataobjs = self.get_dataobj(resolved_reco_id, **hook_kwargs)
+    else:
+        dataobjs = self.get_dataobj(resolved_reco_id)
+    if hook_kwargs:
+        affines = self.get_affine(
+            resolved_reco_id,
+            space=space,
+            override_subject_type=override_subject_type,
+            override_subject_pose=override_subject_pose,
+            **hook_kwargs,
+        )
+    else:
+        affines = self.get_affine(
+            resolved_reco_id,
+            space=space,
+            override_subject_type=override_subject_type,
+            override_subject_pose=override_subject_pose,
+        )
     image_info = self.image_info.get(resolved_reco_id)
 
     if dataobjs is None or affines is None or image_info is None:
@@ -488,6 +505,7 @@ def convert(
     flip_x: bool = False,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
+    hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
 ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
     """Convert a reco to a selected output format."""
     if format not in {"nifti", "nifti1"}:
@@ -502,7 +520,21 @@ def convert(
         flip_x=flip_x,
         xyz_units=xyz_units,
         t_units=t_units,
+        hook_args_by_name=hook_args_by_name,
     )
+
+
+def _resolve_hook_kwargs(
+    scan: Union["Scan", "ScanLoader"],
+    hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]],
+) -> Dict[str, Any]:
+    if not hook_args_by_name:
+        return {}
+    hook_name = getattr(scan, "_converter_hook_name", None)
+    if not isinstance(hook_name, str) or not hook_name:
+        return {}
+    values = hook_args_by_name.get(hook_name)
+    return dict(values) if isinstance(values, Mapping) else {}
 
 
 def _resolve_metadata_spec(
