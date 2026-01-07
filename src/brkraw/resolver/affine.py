@@ -2,8 +2,10 @@ from __future__ import annotations
 from typing import Optional, Union, TypedDict, Tuple, Literal, List, Any
 from typing import cast, TYPE_CHECKING
 from .helpers import get_file, get_reco, return_alt_val_if_none
+import logging
 import numpy as np
 
+logger = logging.getLogger("brkraw")
 
 if TYPE_CHECKING:
     from ..dataclasses import Scan, Reco
@@ -332,6 +334,29 @@ def resolve_matvec_and_shape(visu_pars,
         if num_rotates != num_origins:
             raise ValueError("num_rotates != num_origins")
 
+        expected = int(num_slicepack * num_slices[spack_idx])
+        if rotate.ndim == 2 and rotate.shape[1] == 9 and rotate.shape[0] > expected:
+            if not np.allclose(rotate, rotate[0], atol=0, rtol=0):
+                logger.warning(
+                    "VisuCoreOrientation has %s entries but expected %s; "
+                    "using the first %s entry/entries.",
+                    rotate.shape[0],
+                    expected,
+                    expected,
+                )
+        if origin.ndim == 2 and origin.shape[1] == 3 and origin.shape[0] > expected:
+            if not np.allclose(origin, origin[0], atol=0, rtol=0):
+                logger.warning(
+                    "VisuCorePosition has %s entries but expected %s; "
+                    "using the first %s entry/entries.",
+                    origin.shape[0],
+                    expected,
+                    expected,
+                )
+        if rotate.ndim == 2 and rotate.shape[1] == 9 and rotate.shape[0] >= expected:
+            rotate = rotate[:expected, :]
+        if origin.ndim == 2 and origin.shape[1] == 3 and origin.shape[0] >= expected:
+            origin = origin[:expected, :]
         rotate = rotate.reshape((num_slicepack, num_slices[spack_idx], 9))
         origin = origin.reshape((num_slicepack, num_slices[spack_idx], 3))
         _rotate = rotate[spack_idx]
