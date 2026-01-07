@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.metadata
 import logging
 import re
@@ -71,7 +72,7 @@ def read_hook_docs(
     root: Optional[Union[str, Path]] = None,
 ) -> Tuple[str, str]:
     hook = _resolve_hook_target(target)
-    manifest_path, manifest = _load_manifest(hook["dist"])
+    manifest_path, manifest = _load_manifest(hook["dist"], hook.get("packages"))
     docs_path = _resolve_docs_path(manifest, manifest_path)
     if docs_path is None:
         raise FileNotFoundError(f"Hook docs not found for {hook['name']}")
@@ -126,7 +127,7 @@ def _install_hook(
         installed_version = existing.get("version")
         if installed_version and not _is_version_newer(hook["version"], installed_version):
             return "skipped"
-    manifest_path, manifest = _load_manifest(hook["dist"])
+    manifest_path, manifest = _load_manifest(hook["dist"], hook.get("packages"))
     namespace = _namespace_for_hook(hook["name"])
     installed = _install_manifest(
         manifest,
@@ -292,6 +293,7 @@ def _collect_hooks() -> List[Dict[str, Any]]:
             {
                 "name": dist_name,
                 "entrypoints": [],
+                "packages": set(),
                 "dist": dist,
                 "version": _dist_version(dist),
                 "author": _dist_author(dist),
@@ -299,6 +301,13 @@ def _collect_hooks() -> List[Dict[str, Any]]:
             },
         )
         entry["entrypoints"].append(ep.name)
+        pkg = _entrypoint_package(ep)
+        if pkg:
+            entry["packages"].add(pkg)
+    for hook in hooks.values():
+        packages = hook.get("packages")
+        if isinstance(packages, set):
+            hook["packages"] = sorted(packages)
     return sorted(hooks.values(), key=lambda item: item["name"])
 
 
@@ -372,10 +381,11 @@ def _dist_author(dist: Optional[importlib.metadata.Distribution]) -> str:
 
 def _load_manifest(
     dist: Optional[importlib.metadata.Distribution],
+    packages: Optional[Sequence[str]] = None,
 ) -> Tuple[Path, Dict[str, Any]]:
     if dist is None:
         raise FileNotFoundError("Hook distribution not available.")
-    manifest = _find_manifest(dist)
+    manifest = _find_manifest(dist, packages=packages)
     if manifest is None:
         raise FileNotFoundError(
             f"No hook manifest found in {dist.metadata.get('Name', '<Unknown>')}"
@@ -384,21 +394,54 @@ def _load_manifest(
     return manifest, data
 
 
-def _find_manifest(dist: importlib.metadata.Distribution) -> Optional[Path]:
+def _find_manifest(
+    dist: importlib.metadata.Distribution,
+    *,
+    packages: Optional[Sequence[str]] = None,
+) -> Optional[Path]:
     files = dist.files or []
     for name in MANIFEST_NAMES:
         for entry in files:
             if entry.name == name:
                 return Path(str(dist.locate_file(entry)))
-    top_level = _dist_top_level(dist)
-    for package in top_level:
+    search_packages = list(packages or []) or _dist_top_level(dist)
+    for package in search_packages:
         for name in MANIFEST_NAMES:
             try:
                 candidate = resources.files(package).joinpath(name)
             except Exception:
-                continue
-            if candidate.is_file():
+                candidate = None
+            if candidate is not None and candidate.is_file():
                 return Path(str(candidate))
+        fallback = _find_manifest_in_module(package)
+        if fallback is not None:
+            return fallback
+    return None
+
+
+def _entrypoint_package(ep: importlib.metadata.EntryPoint) -> Optional[str]:
+    module = getattr(ep, "module", None)
+    if not module:
+        value = getattr(ep, "value", "")
+        module = value.split(":", 1)[0] if value else ""
+    if not module:
+        return None
+    return module.split(".", 1)[0]
+
+
+def _find_manifest_in_module(package: str) -> Optional[Path]:
+    try:
+        module = importlib.import_module(package)
+    except Exception:
+        return None
+    module_file = getattr(module, "__file__", None)
+    if not module_file:
+        return None
+    base = Path(module_file).resolve().parent
+    for name in MANIFEST_NAMES:
+        candidate = base / name
+        if candidate.is_file():
+            return candidate
     return None
 
 

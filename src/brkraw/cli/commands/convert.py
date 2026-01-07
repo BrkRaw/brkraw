@@ -203,7 +203,10 @@ def cmd_convert(args: argparse.Namespace) -> int:
         scan = loader.get_scan(scan_id)
         reco_ids = [args.reco_id] if args.reco_id is not None else list(scan.avail.keys())
         if not reco_ids:
-            continue
+            if getattr(scan, "_converter_hook", None):
+                reco_ids = [None]
+            else:
+                continue
         for reco_id in reco_ids:
             if selector_map is not None:
                 # convert selection by context_map
