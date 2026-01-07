@@ -38,7 +38,12 @@ def warn_dependencies(target: Path, *, kind: str, root: Optional[Union[str, Path
             )
             warned = True
     elif kind == "transform":
-        used_by_specs = specs_using_transform(target.name, paths.specs_dir)
+        transform_ref = normalize_transform_ref(
+            str(target),
+            spec_path=target,
+            transforms_dir=paths.transforms_dir,
+        )
+        used_by_specs = specs_using_transform(transform_ref, paths.specs_dir)
         if used_by_specs:
             logger.warning(
                 "Transform %s is referenced by specs: %s",
