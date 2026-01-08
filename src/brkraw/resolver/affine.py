@@ -328,42 +328,66 @@ def resolve_matvec_and_shape(visu_pars,
     shape  = np.asarray(visu_pars.get("VisuCoreSize"), dtype=float)
 
     if dim == 2:
-        num_rotates = rotate.shape[0]
-        num_origins = origin.shape[0]
         num_slicepack = len(num_slices)
-        if num_rotates != num_origins:
-            raise ValueError("num_rotates != num_origins")
 
-        expected = int(num_slicepack * num_slices[spack_idx])
-        if rotate.ndim == 2 and rotate.shape[1] == 9 and rotate.shape[0] > expected:
-            if not np.allclose(rotate, rotate[0], atol=0, rtol=0):
-                logger.warning(
-                    "VisuCoreOrientation has %s entries but expected %s; "
-                    "using the first %s entry/entries.",
-                    rotate.shape[0],
-                    expected,
-                    expected,
-                )
-        if origin.ndim == 2 and origin.shape[1] == 3 and origin.shape[0] > expected:
-            if not np.allclose(origin, origin[0], atol=0, rtol=0):
-                logger.warning(
-                    "VisuCorePosition has %s entries but expected %s; "
-                    "using the first %s entry/entries.",
-                    origin.shape[0],
-                    expected,
-                    expected,
-                )
-        if rotate.ndim == 2 and rotate.shape[1] == 9 and rotate.shape[0] >= expected:
-            rotate = rotate[:expected, :]
-        if origin.ndim == 2 and origin.shape[1] == 3 and origin.shape[0] >= expected:
-            origin = origin[:expected, :]
-        rotate = rotate.reshape((num_slicepack, num_slices[spack_idx], 9))
-        origin = origin.reshape((num_slicepack, num_slices[spack_idx], 3))
-        _rotate = rotate[spack_idx]
-        _origin = origin[spack_idx]
+        if spack_idx < 0 or spack_idx >= num_slicepack:
+            raise IndexError(f"spack_idx out of range: {spack_idx} (num packs: {num_slicepack})")
+
+        total_slices = int(np.sum(np.asarray(num_slices, dtype=int)))
+        spack_slice_start = int(np.sum(np.asarray(num_slices[:spack_idx], dtype=int)))
+        spack_slice_end = spack_slice_start + int(num_slices[spack_idx])
+
+        def _select_slice_entries(arr: np.ndarray, *, width: int, name: str) -> np.ndarray:
+            arr = np.asarray(arr, dtype=float)
+            if arr.ndim == 1:
+                if arr.size == width:
+                    arr = arr.reshape((1, width))
+                else:
+                    raise ValueError(f"{name} has shape {arr.shape}, expected (*, {width})")
+            if arr.ndim != 2 or arr.shape[1] != width:
+                raise ValueError(f"{name} has shape {arr.shape}, expected (*, {width})")
+
+            # Prefer per-slice entries (concatenated across slice packs).
+            if arr.shape[0] > total_slices:
+                if not np.allclose(arr[:total_slices], arr[0], atol=0, rtol=0):
+                    logger.warning(
+                        "%s has %s entries but expected %s; using the first %s entries.",
+                        name,
+                        arr.shape[0],
+                        total_slices,
+                        total_slices,
+                    )
+                arr = arr[:total_slices, :]
+
+            if arr.shape[0] == total_slices:
+                return arr[spack_slice_start:spack_slice_end, :]
+
+            # Fallback: per-pack entries (one entry per slice pack).
+            if arr.shape[0] == num_slicepack:
+                if int(num_slices[spack_idx]) != 1:
+                    raise ValueError(
+                        f"{name} provides one entry per slice pack ({num_slicepack}) "
+                        f"but pack {spack_idx} has {num_slices[spack_idx]} slices; "
+                        "per-slice entries are required to resolve slice positions."
+                    )
+                return arr[spack_idx:spack_idx + 1, :]
+
+            raise ValueError(
+                f"{name} has {arr.shape[0]} entries, expected {total_slices} (per-slice) "
+                f"or {num_slicepack} (per-pack); method num_slices={num_slices}."
+            )
+
+        _rotate = _select_slice_entries(rotate, width=9, name="VisuCoreOrientation")
+        _origin = _select_slice_entries(origin, width=3, name="VisuCorePosition")
         _num_slices = num_slices[spack_idx]
         _slice_thickness = slice_thickness[spack_idx]
         
+        if _rotate.shape[0] > 1 and not np.allclose(_rotate, _rotate[0], atol=0, rtol=0):
+            logger.warning(
+                "VisuCoreOrientation varies across slices in pack %s; using the first slice orientation.",
+                spack_idx,
+            )
+
         row = _rotate[0, 0:3]
         col = _rotate[0, 3:6]
         slc = _rotate[0, 6:9]
