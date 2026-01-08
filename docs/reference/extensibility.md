@@ -143,24 +143,21 @@ CLI plugins are Python distributions that:
 
 They are used to add new workflows without changing the core CLI.
 
+In practice, hook packages and CLI plugins are BrkRaw's *plugin* system (they
+ship code and register entry points), while addons are configuration assets
+that customize behavior in a case-dependent way.
+
 ---
 
 ## What goes into core vs extensions
 
-Core is limited to:
+As a rule of thumb:
 
-- compatibility with Paravision layouts and parameter conventions
-- stable conversion primitives and metadata plumbing
-- extensibility infrastructure (rules/specs/hooks/context maps)
+- Core stays focused on Paravision compatibility and stable infrastructure.
+- Project-specific behavior should live in addons and plugins.
 
-Everything project-specific should be implemented as:
-
-- addons (rules/specs/transforms/pruner specs)
-- converter hook packages (custom conversion pipelines)
-- CLI plugins (new workflows built on top of the API)
-
-If you believe a change must live in core, start with a GitHub Discussion and
-explain why it cannot be implemented as an addon or plugin.
+For contributor-facing guidance (how to decide and when to propose core
+changes), see `docs/dev/core-vs-addon.md`.
 
 ---
 

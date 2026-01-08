@@ -71,14 +71,16 @@ nav:
   - Reference:
       - Extensibility model: reference/extensibility.md
       - Addons and plugins: reference/addons-and-plugins.md
-      - CLI extensions: reference/cli-extensions.md
+      - CLI plugins (overview): reference/cli-extensions.md
       - Rule syntax: reference/rules.md
       - Spec syntax: reference/specs.md
       - Context map syntax: reference/context-map.md
       - Output layout and naming: reference/layout.md
-      - Converter hook packages: reference/hook-packages.md
+      - Hook packages (overview): reference/hook-packages.md
 
   - Developer Guide:
       - Contributing: dev/contributing.md
       - Core vs addon development: dev/core-vs-addon.md
+      - Building CLI plugins: dev/cli-extensions.md
+      - Building hook packages: dev/hook-packages.md
       - Contributors: dev/contributors.md

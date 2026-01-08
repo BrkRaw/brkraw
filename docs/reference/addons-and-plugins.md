@@ -28,6 +28,10 @@ Each mechanism serves a different purpose and scope.
 Addons are files installed into the user's BrkRaw configuration root.
 They are loaded dynamically at runtime and do not require Python packaging.
 
+Use addons for case-dependent customization of BrkRaw behavior (for example,
+choosing different mappings or conversion overrides depending on scan
+parameters), without adding new features to the core.
+
 Addon types include:
 
 - specs

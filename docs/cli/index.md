@@ -41,8 +41,8 @@ Notes:
 
 - Output naming is controlled by configuration (`config.yaml`) and optionally by
   a `context_map` YAML at runtime.
-- Extensions are installed as addons (files) and hooks (Python packages that
-  install namespaced addon files).
+- Extensions are installed as addons (rules/specs/transforms files) and plugins
+  (hook packages and CLI plugins as Python packages).
 
 Roadmap:
 
