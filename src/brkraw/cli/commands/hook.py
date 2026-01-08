@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+import importlib
 from pathlib import Path
 import inspect
 from typing import Any, Dict, Mapping
@@ -191,6 +193,22 @@ _PRESET_IGNORE_PARAMS = frozenset(
 
 def _infer_hook_preset(entry: Mapping[str, Any]) -> Dict[str, Any]:
     preset: Dict[str, Any] = {}
+    modules: list[object] = []
+
+    for func in entry.values():
+        if callable(func):
+            mod_name = getattr(func, "__module__", None)
+            if isinstance(mod_name, str) and mod_name:
+                try:
+                    modules.append(importlib.import_module(mod_name))
+                except Exception:
+                    pass
+
+    for module in modules:
+        module_preset = _infer_hook_preset_from_module(module)
+        if module_preset:
+            return dict(sorted(module_preset.items(), key=lambda item: item[0]))
+
     for func in entry.values():
         if not callable(func):
             continue
@@ -211,6 +229,25 @@ def _infer_hook_preset(entry: Mapping[str, Any]) -> Dict[str, Any]:
             else:
                 preset[name] = param.default
     return dict(sorted(preset.items(), key=lambda item: item[0]))
+
+
+def _infer_hook_preset_from_module(module: object) -> Dict[str, Any]:
+    for attr in ("HOOK_PRESET", "HOOK_ARGS", "HOOK_DEFAULTS"):
+        value = getattr(module, attr, None)
+        if isinstance(value, Mapping):
+            return dict(value)
+
+    build_options = getattr(module, "_build_options", None)
+    if callable(build_options):
+        try:
+            options = build_options({})
+        except Exception:
+            return {}
+        if dataclasses.is_dataclass(options):
+            return dict(dataclasses.asdict(options))
+        if hasattr(options, "__dict__"):
+            return dict(vars(options))
+    return {}
 
 
 def cmd_preset(args: argparse.Namespace) -> int:
