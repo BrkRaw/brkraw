@@ -774,11 +774,20 @@ def _add_convert_args(
         "--prefix",
         help="Filename prefix (supports {Key} tags from layout info).",
     )
-    parser.add_argument(
+    dedupe_group = parser.add_mutually_exclusive_group()
+    dedupe_group.add_argument(
         "--dedupe",
+        dest="dedupe",
         action="store_true",
-        help="Avoid overwriting when output names collide (uses {Counter} tag or appends _N).",
+        help="Avoid overwriting when output names collide (default).",
     )
+    dedupe_group.add_argument(
+        "--no-dedupe",
+        dest="dedupe",
+        action="store_false",
+        help="Disable dedupe and allow overwriting when output names collide.",
+    )
+    parser.set_defaults(dedupe=True)
     parser.add_argument(
         "--sidecar",
         action="store_true",

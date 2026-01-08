@@ -292,6 +292,7 @@ See session.md for details.
 
 - All affine-related options are case-sensitive
 - --output must be a directory when converting multiple scans
+- Dedupe is enabled by default; use --no-dedupe to allow overwriting
 - Invalid subject overrides are rejected early
 - Missing metadata selectors may silently skip scans
 
