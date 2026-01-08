@@ -87,7 +87,7 @@ extensions and supporting tools.
   <https://github.com/BrkRaw/brkraw-mrs>
 
 - **brkraw-viewer**  
-  Legacy graphical user interface for dataset inspection  
+  Support plugin for orientation QC/reorientation, metadata/spec utilities, naming-policy tests, and config editing  
   <https://github.com/BrkRaw/brkraw-viewer>
 
 ### Extension templates
