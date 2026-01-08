@@ -68,7 +68,7 @@ jobs:
 
           notes = Path("RELEASE_NOTES.md").read_text(encoding="utf-8").strip()
           title = f"Release {tag}"
-          body = f"[Release {tag}]({release_url})\\n\\n{notes}"
+          body = f"[Release {tag}]({release_url})\n\n{notes}"
 
           query = {
               "query": """
