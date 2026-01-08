@@ -18,7 +18,10 @@
     {
       "label": "Release: Prep (bump + notes)",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream",
+      "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md && \"${command:python.interpreterPath}\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream",
+      "windows": {
+        "command": "pwsh -NoProfile -Command \"& \\\"${command:python.interpreterPath}\\\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \\\"${command:python.interpreterPath}\\\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream\""
+      },
       "group": "build",
       "problemMatcher": []
     },
@@ -41,6 +44,20 @@
           }
         }
       },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Docs: Update Contributors (git)",
+      "type": "shell",
+      "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source git --output docs/dev/contributors.md",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Docs: Update Contributors (GitHub API)",
+      "type": "shell",
+      "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md",
       "group": "build",
       "problemMatcher": []
     }
