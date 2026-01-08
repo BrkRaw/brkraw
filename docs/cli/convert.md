@@ -81,6 +81,20 @@ brkraw convert /path/to/study --scan-id 3 --prefix "{Protocol}_{ScanID}"
 
 Template fields are resolved from layout info and metadata specs.
 
+### --dedupe
+
+Avoid overwriting files when output names collide.
+
+When enabled, BrkRaw checks whether the resolved output file path(s) already
+exist (or would collide within the same run). If so, it increments an internal
+counter and retries layout rendering.
+
+You may reference the counter explicitly in templates:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --dedupe --prefix "{Protocol}_{ScanID}_{RecoID}_{Counter}"
+```
+
 ### Compression
 
 By default, output is written as .nii.gz.

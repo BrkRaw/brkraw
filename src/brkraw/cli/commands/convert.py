@@ -196,6 +196,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
             slicepack_suffix = meta_suffix
         
     total_written = 0
+    reserved_paths: set = set()
     for scan_id in scan_ids:
         if scan_id is None:
             continue
@@ -244,59 +245,86 @@ def cmd_convert(args: argparse.Namespace) -> int:
                 continue
 
             nii_list = list(nii) if isinstance(nii, tuple) else [nii]
-            try:
-                base_name = layout_core.render_layout(
-                    loader,
-                    scan_id,
-                    layout_entries=layout_entries,
-                    layout_template=layout_template,
-                    context_map=args.context_map,
-                    reco_id=reco_id,
-                )
-            except Exception as exc:
-                logger.error("%s", exc)
-                return 2
-            if args.prefix:
-                base_name = layout_core.render_layout(
-                    loader,
-                    scan_id,
-                    layout_entries=None,
-                    layout_template=args.prefix,
-                    context_map=args.context_map,
-                    reco_id=reco_id,
-                )
-            if batch_all and args.prefix:
-                base_name = f"{base_name}_scan-{scan_id}"
-            if args.reco_id is None and len(reco_ids) > 1:
-                base_name = f"{base_name}_reco-{reco_id}"
-            base_name = _sanitize_filename(base_name)
 
-            slicepack_suffixes = None
-            if len(nii_list) > 1:
-                info = layout_core.load_layout_info(
-                    loader,
-                    scan_id,
-                    context_map=args.context_map,
-                    reco_id=reco_id,
-                )
-                slicepack_suffixes = layout_core.render_slicepack_suffixes(
-                    info,
+            base_name_base: Optional[str] = None
+            slicepack_suffixes: Optional[List[str]] = None
+            output_paths: Optional[List[Path]] = None
+            for counter in range(1, 1000):
+                try:
+                    candidate_base_name = layout_core.render_layout(
+                        loader,
+                        scan_id,
+                        layout_entries=layout_entries,
+                        layout_template=layout_template,
+                        context_map=args.context_map,
+                        reco_id=reco_id,
+                        counter=counter if args.dedupe else None,
+                    )
+                except Exception as exc:
+                    logger.error("%s", exc)
+                    return 2
+                if args.prefix:
+                    candidate_base_name = layout_core.render_layout(
+                        loader,
+                        scan_id,
+                        layout_entries=None,
+                        layout_template=args.prefix,
+                        context_map=args.context_map,
+                        reco_id=reco_id,
+                        counter=counter if args.dedupe else None,
+                    )
+                if batch_all and args.prefix:
+                    candidate_base_name = f"{candidate_base_name}_scan-{scan_id}"
+                if args.reco_id is None and len(reco_ids) > 1:
+                    candidate_base_name = f"{candidate_base_name}_reco-{reco_id}"
+                candidate_base_name = _sanitize_filename(candidate_base_name)
+
+                if base_name_base is None:
+                    base_name_base = candidate_base_name
+                elif args.dedupe and candidate_base_name == base_name_base:
+                    candidate_base_name = f"{candidate_base_name}_{counter}"
+
+                slicepack_suffixes = None
+                if len(nii_list) > 1:
+                    info = layout_core.load_layout_info(
+                        loader,
+                        scan_id,
+                        context_map=args.context_map,
+                        reco_id=reco_id,
+                    )
+                    slicepack_suffixes = layout_core.render_slicepack_suffixes(
+                        info,
+                        count=len(nii_list),
+                        template=slicepack_suffix,
+                        counter=counter if args.dedupe else None,
+                    )
+                output_paths = _resolve_output_paths(
+                    args.output,
+                    candidate_base_name,
                     count=len(nii_list),
-                    template=slicepack_suffix,
+                    compress=bool(args.compress),
+                    slicepack_suffix=slicepack_suffix,
+                    slicepack_suffixes=slicepack_suffixes,
                 )
-            output_paths = _resolve_output_paths(
-                args.output,
-                base_name,
-                count=len(nii_list),
-                compress=bool(args.compress),
-                slicepack_suffix=slicepack_suffix,
-                slicepack_suffixes=slicepack_suffixes,
-            )
+                if output_paths is None:
+                    return 2
+                if len(output_paths) != len(nii_list):
+                    logger.error("Output path count does not match NIfTI outputs.")
+                    return 2
+                if not args.dedupe:
+                    break
+                if _paths_collide(output_paths, reserved_paths):
+                    continue
+                break
+            else:
+                logger.error("Could not resolve unique output name after many attempts.")
+                return 2
+
             if output_paths is None:
+                logger.error("Output paths could not be resolved.")
                 return 2
-            if len(output_paths) != len(nii_list):
-                logger.error("Output path count does not match NIfTI outputs.")
-                return 2
+            for path in output_paths:
+                reserved_paths.add(path)
 
             sidecar_meta = None
             if args.sidecar:
@@ -549,6 +577,15 @@ def _expand_output_paths(
     return [base_dir / f"{base}{suffix.format(index=i + 1)}{ext}" for i in range(count)]
 
 
+def _paths_collide(paths: List[Path], reserved: set) -> bool:
+    if len(set(paths)) != len(paths):
+        return True
+    for path in paths:
+        if path in reserved or path.exists():
+            return True
+    return False
+
+
 def _env_flag(name: str) -> bool:
     """Return True when an env var is set to a truthy value.
 
@@ -705,6 +742,11 @@ def _add_convert_args(
     parser.add_argument(
         "--prefix",
         help="Filename prefix (supports {Key} tags from layout info).",
+    )
+    parser.add_argument(
+        "--dedupe",
+        action="store_true",
+        help="Avoid overwriting when output names collide (uses {Counter} tag or appends _N).",
     )
     parser.add_argument(
         "--sidecar",

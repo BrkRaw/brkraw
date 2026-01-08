@@ -31,6 +31,7 @@ def render_layout(
     context_map: Optional[Union[str, Path]] = None,
     root: Optional[Union[str, Path]] = None,
     reco_id: Optional[int] = None,
+    counter: Optional[int] = None,
     override_info_spec: Optional[Union[str, Path]] = None,
     override_metadata_spec: Optional[Union[str, Path]] = None,
 ) -> str:
@@ -50,8 +51,8 @@ def render_layout(
         override_metadata_spec=override_metadata_spec,
     )
     if isinstance(layout_template, str) and layout_template:
-        return _render_layout_template(layout_template, info, scan_id)
-    return _render_fields(layout_entries, info, scan_id)
+        return _render_layout_template(layout_template, info, scan_id, reco_id=reco_id, counter=counter)
+    return _render_fields(layout_entries, info, scan_id, reco_id=reco_id, counter=counter)
 
 
 def load_layout_info(
@@ -152,19 +153,26 @@ def render_slicepack_suffixes(
     *,
     count: int,
     template: str = "_slpack{index}",
+    counter: Optional[int] = None,
 ) -> List[str]:
     suffixes: List[str] = []
     for idx in range(count):
-        suffixes.append(_render_slicepack_suffix(template, info, idx))
+        suffixes.append(_render_slicepack_suffix(template, info, idx, counter=counter))
     return suffixes
 
 
-def _render_slicepack_suffix(template: str, info: Mapping[str, Any], idx: int) -> str:
+def _render_slicepack_suffix(
+    template: str,
+    info: Mapping[str, Any],
+    idx: int,
+    *,
+    counter: Optional[int],
+) -> str:
     def _replace(match: re.Match[str]) -> str:
         tag = match.group(1)
         if tag.lower() == "index":
             return str(idx + 1)
-        value = _resolve_tag(tag, info, idx + 1)
+        value = _resolve_tag(tag, info, idx + 1, reco_id=None, counter=counter)
         chosen = _select_indexed_value(value, idx)
         if chosen is None:
             return str(idx + 1)
@@ -214,6 +222,9 @@ def _render_fields(
     fields: Optional[Iterable[Mapping[str, Any]]],
     info: Mapping[str, Any],
     scan_id: int,
+    *,
+    reco_id: Optional[int],
+    counter: Optional[int],
 ) -> str:
     parts: List[str] = []
     seps: List[Optional[str]] = []
@@ -250,7 +261,7 @@ def _render_fields(
                 entry_clean = key.replace(".", "").lower()
                 if not _ENTRY_PATTERN.match(entry_clean):
                     continue
-            value = _resolve_tag(key, info, scan_id)
+            value = _resolve_tag(key, info, scan_id, reco_id=reco_id, counter=counter)
             value_str = _format_value_with_options(
                 value,
                 value_pattern=value_pattern,
@@ -297,25 +308,53 @@ def _render_fields(
     return result
 
 
-def _render_layout_template(template: str, info: Mapping[str, Any], scan_id: int) -> str:
+def _render_layout_template(
+    template: str,
+    info: Mapping[str, Any],
+    scan_id: int,
+    *,
+    reco_id: Optional[int],
+    counter: Optional[int],
+) -> str:
     if not _LAYOUT_TAG.search(template):
         return template
-    rendered = _LAYOUT_TAG.sub(lambda m: _resolve_layout_tag(m, info, scan_id), template)
+    rendered = _LAYOUT_TAG.sub(
+        lambda m: _resolve_layout_tag(m, info, scan_id, reco_id=reco_id, counter=counter),
+        template,
+    )
     return rendered or template
 
 
-def _resolve_layout_tag(match: re.Match[str], info: Mapping[str, Any], scan_id: int) -> str:
+def _resolve_layout_tag(
+    match: re.Match[str],
+    info: Mapping[str, Any],
+    scan_id: int,
+    *,
+    reco_id: Optional[int],
+    counter: Optional[int],
+) -> str:
     tag = match.group(1) or ""
     if not tag:
         return ""
-    value = _resolve_tag(tag.strip(), info, scan_id)
+    value = _resolve_tag(tag.strip(), info, scan_id, reco_id=reco_id, counter=counter)
     rendered = _format_value(value)
     return rendered or ""
 
 
-def _resolve_tag(tag: str, info: Mapping[str, Any], scan_id: int) -> Any:
+def _resolve_tag(
+    tag: str,
+    info: Mapping[str, Any],
+    scan_id: int,
+    *,
+    reco_id: Optional[int] = None,
+    counter: Optional[int] = None,
+) -> Any:
     if tag in {"ScanID", "scan_id", "scanid"}:
         return scan_id
+    if tag in {"RecoID", "reco_id", "recoid"}:
+        return reco_id
+    if tag in {"Counter", "counter"}:
+        return counter
     if "." in tag:
         root_key, rest = tag.split(".", 1)
         root_val = info.get(root_key)

@@ -21,6 +21,14 @@ name = layout_core.render_layout(
 )
 ```
 
+### Fixed keys
+
+These placeholders are always available, regardless of mapped metadata:
+
+- `{ScanID}` / `{scan_id}` / `{scanid}`
+- `{RecoID}` / `{reco_id}` / `{recoid}` (may be `None`)
+- `{Counter}` / `{counter}` (optional; use for de-duplication)
+
 You can override specs for testing via API-only kwargs:
 
 ```python

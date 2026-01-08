@@ -165,6 +165,22 @@ Use templates when:
 
 ---
 
+## Fixed keys
+
+Some placeholders are always available, even if they are not present in mapped
+metadata. These are referred to as *fixed keys*.
+
+- `{ScanID}` / `{scan_id}` / `{scanid}`: current scan id.
+- `{RecoID}` / `{reco_id}` / `{recoid}`: current reconstruction id (may be empty when not applicable).
+- `{Counter}` / `{counter}`: optional run-local counter for de-duplication (used by `brkraw convert --dedupe`).
+
+These fixed keys work in both:
+
+- `layout_template` placeholders
+- `layout_entries` via `key: ScanID` / `key: RecoID` / `key: Counter`
+
+---
+
 ## slicepack suffix
 
 For multi-slicepack acquisitions, an optional suffix may be applied.
