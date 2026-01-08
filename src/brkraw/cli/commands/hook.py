@@ -145,8 +145,12 @@ def cmd_docs(args: argparse.Namespace) -> int:
     logger.info("[Hook Docs] %s", hook_name)
     if args.render:
         try:
-            from rich.console import Console
-            from rich.markdown import Markdown
+            import importlib
+
+            console_mod = importlib.import_module("rich.console")
+            markdown_mod = importlib.import_module("rich.markdown")
+            Console = getattr(console_mod, "Console")
+            Markdown = getattr(markdown_mod, "Markdown")
         except Exception:
             logger.warning("rich is not available; printing raw text.")
             print(text)

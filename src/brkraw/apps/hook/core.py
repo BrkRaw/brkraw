@@ -7,7 +7,7 @@ import importlib.metadata
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 try:
     from importlib import resources
@@ -26,6 +26,29 @@ logger = logging.getLogger("brkraw")
 
 REGISTRY_FILENAME = "hooks.yaml"
 MANIFEST_NAMES = ("brkraw_hook.yaml", "brkraw_hook.yml")
+
+
+def _packages_distributions() -> Mapping[str, List[str]]:
+    packages_distributions = getattr(importlib.metadata, "packages_distributions", None)
+    if packages_distributions is not None:
+        return cast(Callable[[], Mapping[str, List[str]]], packages_distributions)()
+
+    mapping: Dict[str, List[str]] = {}
+    for dist in importlib.metadata.distributions():
+        read_text = getattr(dist, "read_text", None)
+        top_level_text = ""
+        if callable(read_text):
+            top_level = read_text("top_level.txt")
+            if isinstance(top_level, str):
+                top_level_text = top_level
+        dist_name = dist.metadata.get("Name")
+        if not dist_name:
+            continue
+        for package in top_level_text.splitlines():
+            package = package.strip()
+            if package:
+                mapping.setdefault(package, []).append(dist_name)
+    return mapping
 
 
 def list_hooks(*, root: Optional[Union[str, Path]] = None) -> List[Dict[str, Any]]:
@@ -347,7 +370,7 @@ def _resolve_distribution(ep: importlib.metadata.EntryPoint) -> Optional[importl
     pkg = getattr(ep, "module", "").split(".")[0]
     if not pkg:
         return None
-    mapping = importlib.metadata.packages_distributions()
+    mapping = _packages_distributions()
     dist_names = mapping.get(pkg, [])
     if not dist_names:
         return None
