@@ -31,6 +31,8 @@ logger = logging.getLogger("brkraw")
 
 _INVALID_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 
+_COUNTER_TAG = re.compile(r"\{(?:Counter|counter)\}")
+
 
 def cmd_convert(args: argparse.Namespace) -> int:
     """Convert a scan/reco to NIfTI with optional metadata sidecars.
@@ -274,13 +276,17 @@ def cmd_convert(args: argparse.Namespace) -> int:
 
             nii_list = list(nii) if isinstance(nii, tuple) else [nii]
 
-            base_name_base: Optional[str] = None
             slicepack_suffixes: Optional[List[str]] = None
             output_paths: Optional[List[Path]] = None
+            uses_counter_tag = _uses_counter_tag(
+                layout_template=layout_template,
+                layout_entries=layout_entries,
+                prefix_template=args.prefix,
+            )
+            counter_enabled = bool(uses_counter_tag and render_layout_supports_counter)
+
             for counter in range(1, 1000):
-                layout_kwargs: Dict[str, Any] = {}
-                if render_layout_supports_counter and args.dedupe:
-                    layout_kwargs["counter"] = counter
+                layout_kwargs: Dict[str, Any] = {"counter": counter} if counter_enabled else {}
                 try:
                     candidate_base_name = layout_core.render_layout(
                         loader,
@@ -310,9 +316,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
                     candidate_base_name = f"{candidate_base_name}_reco-{reco_id}"
                 candidate_base_name = _sanitize_filename(candidate_base_name)
 
-                if base_name_base is None:
-                    base_name_base = candidate_base_name
-                elif args.dedupe and candidate_base_name == base_name_base:
+                if not counter_enabled and counter > 1:
                     candidate_base_name = f"{candidate_base_name}_{counter}"
 
                 slicepack_suffixes = None
@@ -327,7 +331,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
                         info,
                         count=len(nii_list),
                         template=slicepack_suffix,
-                        **({"counter": counter} if slicepack_supports_counter and args.dedupe else {}),
+                        **({"counter": counter} if slicepack_supports_counter and counter_enabled else {}),
                     )
                 output_paths = _resolve_output_paths(
                     args.output,
@@ -342,8 +346,6 @@ def cmd_convert(args: argparse.Namespace) -> int:
                 if len(output_paths) != len(nii_list):
                     logger.error("Output path count does not match NIfTI outputs.")
                     return 2
-                if not args.dedupe:
-                    break
                 if _paths_collide(output_paths, reserved_paths):
                     continue
                 break
@@ -671,6 +673,25 @@ def _parse_hook_args(values: List[str]) -> Dict[str, Dict[str, Any]]:
     return parsed
 
 
+def _uses_counter_tag(
+    *,
+    layout_template: Optional[str],
+    layout_entries: List[Any],
+    prefix_template: Optional[str],
+) -> bool:
+    if isinstance(layout_template, str) and _COUNTER_TAG.search(layout_template):
+        return True
+    if isinstance(prefix_template, str) and _COUNTER_TAG.search(prefix_template):
+        return True
+    for field in layout_entries or []:
+        if not isinstance(field, Mapping):
+            continue
+        key = field.get("key")
+        if isinstance(key, str) and key.strip() in {"Counter", "counter"}:
+            return True
+    return False
+
+
 def _coerce_scalar(value: str) -> Any:
     if value.lower() in {"true", "false"}:
         return value.lower() == "true"
@@ -774,20 +795,6 @@ def _add_convert_args(
         "--prefix",
         help="Filename prefix (supports {Key} tags from layout info).",
     )
-    dedupe_group = parser.add_mutually_exclusive_group()
-    dedupe_group.add_argument(
-        "--dedupe",
-        dest="dedupe",
-        action="store_true",
-        help="Avoid overwriting when output names collide (default).",
-    )
-    dedupe_group.add_argument(
-        "--no-dedupe",
-        dest="dedupe",
-        action="store_false",
-        help="Disable dedupe and allow overwriting when output names collide.",
-    )
-    parser.set_defaults(dedupe=True)
     parser.add_argument(
         "--sidecar",
         action="store_true",

@@ -81,19 +81,12 @@ brkraw convert /path/to/study --scan-id 3 --prefix "{Protocol}_{ScanID}"
 
 Template fields are resolved from layout info and metadata specs.
 
-### --dedupe
+### Output name collisions
 
-Avoid overwriting files when output names collide.
+BrkRaw avoids overwriting outputs when output names collide.
 
-When enabled, BrkRaw checks whether the resolved output file path(s) already
-exist (or would collide within the same run). If so, it increments an internal
-counter and retries layout rendering.
-
-You may reference the counter explicitly in templates:
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --dedupe --prefix "{Protocol}_{ScanID}_{RecoID}_{Counter}"
-```
+- If your template uses `{Counter}`, it starts at `1` and increments until the output name is unique.
+- If your template does not use `{Counter}`, BrkRaw appends `_<N>` (for example `_2`, `_3`, ...) as needed.
 
 ### Compression
 
@@ -292,7 +285,7 @@ See session.md for details.
 
 - All affine-related options are case-sensitive
 - --output must be a directory when converting multiple scans
-- Dedupe is enabled by default; use --no-dedupe to allow overwriting
+- Output names are deduped automatically; use `{Counter}` to control the numeric suffix position
 - Invalid subject overrides are rejected early
 - Missing metadata selectors may silently skip scans
 
