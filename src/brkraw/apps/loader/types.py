@@ -147,7 +147,8 @@ class ScanLoader(Scan, BaseLoader):
             space: AffineSpace = "subject_ras",
             override_subject_type: Optional[SubjectType],
             override_subject_pose: Optional[SubjectPose],
-            decimals: Optional[int] = None
+            decimals: Optional[int] = None,
+            **kwargs: Any,
             ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
         ...
 

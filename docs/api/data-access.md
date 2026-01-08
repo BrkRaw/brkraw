@@ -129,6 +129,8 @@ Notes:
 - Some scans produce multiple “slice packs”; in that case these APIs may return
   a tuple of arrays/matrices (one per pack).
 - `space` controls the affine coordinate system (`raw`, `scanner`, `subject_ras`).
+- `scan.get_affine(...)` also accepts optional post-transforms via extra kwargs:
+  `flip_x/flip_y/flip_z` and `rad_x/rad_y/rad_z` (radians), applied right before returning.
 
 ---
 
@@ -141,4 +143,3 @@ fid = loader.get_fid(scan_id=3)
 ```
 
 If the scan has no FID reader, this returns `None`.
-

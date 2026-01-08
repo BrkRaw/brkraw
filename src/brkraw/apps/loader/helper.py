@@ -328,7 +328,7 @@ def get_affine(
     override_subject_type: Optional["SubjectType"] = None,
     override_subject_pose: Optional["SubjectPose"] = None,
     decimals: Optional[int] = None,
-    **_: Any,
+    **kwargs: Any,
 ) -> AffineReturn:
     """
     Return affine(s) for a reco in the requested coordinate space.
@@ -380,7 +380,8 @@ def get_affine(
 
     # "raw" does not need subject info
     if space == "raw":
-        return _finalize_affines(affines, num_slice_packs, decimals)
+        result = _finalize_affines(affines, num_slice_packs, decimals)
+        return _apply_affine_post_transform(result, kwargs=kwargs)
 
     # Need subject type/pose for unwrap and wrap
     visu_pars = get_file(self.avail[resolved_reco_id], "visu_pars")
@@ -393,7 +394,8 @@ def get_affine(
     ]
 
     if space == "scanner":
-        return _finalize_affines(affines_scanner, num_slice_packs, decimals)
+        result = _finalize_affines(affines_scanner, num_slice_packs, decimals)
+        return _apply_affine_post_transform(result, kwargs=kwargs)
 
     # Step 2: wrap to subject RAS (optionally with override)
     use_type = override_subject_type or subj_type
@@ -403,7 +405,77 @@ def get_affine(
         affine_resolver.wrap_to_subject_ras(affine, use_type, use_pose)
         for affine in affines_scanner
     ]
-    return _finalize_affines(affines_subject_ras, num_slice_packs, decimals)
+    result = _finalize_affines(affines_subject_ras, num_slice_packs, decimals)
+    return _apply_affine_post_transform(result, kwargs=kwargs)
+
+
+def _apply_affine_post_transform(affines: AffineReturn, *, kwargs: Mapping[str, Any]) -> AffineReturn:
+    """Apply optional flips/rotations to affines right before returning.
+
+    These transforms are applied in world space and do not depend on output
+    `space`. They are controlled via extra kwargs (intentionally not strict):
+
+    - flip_x / flip_y / flip_z: bool-like
+    - rad_x / rad_y / rad_z: radians (float-like)
+    """
+
+    def as_bool(value: Any) -> bool:
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+        return bool(value)
+
+    def as_float(value: Any) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    flip_x = as_bool(kwargs.get("flip_x", False))
+    flip_y = as_bool(kwargs.get("flip_y", False))
+    flip_z = as_bool(kwargs.get("flip_z", False))
+    rad_x = as_float(kwargs.get("rad_x", 0.0))
+    rad_y = as_float(kwargs.get("rad_y", 0.0))
+    rad_z = as_float(kwargs.get("rad_z", 0.0))
+
+    if not (flip_x or flip_y or flip_z or rad_x or rad_y or rad_z):
+        return affines
+
+    transform = np.eye(4, dtype=float)
+    if flip_x or flip_y or flip_z:
+        flip = np.eye(4, dtype=float)
+        if flip_x:
+            flip[0, 0] = -1.0
+        if flip_y:
+            flip[1, 1] = -1.0
+        if flip_z:
+            flip[2, 2] = -1.0
+        transform = flip @ transform
+
+    if rad_x:
+        cx, sx = float(np.cos(rad_x)), float(np.sin(rad_x))
+        rx = np.array(
+            [[1.0, 0.0, 0.0, 0.0], [0.0, cx, -sx, 0.0], [0.0, sx, cx, 0.0], [0.0, 0.0, 0.0, 1.0]],
+            dtype=float,
+        )
+        transform = rx @ transform
+    if rad_y:
+        cy, sy = float(np.cos(rad_y)), float(np.sin(rad_y))
+        ry = np.array(
+            [[cy, 0.0, sy, 0.0], [0.0, 1.0, 0.0, 0.0], [-sy, 0.0, cy, 0.0], [0.0, 0.0, 0.0, 1.0]],
+            dtype=float,
+        )
+        transform = ry @ transform
+    if rad_z:
+        cz, sz = float(np.cos(rad_z)), float(np.sin(rad_z))
+        rz = np.array(
+            [[cz, -sz, 0.0, 0.0], [sz, cz, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
+            dtype=float,
+        )
+        transform = rz @ transform
+
+    if isinstance(affines, tuple):
+        return tuple(np.asarray(transform @ np.asarray(a), dtype=float) for a in affines)
+    return np.asarray(transform @ np.asarray(affines), dtype=float)
 
 
 def get_nifti1image(
