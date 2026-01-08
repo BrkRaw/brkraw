@@ -83,4 +83,6 @@ nav:
       - Core vs addon development: dev/core-vs-addon.md
       - Building CLI plugins: dev/cli-extensions.md
       - Building hook packages: dev/hook-packages.md
+      - Roadmap: dev/roadmap.md
+      - Documentation: dev/documentation.md
       - Contributors: dev/contributors.md
