@@ -5,6 +5,11 @@ on:
     tags:
       - "*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.2.3)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,11 +20,21 @@ jobs:
     if: ${{ github.repository == 'BrkRaw/brkraw' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.value }}
       - name: Detect prerelease tag
         id: prerelease
         run: |
-          tag="${GITHUB_REF_NAME}"
+          tag="${{ steps.tag.outputs.value }}"
           if echo "$tag" | grep -Eq '(a|b|rc)[0-9]+$'; then
             echo "value=true" >> "$GITHUB_OUTPUT"
           else
@@ -28,16 +43,16 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: ${{ steps.tag.outputs.value }}
           body_path: RELEASE_NOTES.md
           prerelease: ${{ steps.prerelease.outputs.value }}
       - name: Post release announcement
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          TAG_NAME: ${{ github.ref_name }}
-          RELEASE_URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          TAG_NAME: ${{ steps.tag.outputs.value }}
+          RELEASE_URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.value }}
         run: |
           python3 - <<'PY'
           import json

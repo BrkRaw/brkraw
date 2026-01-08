@@ -8,6 +8,10 @@ on:
         type: choice
         options: [testpypi, pypi]
         default: testpypi
+      tag:
+        description: "Tag to publish (optional, e.g. v1.2.3)"
+        required: false
+        type: string
   release:
     types: [published]
 
@@ -19,7 +23,17 @@ jobs:
     if: ${{ github.repository == 'BrkRaw/brkraw' && (github.event_name != 'release' || github.event.release.prerelease == false) }}
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag }}" ]; then
+            echo "value=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.value }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
@@ -28,9 +42,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build twine
       - name: Verify version matches tag
-        if: ${{ github.event_name == 'release' }}
+        if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.tag != '') }}
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.tag.outputs.value }}
         run: |
           python -c 'code = """import os
           import sys
