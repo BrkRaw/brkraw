@@ -1,60 +1,164 @@
-# CLI: addon
+# brkraw addon
 
-Manage installed specs, pruner specs, rules, and transforms.
+The `brkraw addon` command manages BrkRaw's extensibility layer.
+It is used to install, inspect, edit, and remove **specs**, **rules**, **pruner specs**, and **transforms** that control how metadata is interpreted and how conversions are performed.
 
-Specs include remapper specs (`info_spec`, `metadata_spec`). Pruner specs are
-installed separately under `pruner_specs/`.
+This command is central to BrkRaw's design goal:
+**all extensions are shared through a common, user-visible mechanism**, so newly installed hooks or specs work naturally with existing workflows.
 
-## brkraw addon add
+---
 
-Install a spec or rule file.
+## What is an addon in BrkRaw?
 
-Example:
+In BrkRaw, an "addon" refers to one of the following YAML- or script-based components installed under the config root:
 
-- `brkraw addon add path/to/spec.yaml`
+- Info specs (`info_spec`)
+- Metadata specs (`metadata_spec`)
+- Converter hooks (`converter_hook`)
+- Rules (binding specs to workflows)
+- Pruner specs (dataset reduction for sharing)
+- Transforms (Python helpers referenced by specs)
 
-## brkraw addon list
+All addons live under the BrkRaw config directory (by default `~/.brkraw`).
 
-List installed specs, pruner specs, rules, and transforms.
+---
 
-Example:
+## List installed addons
 
-- `brkraw addon list`
+Shows all installed specs, rules, pruner specs, and transforms in a categorized table.
+
+```bash
+brkraw addon list
+```
+
+What this shows:
+
+- Specs: name, version, category, description
+- Rules: category and binding targets
+- Pruner specs: available pruning templates
+- Transforms: Python files referenced by specs
+
+Unknown or incomplete metadata is displayed in gray to help identify legacy or prototype files.
+
+---
+
+## Install an addon
+
+Install a spec, rule, or pruner spec from a YAML file.
+
+```bash
+brkraw addon add FILE.yaml
+```
+
+Behavior:
+
+- The file type is auto-detected (spec, rule, or pruner spec)
+- Validation is performed before installation
+- Referenced transforms are automatically installed if declared
+- Files are copied into the appropriate config subdirectory
+
+This is how third-party extensions (for example, `brkraw-mrs`) integrate with the core CLI.
+
+---
+
+## Edit an installed addon
+
+Open an installed addon in your preferred text editor.
+
+```bash
+brkraw addon edit TARGET
+```
+
+Optional hints:
+
+```bash
+brkraw addon edit TARGET --kind spec
+brkraw addon edit TARGET --kind rule
+brkraw addon edit TARGET --kind pruner
+brkraw addon edit TARGET --kind transform
+```
 
 Notes:
 
-- Spec listings include `name`, `version`, `description`, and `category` from `__meta__`.
+- `TARGET` can be a filename or a logical name
+- The editor is resolved from:
 
-- Pruner spec listings omit `category`.
+  - `config.yaml: editor`
+  - `$VISUAL`
+  - `$EDITOR`
 
-## brkraw addon rm
+This allows tight iteration on specs and rules without leaving the CLI.
 
-Remove installed addons by filename (wildcards supported).
+---
 
-Examples:
+## Remove an addon
 
-- `brkraw addon rm metadata_func.yaml`
+Remove an installed addon file.
 
-- `brkraw addon rm "*.yaml" --kind spec --force`
+```bash
+brkraw addon rm FILE.yaml
+```
 
-- `brkraw addon rm "prune.yaml" --kind pruner`
+Optional flags:
 
-Notes:
+```bash
+brkraw addon rm FILE.yaml --kind spec
+brkraw addon rm FILE.yaml --force
+```
 
-- Dependency checks run by default; use `--force` to remove anyway.
+Behavior:
 
-- `--kind` can limit removal to `spec`, `pruner`, `rule`, or `transform`.
+- Dependency checks are performed by default
+- If other rules or specs reference the target, a warning is shown
+- Use `--force` to remove anyway
 
-## brkraw addon edit
+This protects users from accidentally breaking active workflows.
 
-Open an installed spec or rule in the configured editor (`editor` or `$EDITOR`).
+---
 
-Examples:
+## Dependency awareness
 
-- `brkraw addon edit metadata_anat --kind spec`
+The addon system tracks dependencies between components:
 
-- `brkraw addon edit rules.yaml --kind rule`
+- Rules referencing specs
+- Specs including other specs
+- Specs referencing transform scripts
 
-- `brkraw addon edit prune.yaml --kind pruner`
+When removing addons, BrkRaw warns about downstream dependencies so users can make informed decisions.
 
-- `brkraw addon edit metadata_spec --kind rule --category metadata_spec`
+---
+
+## Typical workflows
+
+### Install default addons
+
+```bash
+brkraw init --install-default
+```
+
+Installs bundled specs, rules, and pruner specs shipped with BrkRaw.
+
+### Add a custom spec and tweak it
+
+```bash
+brkraw addon add my_spec.yaml
+brkraw addon edit my_spec.yaml
+```
+
+### Inspect what is currently active
+
+```bash
+brkraw addon list
+```
+
+---
+
+## Design notes
+
+- Addons are **file-based and transparent**
+- No hidden registry or binary state
+- Everything is inspectable, editable, and versionable
+- This design allows BrkRaw core and external projects to evolve independently
+
+Future tools such as `brkraw-bids` will build on the same addon mechanism for
+project-specific and modality-aware organization logic.

@@ -1,89 +1,74 @@
-# Python API Overview
+# Python API overview
 
-Examples below show common patterns when using BrkRaw as a library.
+The brkraw Python API provides programmatic access to the same core
+functionality as the CLI, using explicit function calls and objects
+instead of shell commands.
 
-## Load a dataset
+The API is organized around a small set of core tasks:
+
+- Load a dataset and bind a configuration context
+- Inspect datasets and acquisition parameters
+- Convert scans and generate outputs
+- Manage mapping logic and extensions
+
+This section documents the main API entry points and how they fit together.
+
+## Entry point
+
+All workflows start by loading a dataset:
 
 ```python
 import brkraw as brk
-
 loader = brk.load("/path/to/study")
 ```
 
-## Inspect info
+The returned object acts as a dataset loader and the primary handle for
+inspection and conversion.
+
+Loading a dataset is non-destructive and does not modify the source files.
+
+## Recommended workflow
+
+1. Load a dataset:
+
+```python
+loader = brk.load("/path/to/study")
+```
+
+2. Inspect the dataset:
 
 ```python
 info = loader.info(scope="full", as_dict=True)
-print(info["Study"])
 ```
 
-## Read scan data
+3. Convert a scan:
 
 ```python
-scan = loader.get_scan(3)
-data = scan.get_dataobj(reco_id=1)
-```
-
-## Build a NIfTI image
-
-```python
-nii = loader.convert(3, reco_id=1, format="nifti")
-if isinstance(nii, tuple):
-    # Multiple slice packs (suffix controlled by output.slicepack_suffix in config)
-    for i, img in enumerate(nii, start=1):
-        img.to_filename(f"scan3_slpack{i}.nii.gz")
-else:
-    nii.to_filename("scan3.nii.gz")
-```
-
-## Read metadata (sidecar)
-
-```python
-meta = loader.get_metadata(3, reco_id=1)
-print(meta)
-```
-
-To capture the spec metadata used during resolution:
-
-```python
-meta, spec_info = loader.get_metadata(3, reco_id=1, return_spec=True)
-print(spec_info["name"], spec_info.get("version"))
-```
-
-Override context map:
-
-```python
-meta = loader.get_metadata(3, reco_id=1, context_map="maps.yaml")
-```
-
-## Layout rendering
-
-```python
-from brkraw.core import layout as layout_core
-
-name = layout_core.render_layout(
-    loader,
+nii = loader.convert(
     scan_id=3,
-    layout_template="sub-{Subject.ID}/scan-{ScanID}_{Protocol}",
-    context_map="maps.yaml",
+    reco_id=1,
+    format="nifti",
 )
 ```
 
-Override info/metadata specs (testing only):
+4. Reuse the same loader instance when converting multiple scans:
 
 ```python
-name = layout_core.render_layout(
-    loader,
-    scan_id=3,
-    layout_entries=[{"key": "Protocol", "hide": True}],
-    override_info_spec="info_override.yaml",
-    override_metadata_spec="metadata_override.yaml",
-)
+for scan_id in loader.avail.keys():
+    nii = loader.convert(
+        scan_id=scan_id,
+        reco_id=1,
+        format="nifti",
+    )
 ```
 
-## Parameter search
+Reusing the loader avoids repeated dataset discovery and validation,
+while keeping scan selection explicit at each call.
 
-```python
-params = loader.search_params("PVM_RepetitionTime", scan_id=3)
-print(params)
-```
+## Notes
+
+- Output naming and metadata generation are controlled by configuration
+  files (`config.yaml`) and optionally by a `context_map` YAML passed at
+  runtime.
+- Extensions are managed as addons (data files) and hooks (Python packages
+  that install namespaced addon assets).

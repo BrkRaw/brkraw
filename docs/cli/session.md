@@ -1,75 +1,117 @@
-# CLI: session
+# session
 
-Manage environment defaults for repeated CLI use.
+Manage BrkRaw environment defaults for CLI workflows.
 
-## Shell helpers
+`brkraw session` does not modify your shell directly. Instead it prints shell
+commands, so you can apply them using `eval ...`.
 
-Install helpers into your shell rc:
+This is useful when you run multiple commands repeatedly against the same
+dataset or with the same conversion defaults.
 
-- `brkraw init --shell-rc ~/.zshrc`
+Tip:
 
-Then you can use:
+- `brkraw init --shell-rc ~/.zshrc` (or `~/.bashrc`) can install helper
+  functions `brkraw-set` and `brkraw-unset` for convenience.
 
-- `brkraw-set ...` (exports vars in the current shell)
+---
 
-- `brkraw-unset ...` (unsets vars in the current shell)
+## session set
 
-## brkraw session set
-
-Emit `export` statements for environment defaults.
-
-Examples:
-
-- `brkraw session set -p /path/to/study -s 3 -r 1`
-
-- `brkraw session set --convert-option FORMAT=nifti --convert-option COMPRESS=1`
-
-- `brkraw session set --convert-option OUTPUT=./out --convert-option SIDECAR=1`
-
-- `eval "$(brkraw session set -p /path/to/study -s 3)"`
-
-Convert options (set as `BRKRAW_CONVERT_<KEY>`):
-
-- `OUTPUT`, `PREFIX`, `SCAN_ID`, `RECO_ID`
-
-- `SIDECAR`, `CONTEXT_MAP`, `SPACE`, `COMPRESS`, `FORMAT`
-
-- `FLIP_X`
-
-- `OVERRIDE_SUBJECT_TYPE`, `OVERRIDE_SUBJECT_POSE`
-
-- `XYZ_UNITS`, `T_UNITS`, `HEADER`
-
-`FORMAT`/`COMPRESS` control the NIfTI file extension (`nii` or `nii.gz`), not the
-filename layout. The filename entries are configured via `output.layout_entries`
-and `output.layout_template` in `config.yaml`.
-
-## brkraw session unset
-
-Emit `unset` statements. Behavior matches the old `brkraw unset`.
+Emit `export ...` statements for BrkRaw defaults.
 
 Examples:
 
-- `brkraw session unset`
-
-- `brkraw session unset --path --scan-id`
-
-- `brkraw session unset --convert-option`
-
-- `brkraw session unset --convert-option OUTPUT --convert-option SCAN_ID`
-
-- `eval "$(brkraw session unset --path --scan-id)"`
-
-## brkraw session env
-
-Show current environment defaults.
-
-## Help output (example)
+Set a default dataset path:
 
 ```bash
-brkraw session -h
+eval "$(brkraw session set --path /path/to/study)"
 ```
 
+Set default scan/reco ids:
+
+```bash
+eval "$(brkraw session set --scan-id 3 --reco-id 1)"
+```
+
+Set a default parameter key for `brkraw params`:
+
+```bash
+eval "$(brkraw session set --param-key PVM_RepetitionTime)"
+```
+
+Set default parameter file(s) for `brkraw params`:
+
+```bash
+eval "$(brkraw session set --param-file visu_pars)"
+```
+
+Set default convert options (repeatable):
+
+```bash
+eval "$(brkraw session set --convert-option SIDECAR=true --convert-option SPACE=subject_ras)"
+```
+
+Convert option keys map to `BRKRAW_CONVERT_<OPTION>` environment variables.
+
+Supported keys include:
+
+- OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, CONTEXT_MAP
+- COMPRESS, SPACE, FLIP_X
+- OVERRIDE_SUBJECT_TYPE, OVERRIDE_SUBJECT_POSE
+- XYZ_UNITS, T_UNITS
+- HEADER, FORMAT
+
+Notes:
+
+- `--convert-option` expects `KEY=VALUE`.
+- Keys are normalized to uppercase and `-` becomes `_`.
+
+---
+
+## session unset
+
+Emit `unset ...` commands to remove defaults.
+
+Unset everything:
+
+```bash
+eval "$(brkraw session unset)"
+```
+
+Unset selected categories:
+
+```bash
+eval "$(brkraw session unset --path --scan-id --reco-id)"
+```
+
+Unset specific convert variables:
+
+```bash
+eval "$(brkraw session unset --convert-option OUTPUT --convert-option SPACE)"
+```
+
+Unset all convert variables:
+
+```bash
+eval "$(brkraw session unset --convert-option)"
+```
+
+Notes:
+
+- `unset` flags are toggles (e.g., `--reco-id` unsets the default reco id).
+
+---
+
+## session env
+
+Show current BrkRaw environment defaults (from environment variables).
+
+```bash
+brkraw session env
+```
+
+If nothing is set:
+
 ```text
-usage: brkraw session [-h] [--root ROOT] {set,unset,env} ...
+(none)
 ```

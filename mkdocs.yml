@@ -39,28 +39,45 @@ extra_css:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - CLI:
-      - Overview: cli/info-and-params.md
-      - Session helpers: cli/session.md
-      - Convert command: cli/convert.md
-      - Addons: cli/addon.md
-      - Hooks: cli/hook.md
-      - Config: cli/config.md
-      - Prune: cli/prune.md
-  - API:
-      - Overview: api/overview.md
-      - CLI Equivalents: api/cli-workflows.md
-      - Layout API: api/layout.md
-      - Addon API: api/addon.md
-      - Pruner API: api/pruner.md
-  - Contribution:
-      - Extending BrkRaw: contrib/contribution.md
-      - Rule Syntax: contrib/rule-syntax.md
-      - Spec Syntax: contrib/spec-syntax.md
-      - Addons and Plugins: contrib/addons-and-plugins.md
-      - Hook Packages: contrib/hook-packages.md
-      - Core vs Addon Development: contrib/development-model.md
-      - Contributors: contrib/contributors.md
+
+  - Getting Started:
+      - Overview: getting-started/index.md
+      - CLI quickstart: getting-started/cli.md
+      - Python API quickstart: getting-started/api.md
+      - Configuration basics: getting-started/configuration.md
+      - Converter hooks: getting-started/hooks.md
+      - Dataset viewer: getting-started/viewer.md
+
+  - CLI Reference:
+      - overview: cli/index.md
+      - session: cli/session.md
+      - info: cli/info.md
+      - convert: cli/convert.md
+      - prune: cli/prune.md
+      - config: cli/config.md
+      - addon: cli/addon.md
+      - hook: cli/hook.md
+
+  - API Reference:
+      - overview: api/overview.md
+      - info and params: api/info.md
+      - convert: api/convert.md
+      - prune: api/prune.md
+      - layout: api/layout.md
+      - addon: api/addon.md
+      - hook: api/hook.md
+
   - Reference:
-      - Configuration: configuration.md
+      - Extensibility model: reference/extensibility.md
+      - Addons and plugins: reference/addons-and-plugins.md
+      - CLI extensions: reference/cli-extensions.md
+      - Rule syntax: reference/rules.md
+      - Spec syntax: reference/specs.md
+      - Context map syntax: reference/context-map.md
+      - Output layout and naming: reference/layout.md
+      - Converter hook packages: reference/hook-packages.md
+
+  - Developer Guide:
+      - Contributing: dev/contributing.md
+      - Core vs addon development: dev/core-vs-addon.md
+      - Contributors: dev/contributors.md

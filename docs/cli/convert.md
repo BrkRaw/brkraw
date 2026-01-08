@@ -1,206 +1,269 @@
-# CLI: convert
+# Convert scans to NIfTI
 
-These commands convert Paravision datasets to NIfTI and optionally write JSON
-sidecars.
+`brkraw convert` is the core command for converting Bruker Paravision scans
+into NIfTI files, with optional metadata sidecars and extensible conversion
+logic via hooks.
 
+This command is designed for interactive inspection, scriptable workflows,
+and batch processing in real research environments.
 
-## brkraw convert
+## Basic usage
 
-Convert a single dataset. If `-s/--scan-id` is omitted, all scans and recos are
-converted.
+Convert a single scan and reco:
 
-Examples:
-
-- `brkraw convert /path/to/study -s 3 -r 1 -o out`
-
-- `brkraw convert /path/to/study --sidecar`
-
-- `brkraw convert /path/to/study -o out` (all scans, all recos)
-
-
-Notes:
-
-- `-o` with `.nii` or `.nii.gz` writes a single file.
-
-- `-o` without an extension is treated as a directory when converting all scans.
-
-- Multiple slice packs use `output.slicepack_suffix` from `config.yaml`.
-
-- Output layout keys are resolved from the merged `info_spec` and `metadata_spec`
-  results (metadata wins on conflicts).
-
-- `--format nifti` with compression on writes `.nii.gz` (default).
-  Use `--no-compress` to write `.nii`.
-
-- `--prefix` supports layout tags like `{Protocol}` or `{SliceOrient}` and
-  overrides any layout template from config/context maps.
-- `--hook-arg` passes hook-specific options to converter hooks using
-  `HOOK:KEY=VALUE` format (repeatable).
-
-
-## brkraw convert-batch
-
-Convert every dataset found under a root folder (subdirectories and zip files).
-
-Examples:
-
-- `brkraw convert-batch /path/to/root -o /path/to/out`
-
-Notes:
-
-- `-o` must be a directory for `convert-batch`.
-
-- `convert-batch` always converts all scans and recos.
-
-- Each dataset path is logged before conversion.
-
-
-## Output layout
-
-NIfTI filenames are built from layout fields or a layout template. Values come
-from merged `info_spec` + `metadata_spec` results.
-
-Priority order:
-
-1. CLI `--prefix` (template override).
-
-2. `context_map.__meta__` (`layout_entries`, `layout_template`).
-
-3. `config.yaml` (`output.layout_entries`, `output.layout_template`).
-
-Each entry is appended in order when the value is present. Values are sanitized
-to `A-Z`, `a-z`, `0-9`, `.`, `_`, `-`. Missing values are skipped.
-Use `sep: "/"` on a field to insert folder separators.
-
-
-### Practical naming examples
-
-Minimal `info_spec` context (from `src/brkraw/apps/loader/info/study.yaml`):
-```yaml
-Study.ID:
-  sources:
-    - file: subject
-      key: SUBJECT_study_name
-  transform: strip_jcamp_string
-Subject.ID:
-  sources:
-    - file: subject
-      key: SUBJECT_id
-  transform: strip_jcamp_string
-```
-Assume the mapped values are:
-```
-Study.ID = S001
-Subject.ID = 01
-Protocol = T1w
-```
-
-Minimal entries (default prefixing):
-```yaml
-output:
-  layout_entries:
-    - key: Study.ID
-      entry: study
-      sep: "/"
-    - key: Subject.ID
-      entry: sub
-      sep: "/"
-    - key: Protocol
-      entry: acq
-```
-Example result (when values exist):
-```
-study-S001/sub-sub-01/acq-T1w
-```
-
-Entry omitted (auto entry name):
-```yaml
-output:
-  layout_entries:
-    - key: Study.ID
-      sep: "/"
-    - key: Subject.ID
-      sep: "/"
-    - key: Protocol
-```
-Example result:
-```
-studyid-S001/subjectid-sub-01/protocol-T1w
-```
-
-Value-only entry (`hide: true`):
-```yaml
-output:
-  layout_entries:
-    - key: Study.ID
-      entry: study
-      sep: "/"
-    - key: Subject.ID
-      entry: sub
-      sep: "/"
-    - key: Protocol
-      hide: true
-```
-Example result:
-```
-study-S001/sub-sub-01/T1w
-```
-
-Single-file output override:
 ```bash
-brkraw convert /path/to/study -s 3 -r 1 -o /tmp/myfile.nii.gz
-```
-This ignores layout entries and writes the file as provided.
-
-Template override:
-```yaml
-output:
-  layout_template: "study-{Study.ID}/sub-{Subject.ID}/{Protocol}"
-```
-Example result:
-```
-study-S001/sub-sub-01/T1w
+brkraw convert /path/to/study --scan-id 3 --reco-id 1
 ```
 
-Extension handling:
-- Layout outputs build the base filename only.
-- The extension is added automatically based on `--format` and `--no-compress`
-  (default: `.nii.gz`, `--no-compress` => `.nii`).
-- Supplying `--output` with a `.nii`/`.nii.gz` filename uses that extension as-is.
+By default:
 
-Context map note:
-`context_map` layout overrides are intended for BIDS-oriented workflows and are
-under active development/testing/documentation.
+- Output is written to the current directory
+- Files are compressed (.nii.gz)
+- Affines are computed in subject_ras space
+- Output filenames follow the configured layout rules
 
-Context map layout overrides:
+## Selecting scans and reconstructions
 
-```yaml
-__meta__:
-  layout_entries:
-    - key: Study.ID
-      entry: study
-      sep: "/"
-    - key: Subject.ID
-      entry: sub
-      sep: "/"
-    - key: Protocol
-      hide: true
-  layout_template: "study-{Study.ID}/sub-{Subject.ID}/{Protocol}"
-  slicepack_suffix: "_sl{index}"
+### --scan-id
+
+Specify the scan ID to convert.
+
+```bash
+brkraw convert /path/to/study --scan-id 5
 ```
 
+If omitted, all available scans are converted (batch behavior).
 
-## Environment defaults
+### --reco-id
 
-You can set defaults via `brkraw session set --convert-option KEY=VALUE`.
-Common keys:
+Specify the reconstruction ID.
 
-- `OUTPUT`, `PREFIX`, `SCAN_ID`, `RECO_ID`
+```bash
+brkraw convert /path/to/study --scan-id 5 --reco-id 2
+```
 
-- `SIDECAR`, `CONTEXT_MAP`, `SPACE`, `COMPRESS`, `FORMAT`
+Notes:
 
-- `FLIP_X`
+- Default is 1
+- If omitted and multiple recos exist, all recos are converted
+- Some converter hooks may not use reco IDs explicitly
 
-- `OVERRIDE_SUBJECT_TYPE`, `OVERRIDE_SUBJECT_POSE`
+## Output control
 
-- `XYZ_UNITS`, `T_UNITS`, `HEADER`
+### --output
+
+Control where converted files are written.
+
+Write to a directory:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --output out/
+```
+
+Write to a specific file:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --output scan3.nii.gz
+```
+
+Rules:
+
+- When converting multiple scans, --output must be a directory
+- When --output is a file, --prefix cannot be used
+
+### --prefix
+
+Override the filename layout using a template.
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --prefix "{Protocol}_{ScanID}"
+```
+
+Template fields are resolved from layout info and metadata specs.
+
+### Compression
+
+By default, output is written as .nii.gz.
+
+Disable compression:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --no-compress
+```
+
+## Metadata sidecars
+
+### --sidecar
+
+Write a JSON sidecar file next to each NIfTI output.
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --sidecar
+```
+
+Sidecar metadata is generated from:
+
+- Built-in info specs
+- Installed metadata specs
+- Optional context maps
+
+## Affine handling
+
+### --space
+
+Select the affine space used for conversion.
+Values are case-sensitive.
+
+Valid values:
+
+- raw
+- scanner
+- subject_ras
+
+Example:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --space subject_ras
+```
+
+### --override-subject-type
+
+Override the subject type used when computing subject-view affines
+(space=subject_ras only).
+
+Valid values (case-sensitive):
+
+- Biped
+- Quadruped
+- Phantom
+- Other
+- OtherAnimal
+
+Example:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --override-subject-type Quadruped
+```
+
+### --override-subject-pose
+
+Override the subject pose used when computing subject-view affines
+(space=subject_ras only).
+
+Valid values (case-sensitive):
+
+- Head_Supine
+- Head_Prone
+- Head_Left
+- Head_Right
+- Foot_Supine
+- Foot_Prone
+- Foot_Left
+- Foot_Right
+
+Example:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --override-subject-pose Head_Supine
+```
+
+### Axis flip
+
+Flip the x-axis in the output affine:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --flip-x
+```
+
+## Units and headers
+
+### Spatial and temporal units
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --xyz-units mm --t-units sec
+```
+
+Values are validated strictly and are case-sensitive.
+
+### Header overrides
+
+Provide a YAML file to override NIfTI header fields:
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --header header_override.yaml
+```
+
+## Context maps and selection
+
+### --context-map
+
+Apply metadata remapping and conditional selection logic.
+
+```bash
+brkraw convert /path/to/study --context-map bids_map.yaml --sidecar
+```
+
+Context maps can:
+
+- Select or skip scans
+- Modify metadata fields
+- Override layout rules and slice-pack suffixes
+
+## Converter hooks
+
+### --hook-arg
+
+Pass arguments to installed converter hooks.
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --hook-arg mrs:reference=water
+```
+
+Format:
+
+```text
+HOOK_NAME:KEY=VALUE
+```
+
+Values are parsed as bool, int, float, or string.
+
+## Batch conversion
+
+### brkraw convert-batch
+
+Convert all datasets under a root directory.
+
+```bash
+brkraw convert-batch /path/to/datasets --output out/
+```
+
+Notes:
+
+- Each subdirectory or zip file is treated as a dataset
+- Failures in one dataset do not stop the batch
+
+## Environment defaults (advanced)
+
+brkraw convert respects environment variables set via brkraw session set.
+
+Example:
+
+```bash
+brkraw-set -p /path/to/study -s 3 -r 1
+brkraw convert
+```
+
+See session.md for details.
+
+## Common pitfalls
+
+- All affine-related options are case-sensitive
+- --output must be a directory when converting multiple scans
+- Invalid subject overrides are rejected early
+- Missing metadata selectors may silently skip scans
+
+## Looking ahead
+
+BrkRaw focuses on robust conversion and extensibility.
+Project-specific organization logic (scan-aware or modality-aware BIDS layouts)
+is planned in a dedicated tool: brkraw-bids.

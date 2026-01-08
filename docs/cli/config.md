@@ -1,70 +1,136 @@
-# CLI: config
+# config
 
-Manage the configuration root and related paths.
+Manage BrkRaw configuration locations and `config.yaml`.
 
-## brkraw config init
+Use this command to:
 
-Create the config root and optional `config.yaml`.
+- create or reset config roots,
+- inspect resolved configuration,
+- set or unset individual keys,
+- open `config.yaml` in your preferred editor.
 
-Examples:
+By default, BrkRaw stores configuration under `~/.brkraw`, or you can override it
+with `BRKRAW_CONFIG_HOME` or `--root`.
 
-- `brkraw config init`
+---
 
-- `brkraw config init --no-config`
+## Subcommands
 
-## brkraw config show
+### config init
 
-Show resolved config values as YAML.
+Create the config folders and optionally create `config.yaml`.
 
-Example:
+```bash
+brkraw config init
+```
 
-- `brkraw config show`
+Options:
 
-Defaults are included even if the key is missing from `config.yaml`.
+- `--no-config`  
+  Do not create `config.yaml`.
 
-## brkraw config path
+- `--no-exist-ok`  
+  Fail if the config root already exists.
+
+---
+
+### config show
+
+Print resolved config values (ordered for readability).
+
+```bash
+brkraw config show
+```
+
+If `config.yaml` is empty, prints:
+
+```text
+config.yaml: <empty>
+```
+
+---
+
+### config path
 
 Print a specific config path.
 
-Example:
+```bash
+brkraw config path root
+brkraw config path config
+brkraw config path rules
+brkraw config path specs
+brkraw config path transforms
+```
 
-- `brkraw config path specs`
+---
 
-- `brkraw config path pruner_specs`
+### config edit
 
+Edit `config.yaml` in an editor.
 
-## brkraw config set
+```bash
+brkraw config edit
+```
 
-Set a config key to a YAML value.
+BrkRaw resolves the editor in this order:
 
-Example:
+1. `config.yaml: editor`
+2. `$VISUAL`
+3. `$EDITOR`
 
-- `brkraw config set output.layout_entries '[{key: Subject.ID, entry: sub, hide: false}]'`
+If `config.yaml` does not exist, it is reset to defaults before editing.
 
-- `brkraw config set output.layout_template='sub-{Subject.ID}/study-{Study.ID}'`
+---
 
-- `brkraw config set logging.level=DEBUG`
+### config set
 
-## brkraw config unset
+Set a config key.
 
-Remove a config key.
+```bash
+brkraw config set logging.level DEBUG
+brkraw config set output.float_decimals 4
+```
 
-Example:
+Nested keys are supported with dot notation:
 
-- `brkraw config unset output.layout_template`
+```bash
+brkraw config set logging.print_width 160
+```
 
-## brkraw config reset
+You can also use `KEY=VALUE` form:
+
+```bash
+brkraw config set logging.level=DEBUG
+```
+
+Values are parsed as YAML scalars (e.g., `true`, `false`, numbers, lists).
+
+---
+
+### config unset
+
+Unset a config key.
+
+```bash
+brkraw config unset logging.level
+brkraw config unset output.layout_template
+```
+
+Nested keys are supported with dot notation. When nested dicts become empty,
+they are removed automatically.
+
+---
+
+### config reset
 
 Reset `config.yaml` to defaults.
 
-Example:
+```bash
+brkraw config reset
+```
 
-- `brkraw config reset --yes`
+To skip confirmation:
 
-## brkraw config edit
-
-Open `config.yaml` in the configured editor (`editor` or `$EDITOR`).
-
-Example:
-
-- `brkraw config edit`
+```bash
+brkraw config reset --yes
+```
