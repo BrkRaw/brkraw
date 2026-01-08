@@ -440,42 +440,17 @@ def _apply_affine_post_transform(affines: AffineReturn, *, kwargs: Mapping[str, 
     if not (flip_x or flip_y or flip_z or rad_x or rad_y or rad_z):
         return affines
 
-    transform = np.eye(4, dtype=float)
-    if flip_x or flip_y or flip_z:
-        flip = np.eye(4, dtype=float)
-        if flip_x:
-            flip[0, 0] = -1.0
-        if flip_y:
-            flip[1, 1] = -1.0
-        if flip_z:
-            flip[2, 2] = -1.0
-        transform = flip @ transform
-
-    if rad_x:
-        cx, sx = float(np.cos(rad_x)), float(np.sin(rad_x))
-        rx = np.array(
-            [[1.0, 0.0, 0.0, 0.0], [0.0, cx, -sx, 0.0], [0.0, sx, cx, 0.0], [0.0, 0.0, 0.0, 1.0]],
-            dtype=float,
-        )
-        transform = rx @ transform
-    if rad_y:
-        cy, sy = float(np.cos(rad_y)), float(np.sin(rad_y))
-        ry = np.array(
-            [[cy, 0.0, sy, 0.0], [0.0, 1.0, 0.0, 0.0], [-sy, 0.0, cy, 0.0], [0.0, 0.0, 0.0, 1.0]],
-            dtype=float,
-        )
-        transform = ry @ transform
-    if rad_z:
-        cz, sz = float(np.cos(rad_z)), float(np.sin(rad_z))
-        rz = np.array(
-            [[cz, -sz, 0.0, 0.0], [sz, cz, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-            dtype=float,
-        )
-        transform = rz @ transform
+    def apply_one(a: np.ndarray) -> np.ndarray:
+        out = np.asarray(a, dtype=float)
+        if flip_x or flip_y or flip_z:
+            out = affine_resolver.flip_affine(out, flip_x=flip_x, flip_y=flip_y, flip_z=flip_z)
+        if rad_x or rad_y or rad_z:
+            out = affine_resolver.rotate_affine(out, rad_x=rad_x, rad_y=rad_y, rad_z=rad_z)
+        return np.asarray(out, dtype=float)
 
     if isinstance(affines, tuple):
-        return tuple(np.asarray(transform @ np.asarray(a), dtype=float) for a in affines)
-    return np.asarray(transform @ np.asarray(affines), dtype=float)
+        return tuple(apply_one(np.asarray(a)) for a in affines)
+    return apply_one(np.asarray(affines))
 
 
 def get_nifti1image(
