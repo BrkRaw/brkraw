@@ -8,9 +8,9 @@ This page is auto-generated from GitHub contributors.
 
 |  |  |  |  |  |  |
 | --- | --- | --- | --- | --- | --- |
-| [![dvm-shlee][dvm-shlee-avatar]][dvm-shlee] | [![ycAbout][ycabout-avatar]][ycabout] | [![Remi-Gau][remi-gau-avatar]][remi-gau] | [![banwoomi][banwoomi-avatar]][banwoomi] | [![gdevenyi][gdevenyi-avatar]][gdevenyi] | [![jeremie-fouquet][jeremie-fouquet-avatar]][jeremie-fouquet] |
-| [![timwahoo][timwahoo-avatar]][timwahoo] | [![eugenegkim][eugenegkim-avatar]][eugenegkim] | [![lconcha][lconcha-avatar]][lconcha] | [![jsmi-d][jsmi-d-avatar]][jsmi-d] | [![mih][mih-avatar]][mih] | [![grandjeanlab][grandjeanlab-avatar]][grandjeanlab] |
-| [![RicardoRios46][ricardorios46-avatar]][ricardorios46] |  |  |  |  |  |
+| [![dvm-shlee][dvm-shlee-avatar]][dvm-shlee]<br>dvm-shlee | [![ycAbout][ycabout-avatar]][ycabout]<br>ycAbout | [![Remi-Gau][remi-gau-avatar]][remi-gau]<br>Remi-Gau | [![banwoomi][banwoomi-avatar]][banwoomi]<br>banwoomi | [![gdevenyi][gdevenyi-avatar]][gdevenyi]<br>gdevenyi | [![jeremie-fouquet][jeremie-fouquet-avatar]][jeremie-fouquet]<br>jeremie-fouquet |
+| [![timwahoo][timwahoo-avatar]][timwahoo]<br>timwahoo | [![eugenegkim][eugenegkim-avatar]][eugenegkim]<br>eugenegkim | [![lconcha][lconcha-avatar]][lconcha]<br>lconcha | [![jsmi-d][jsmi-d-avatar]][jsmi-d]<br>jsmi-d | [![mih][mih-avatar]][mih]<br>mih | [![grandjeanlab][grandjeanlab-avatar]][grandjeanlab]<br>grandjeanlab |
+| [![RicardoRios46][ricardorios46-avatar]][ricardorios46]<br>RicardoRios46 |  |  |  |  |  |
 
 [dvm-shlee]: https://github.com/dvm-shlee
 [dvm-shlee-avatar]: https://avatars.githubusercontent.com/u/7221078?s=96
@@ -39,4 +39,4 @@ This page is auto-generated from GitHub contributors.
 [ricardorios46]: https://github.com/RicardoRios46
 [ricardorios46-avatar]: https://avatars.githubusercontent.com/u/43252153?s=96
 
-Last updated: 2026-01-07
+Last updated: 2026-01-08

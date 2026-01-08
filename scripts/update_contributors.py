@@ -11,10 +11,13 @@ import urllib.request
 import urllib.parse
 from pathlib import Path
 from typing import Dict, List, Optional
+import re
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT_PATH = REPO_ROOT / "docs" / "dev" / "contributors.md"
+
+_GITHUB_LOGIN_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$")
 
 
 def _infer_github_login(name: str, email: str) -> Optional[str]:
@@ -29,6 +32,15 @@ def _infer_github_login(name: str, email: str) -> Optional[str]:
     name = name.strip()
     if name.startswith("@") and len(name) > 1:
         return name[1:]
+    # Heuristic: when the author name itself looks like a GitHub login (e.g. "dvm-shlee"),
+    # treat it as such. Keep this conservative to avoid incorrect matches for common names.
+    if (
+        name
+        and name == name.lower()
+        and ("-" in name or any(ch.isdigit() for ch in name))
+        and _GITHUB_LOGIN_RE.fullmatch(name)
+    ):
+        return name
     return None
 
 
@@ -128,7 +140,12 @@ def _avatar_url_with_size(url: str, *, size: int = 96) -> str:
     # Keep URLs short to reduce markdownlint MD013 noise (especially in ref defs).
     parts = urllib.parse.urlsplit(url)
     base = urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
-    return f"{base}?s={size}"
+    size_param = "size" if parts.netloc.lower() == "github.com" else "s"
+    return f"{base}?{size_param}={size}"
+
+
+def _escape_table_text(text: str) -> str:
+    return (text or "").replace("|", "\\|").strip()
 
 
 def _render_github_avatar_table(items: List[Dict[str, str]], *, per_row: int = 6) -> str:
@@ -137,11 +154,15 @@ def _render_github_avatar_table(items: List[Dict[str, str]], *, per_row: int = 6
         login = (item.get("login") or "").strip()
         if not login:
             continue
+        display = (item.get("name") or login).strip() or login
+        html_url = (item.get("html_url") or f"https://github.com/{login}").strip()
+        avatar_url = (item.get("avatar_url") or f"https://github.com/{login}.png").strip()
         users.append(
             {
                 "login": login,
-                "url": (item.get("html_url") or f"https://github.com/{login}").strip(),
-                "avatar": _avatar_url_with_size(item.get("avatar_url") or "", size=96),
+                "display": display,
+                "url": html_url,
+                "avatar": _avatar_url_with_size(avatar_url, size=96),
             }
         )
 
@@ -160,7 +181,8 @@ def _render_github_avatar_table(items: List[Dict[str, str]], *, per_row: int = 6
         for user in chunk:
             ref_profile = user["login"].lower()
             ref_avatar = f"{ref_profile}-avatar"
-            row_cells.append(f"[![{user['login']}][{ref_avatar}]][{ref_profile}]")
+            label = _escape_table_text(user["display"])
+            row_cells.append(f"[![{label}][{ref_avatar}]][{ref_profile}]<br>{label}")
             refs.append(f"[{ref_profile}]: {user['url']}")
             refs.append(f"[{ref_avatar}]: {user['avatar']}")
         while len(row_cells) < cols:
@@ -190,9 +212,34 @@ def _normalize_github_items(items: List[Dict[str, str]]) -> List[Dict[str, str]]
 
 
 def _normalize_git_items(items: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    by_email: Dict[str, Dict[str, str]] = {}
+    for item in items:
+        email = (item.get("email") or "").strip().lower()
+        if not email:
+            continue
+        name = (item.get("name") or "").strip()
+        login = (item.get("login") or "").strip()
+        count = int((item.get("count") or "0").strip() or "0")
+
+        current = by_email.get(email)
+        if current is None:
+            by_email[email] = {"email": email, "name": name, "login": login, "count": str(count)}
+            continue
+
+        current["count"] = str(int(current.get("count", "0")) + count)
+        if not current.get("login") and login:
+            current["login"] = login
+        if name and (" " in name) and (" " not in (current.get("name") or "")):
+            current["name"] = name
+        elif name and not current.get("name"):
+            current["name"] = name
+
+    merged = list(by_email.values())
+    merged.sort(key=lambda x: int(x.get("count", "0")), reverse=True)
+
     seen: set[str] = set()
     normalized: List[Dict[str, str]] = []
-    for item in sorted(items, key=lambda x: int(x.get("count", "0")), reverse=True):
+    for item in merged:
         login = (item.get("login") or "").strip()
         name = (item.get("name") or "").strip()
         key = login or name
@@ -255,10 +302,13 @@ def main() -> int:
         "ideas, and feedback.\n\n"
     )
     note = f"{source_note}\n\n"
-    if source == "github":
-        body = _render_github_avatar_table(contributors, per_row=6)
-    else:
-        body = _render_markdown_list(contributors)
+    with_login = [c for c in contributors if (c.get("login") or "").strip()]
+    without_login = [c for c in contributors if not (c.get("login") or "").strip()]
+    body = _render_github_avatar_table(with_login, per_row=6)
+    if without_login:
+        if body:
+            body += "\n\n"
+        body += _render_markdown_list(without_login)
     updated = f"\n\nLast updated: {dt.date.today().isoformat()}\n"
 
     content = header + intro + note + body + updated
