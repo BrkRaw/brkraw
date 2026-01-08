@@ -6,6 +6,7 @@ Last updated: 2026-01-06
 """
 
 import argparse
+import inspect
 import json
 import logging
 import os
@@ -139,6 +140,17 @@ def cmd_convert(args: argparse.Namespace) -> int:
         default="nifti",
     )
 
+    try:
+        render_layout_supports_counter = "counter" in inspect.signature(layout_core.render_layout).parameters
+    except (TypeError, ValueError):
+        render_layout_supports_counter = True
+    try:
+        slicepack_supports_counter = (
+            "counter" in inspect.signature(layout_core.render_slicepack_suffixes).parameters
+        )
+    except (TypeError, ValueError):
+        slicepack_supports_counter = True
+
     hook_args_by_name: Dict[str, Dict[str, Any]] = {}
     hook_args_yaml_sources: List[str] = []
     for env_key in ("BRKRAW_CONVERT_HOOK_ARGS_YAML", "BRKRAW_HOOK_ARGS_YAML"):
@@ -267,6 +279,9 @@ def cmd_convert(args: argparse.Namespace) -> int:
             slicepack_suffixes: Optional[List[str]] = None
             output_paths: Optional[List[Path]] = None
             for counter in range(1, 1000):
+                layout_kwargs: Dict[str, Any] = {}
+                if render_layout_supports_counter and args.dedupe:
+                    layout_kwargs["counter"] = counter
                 try:
                     candidate_base_name = layout_core.render_layout(
                         loader,
@@ -275,7 +290,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
                         layout_template=layout_template,
                         context_map=args.context_map,
                         reco_id=reco_id,
-                        counter=counter if args.dedupe else None,
+                        **layout_kwargs,
                     )
                 except Exception as exc:
                     logger.error("%s", exc)
@@ -288,7 +303,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
                         layout_template=args.prefix,
                         context_map=args.context_map,
                         reco_id=reco_id,
-                        counter=counter if args.dedupe else None,
+                        **layout_kwargs,
                     )
                 if batch_all and args.prefix:
                     candidate_base_name = f"{candidate_base_name}_scan-{scan_id}"
@@ -313,7 +328,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
                         info,
                         count=len(nii_list),
                         template=slicepack_suffix,
-                        counter=counter if args.dedupe else None,
+                        **({"counter": counter} if slicepack_supports_counter and args.dedupe else {}),
                     )
                 output_paths = _resolve_output_paths(
                     args.output,
