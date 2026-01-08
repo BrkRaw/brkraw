@@ -11,7 +11,6 @@ INIT_PATH = REPO_ROOT / "src" / "brkraw" / "__init__.py"
 README_PATH = REPO_ROOT / "README.md"
 RELEASE_NOTES_PATH = REPO_ROOT / "RELEASE_NOTES.md"
 PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
-DOCS_INDEX_PATH = REPO_ROOT / "docs" / "index.md"
 
 
 def run_git(args):
@@ -50,24 +49,22 @@ def update_readme_version(version):
     README_PATH.write_text(new_text, encoding="utf-8")
 
 
-def update_docs_index_version(version):
-    text = DOCS_INDEX_PATH.read_text(encoding="utf-8")
+def update_docs_index_version(version, docs_index_path: Path) -> bool:
+    """Update an existing docs index version line, but never insert new lines.
+
+    Returns True if a replacement occurred, otherwise False.
+    """
+    text = docs_index_path.read_text(encoding="utf-8")
     new_text, count = re.subn(
         r"Documentation for BrkRaw v[0-9A-Za-z.\-]+\\.",
         f"Documentation for BrkRaw v{version}.",
         text,
         count=1,
     )
-    if count == 0:
-        lines = text.splitlines()
-        insert_at = 0
-        for idx, line in enumerate(lines):
-            if line.strip() == "":
-                insert_at = idx + 1
-                break
-        lines.insert(insert_at, f"Documentation for BrkRaw v{version}.")
-        new_text = "\n".join(lines)
-    DOCS_INDEX_PATH.write_text(new_text, encoding="utf-8")
+    if count != 1:
+        return False
+    docs_index_path.write_text(new_text, encoding="utf-8")
+    return True
 
 
 def update_pyproject_classifiers(status_label):
@@ -134,6 +131,11 @@ def main():
     )
     parser.add_argument("--version", required=True, help="Release version (PEP 440)")
     parser.add_argument(
+        "--update-docs-index",
+        action="store_true",
+        help="Also update docs/index.md if it already contains a version line (default: off).",
+    )
+    parser.add_argument(
         "--fetch-tags",
         action="store_true",
         help="Fetch tags from remote before generating notes",
@@ -152,13 +154,16 @@ def main():
     update_init_version(args.version)
     update_readme_version(args.version)
     update_pyproject_classifiers(status_classifier)
-    update_docs_index_version(args.version)
+    if args.update_docs_index:
+        docs_index_path = REPO_ROOT / "docs" / "index.md"
+        updated = update_docs_index_version(args.version, docs_index_path)
+        if not updated:
+            print(f"Note: docs index not updated (no version line found): {docs_index_path}")
     generate_release_notes(args.version)
 
     print(f"Updated {INIT_PATH}")
     print(f"Updated {README_PATH}")
     print(f"Updated {PYPROJECT_PATH}")
-    print(f"Updated {DOCS_INDEX_PATH}")
     print(f"Generated {RELEASE_NOTES_PATH}")
 
 

@@ -1,6 +1,6 @@
 # Preclinical MRI Dataset Toolkit
 
-Documentation for BrkRaw v0.5.0b1.
+Documentation for BrkRaw.
 
 BrkRaw is a toolkit for loading Bruker Paravision MRI studies, inspecting and
 normalizing metadata, mapping parameters through rule and spec systems, and
