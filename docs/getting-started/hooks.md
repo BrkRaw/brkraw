@@ -60,6 +60,22 @@ brkraw hook docs <hook-name> --render
 
 ---
 
+## Generate hook argument presets
+
+When a hook supports many optional arguments, generate a YAML template:
+
+```bash
+brkraw hook preset <hook-entrypoint> -o hook_args.yaml
+```
+
+Then pass it to `brkraw convert`:
+
+```bash
+brkraw convert /path/to/study --scan-id 14 --hook-args-yaml hook_args.yaml
+```
+
+---
+
 ## Uninstall a hook
 
 Remove the installed hook addons from the config root:

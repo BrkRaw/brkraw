@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from types import MethodType
 from functools import partial
+import inspect
 from typing import TYPE_CHECKING, Optional, Tuple, Union, Any, Mapping, cast, List, Dict, Literal
 from pathlib import Path
 from warnings import warn
@@ -446,17 +447,19 @@ def get_nifti1image(
     if resolved_reco_id is None:
         return None
     hook_kwargs = _resolve_hook_kwargs(self, hook_args_by_name)
-    if hook_kwargs:
-        dataobjs = self.get_dataobj(resolved_reco_id, **hook_kwargs)
+    data_kwargs = _filter_hook_kwargs(self.get_dataobj, hook_kwargs)
+    if data_kwargs:
+        dataobjs = self.get_dataobj(resolved_reco_id, **data_kwargs)
     else:
         dataobjs = self.get_dataobj(resolved_reco_id)
-    if hook_kwargs:
+    affine_kwargs = _filter_hook_kwargs(self.get_affine, hook_kwargs)
+    if affine_kwargs:
         affines = self.get_affine(
             resolved_reco_id,
             space=space,
             override_subject_type=override_subject_type,
             override_subject_pose=override_subject_pose,
-            **hook_kwargs,
+            **affine_kwargs,
         )
     else:
         affines = self.get_affine(
@@ -535,6 +538,38 @@ def _resolve_hook_kwargs(
         return {}
     values = hook_args_by_name.get(hook_name)
     return dict(values) if isinstance(values, Mapping) else {}
+
+
+def _filter_hook_kwargs(func: Any, hook_kwargs: Mapping[str, Any]) -> Dict[str, Any]:
+    """Drop unsupported hook kwargs for a callable.
+
+    This keeps YAML/CLI presets safe when converter hooks do not accept
+    arbitrary kwargs.
+    """
+    if not hook_kwargs:
+        return {}
+    try:
+        sig = inspect.signature(func)
+    except (TypeError, ValueError):
+        return dict(hook_kwargs)
+    for param in sig.parameters.values():
+        if param.kind == inspect.Parameter.VAR_KEYWORD:
+            return dict(hook_kwargs)
+    allowed = {
+        param.name
+        for param in sig.parameters.values()
+        if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        and param.name != "self"
+    }
+    filtered = {key: value for key, value in hook_kwargs.items() if key in allowed}
+    dropped = [key for key in hook_kwargs.keys() if key not in allowed]
+    if dropped:
+        logger.debug(
+            "Ignoring unsupported hook args for %s: %s",
+            getattr(func, "__name__", "<callable>"),
+            ", ".join(sorted(dropped)),
+        )
+    return filtered
 
 
 def _resolve_metadata_spec(

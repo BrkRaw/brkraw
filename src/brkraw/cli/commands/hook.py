@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict
+from pathlib import Path
+import inspect
+from typing import Any, Dict, Mapping
 
 import argparse
 import logging
@@ -8,6 +10,8 @@ import logging
 from brkraw.apps import hook as hook_app
 from brkraw.core import config as config_core
 from brkraw.core import formatter
+from brkraw.specs import converter as converter_core
+import yaml
 
 logger = logging.getLogger("brkraw")
 
@@ -162,6 +166,70 @@ def cmd_docs(args: argparse.Namespace) -> int:
     return 0
 
 
+_PRESET_IGNORE_PARAMS = frozenset(
+    {
+        "self",
+        "scan",
+        "scan_id",
+        "reco_id",
+        "format",
+        "space",
+        "override_header",
+        "override_subject_type",
+        "override_subject_pose",
+        "flip_x",
+        "xyz_units",
+        "t_units",
+        "decimals",
+        "spec",
+        "context_map",
+        "return_spec",
+        "hook_args_by_name",
+    }
+)
+
+
+def _infer_hook_preset(entry: Mapping[str, Any]) -> Dict[str, Any]:
+    preset: Dict[str, Any] = {}
+    for func in entry.values():
+        if not callable(func):
+            continue
+        try:
+            sig = inspect.signature(func)
+        except (TypeError, ValueError):
+            continue
+        for param in sig.parameters.values():
+            if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                continue
+            name = param.name
+            if name in _PRESET_IGNORE_PARAMS:
+                continue
+            if name in preset:
+                continue
+            if param.default is inspect.Parameter.empty:
+                preset[name] = None
+            else:
+                preset[name] = param.default
+    return dict(sorted(preset.items(), key=lambda item: item[0]))
+
+
+def cmd_preset(args: argparse.Namespace) -> int:
+    try:
+        entry = converter_core.resolve_hook(args.target)
+    except LookupError as exc:
+        logger.error("%s", exc)
+        return 2
+    preset = _infer_hook_preset(entry)
+    payload = {"hooks": {args.target: preset}}
+    text = yaml.safe_dump(payload, sort_keys=False)
+    if args.output:
+        Path(args.output).expanduser().write_text(text, encoding="utf-8")
+        logger.info("Wrote preset: %s", args.output)
+        return 0
+    print(text, end="" if text.endswith("\n") else "\n")
+    return 0
+
+
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
     hook_parser = subparsers.add_parser(
         "hook",
@@ -208,3 +276,18 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help="Render markdown using rich (if installed).",
     )
     docs_parser.set_defaults(hook_func=cmd_docs)
+
+    preset_parser = hook_sub.add_parser(
+        "preset",
+        help="Generate a YAML hook-args preset template.",
+    )
+    preset_parser.add_argument(
+        "target",
+        help="Hook entrypoint name.",
+    )
+    preset_parser.add_argument(
+        "-o",
+        "--output",
+        help="Write the preset YAML to a file instead of stdout.",
+    )
+    preset_parser.set_defaults(hook_func=cmd_preset)

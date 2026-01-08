@@ -143,6 +143,29 @@ Notes:
 
 ---
 
+## brkraw hook preset
+
+Generate a YAML template for hook arguments by inspecting the hook entrypoint signature.
+
+```bash
+brkraw hook preset mrs
+```
+
+Write to a file:
+
+```bash
+brkraw hook preset mrs -o hook_args.yaml
+```
+
+You can pass the generated file to `brkraw convert` via `--hook-args-yaml`.
+
+Notes:
+
+- The template is a best-effort based on Python function signatures.
+- Unknown keys in presets are ignored at runtime (logged at DEBUG).
+
+---
+
 ## Common workflow example (brkraw-mrs)
 
 Install the hook assets:

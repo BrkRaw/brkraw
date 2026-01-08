@@ -241,6 +241,25 @@ HOOK_NAME:KEY=VALUE
 
 Values are parsed as bool, int, float, or string.
 
+### --hook-args-yaml
+
+Load hook arguments from a YAML file (repeatable). CLI `--hook-arg` values override YAML.
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --hook-args-yaml hook_args.yaml
+```
+
+Example YAML:
+
+```yaml
+hooks:
+  mrs:
+    reference: water
+    peak_ppm: 3.02
+```
+
+You can also set `BRKRAW_CONVERT_HOOK_ARGS_YAML` (comma-separated paths).
+
 ## Batch conversion
 
 ### brkraw convert-batch
