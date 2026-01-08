@@ -83,11 +83,11 @@ def update_pyproject_classifiers(status_label):
 
 def determine_status(version):
     v = version.lower()
-    if re.search(r"a\d+", v):
+    if re.search(r"a\d*", v):
         return ("3 - Alpha", "alpha", False)
-    if re.search(r"b\d+", v):
+    if re.search(r"b\d*", v):
         return ("4 - Beta", "beta", False)
-    if re.search(r"rc\d+", v):
+    if re.search(r"rc\d*", v):
         return ("4 - Beta", "release candidate", False)
     return ("5 - Production/Stable", "stable", True)
 

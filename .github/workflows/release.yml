@@ -35,7 +35,7 @@ jobs:
         id: prerelease
         run: |
           tag="${{ steps.tag.outputs.value }}"
-          if echo "$tag" | grep -Eq '(a|b|rc)[0-9]+$'; then
+          if echo "$tag" | grep -Eq '(a|b|rc)[0-9]*$'; then
             echo "value=true" >> "$GITHUB_OUTPUT"
           else
             echo "value=false" >> "$GITHUB_OUTPUT"
