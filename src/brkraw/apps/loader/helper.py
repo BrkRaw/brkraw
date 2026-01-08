@@ -537,6 +537,40 @@ def _resolve_hook_kwargs(
     if not isinstance(hook_name, str) or not hook_name:
         return {}
     values = hook_args_by_name.get(hook_name)
+    if values is None:
+        seen: set[str] = set()
+
+        def _add(candidate: str) -> None:
+            cand = candidate.strip()
+            if not cand or cand in seen:
+                return
+            seen.add(cand)
+
+        _add(hook_name)
+        _add(hook_name.lower())
+        _add(hook_name.replace("_", "-"))
+        _add(hook_name.replace("-", "_"))
+        _add(hook_name.lower().replace("_", "-"))
+        _add(hook_name.lower().replace("-", "_"))
+        _add(f"brkraw-{hook_name}")
+        _add(f"brkraw_{hook_name}")
+        _add(f"brkraw-{hook_name.lower()}")
+        _add(f"brkraw_{hook_name.lower()}")
+        _add(f"brkraw-{hook_name.lower().replace('_', '-')}")
+        _add(f"brkraw_{hook_name.lower().replace('-', '_')}")
+
+        for candidate in sorted(seen):
+            if candidate == hook_name:
+                continue
+            candidate_values = hook_args_by_name.get(candidate)
+            if candidate_values is not None:
+                logger.debug(
+                    "Using hook args for %r from alias %r.",
+                    hook_name,
+                    candidate,
+                )
+                values = candidate_values
+                break
     return dict(values) if isinstance(values, Mapping) else {}
 
 
