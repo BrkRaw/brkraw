@@ -60,6 +60,7 @@ nav:
 
   - API Reference:
       - overview: api/overview.md
+      - data access: api/data-access.md
       - info and params: api/info.md
       - convert: api/convert.md
       - prune: api/prune.md

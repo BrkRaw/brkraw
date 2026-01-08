@@ -13,6 +13,9 @@ The API is organized around a small set of core tasks:
 
 This section documents the main API entry points and how they fit together.
 
+For lower-level access (scan objects, file access, data/affine retrieval), see
+`docs/api/data-access.md`.
+
 ## Entry point
 
 All workflows start by loading a dataset:

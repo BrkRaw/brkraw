@@ -145,3 +145,6 @@ addon.remove("spec.yaml", root=None)
 ```
 
 For advanced usage, see the full API documentation under `docs/api/`.
+
+If you need lower-level access (scan objects, dataset file access, `get_dataobj`,
+`get_affine`), start with `docs/api/data-access.md`.
