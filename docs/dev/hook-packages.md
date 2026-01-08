@@ -101,7 +101,96 @@ data so they are available after installation.
 
 ---
 
+## Hook arguments (kwargs) and presets
+
+BrkRaw supports passing hook arguments at runtime via:
+
+- CLI: `brkraw convert --hook-arg HOOK:KEY=VALUE`
+- CLI: `brkraw convert --hook-args-yaml hook_args.yaml`
+- CLI template generation: `brkraw hook preset <hook-entrypoint>`
+
+### How BrkRaw passes hook args
+
+BrkRaw collects all hook args into a mapping:
+
+```yaml
+hooks:
+  <hook-entrypoint>:
+    key: value
+```
+
+At conversion time, BrkRaw looks up args by the selected hook entrypoint name
+(for example `sordino`, `mrs`) and passes them as keyword arguments to hook
+functions (typically `get_dataobj` and/or `get_affine`).
+
+If users provide extra keys that your hook does not accept, BrkRaw will drop
+unsupported kwargs (and log the dropped keys at DEBUG) to avoid `TypeError`
+crashes.
+
+### Recommended pattern: accept `**kwargs` and validate
+
+For hooks with many optional arguments, prefer:
+
+- accept `**kwargs`
+- normalize/validate into a typed options object (dataclass is recommended)
+
+Example:
+
+```python
+from dataclasses import dataclass
+from typing import Any, Dict
+
+@dataclass
+class Options:
+    reference: str = "water"
+    peak_ppm: float = 3.02
+
+def _build_options(kwargs: Dict[str, Any]) -> Options:
+    return Options(
+        reference=str(kwargs.get("reference", "water")),
+        peak_ppm=float(kwargs.get("peak_ppm", 3.02)),
+    )
+
+def get_dataobj(scan, reco_id=None, **kwargs):
+    options = _build_options(kwargs)
+    ...
+```
+
+This keeps the hook resilient to new keys, allows strict validation inside the
+hook, and makes it easy to document defaults.
+
+### Make `brkraw hook preset` useful
+
+`brkraw hook preset <hook-entrypoint>` generates a YAML template by inspecting
+your hook module.
+
+To improve preset generation for kwargs-based hooks, expose one of:
+
+- `HOOK_PRESET` / `HOOK_ARGS` / `HOOK_DEFAULTS`: mapping of default values
+- `_build_options({})` that returns a dataclass (or an object with `__dict__`)
+
+Example:
+
+```python
+HOOK_DEFAULTS = {
+    "reference": "water",
+    "peak_ppm": 3.02,
+}
+```
+
+If none of these are available and your hook only takes `**kwargs`, BrkRaw
+cannot infer supported keys and the preset will be empty.
+
+### Document supported keys clearly
+
+Hook docs shipped via `brkraw_hook.yaml` (`docs:` or `readme:`) should include:
+
+- supported hook args (name, type, default)
+- what each argument affects
+- example CLI usage (`--hook-arg` / `--hook-args-yaml`)
+
+---
+
 ## Reference implementations
 
 - Hook template repository: https://github.com/brkraw/brkraw-hook.git
-
