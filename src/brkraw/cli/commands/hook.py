@@ -244,7 +244,21 @@ def _infer_hook_preset_from_module(module: object) -> Dict[str, Any]:
         except Exception:
             return {}
         if dataclasses.is_dataclass(options):
-            return dict(dataclasses.asdict(options))
+            if not isinstance(options, type):
+                return dict(dataclasses.asdict(options))
+            defaults: Dict[str, Any] = {}
+            for field in dataclasses.fields(options):
+                if field.default is not dataclasses.MISSING:
+                    defaults[field.name] = field.default
+                    continue
+                if field.default_factory is not dataclasses.MISSING:  # type: ignore[comparison-overlap]
+                    try:
+                        defaults[field.name] = field.default_factory()  # type: ignore[misc]
+                    except Exception:
+                        defaults[field.name] = None
+                    continue
+                defaults[field.name] = None
+            return defaults
         if hasattr(options, "__dict__"):
             return dict(vars(options))
     return {}
