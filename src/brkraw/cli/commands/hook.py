@@ -25,10 +25,12 @@ def _normalize_row(row: Dict[str, str]) -> Dict[str, object]:
     version = row.get("version", "")
     entrypoints = row.get("entrypoints", "")
     description = row.get("description", "")
+    install_status = row.get("install_status", "")
     name_cell: object = name
     version_cell: object = version
     entrypoints_cell: object = entrypoints
     description_cell: object = description
+    install_cell: object = install_status
     if row.get("name_unknown") == "1":
         name_cell = {"value": name, "color": "gray"}
     if row.get("version_unknown") == "1":
@@ -37,11 +39,14 @@ def _normalize_row(row: Dict[str, str]) -> Dict[str, object]:
         entrypoints_cell = {"value": entrypoints, "color": "gray"}
     if row.get("description_unknown") == "1":
         description_cell = {"value": description, "color": "gray"}
+    if row.get("install_status_color"):
+        install_cell = {"value": install_status, "color": row["install_status_color"]}
     return {
         "name": name_cell,
         "version": version_cell,
         "entrypoints": entrypoints_cell,
         "description": description_cell,
+        "installed": install_cell,
     }
 
 
@@ -50,6 +55,13 @@ def cmd_list(args: argparse.Namespace) -> int:
     width = config_core.output_width(root=args.root)
     rows = []
     for hook in hooks:
+        install_status = hook.get("install_status", "No")
+        if install_status == "Yes":
+            status_color = "green"
+        elif install_status == "Partially":
+            status_color = "yellow"
+        else:
+            status_color = "red"
         rows.append(
             _normalize_row(
                 {
@@ -57,6 +69,8 @@ def cmd_list(args: argparse.Namespace) -> int:
                     "version": hook.get("version", "<Unknown>"),
                     "entrypoints": ", ".join(hook.get("entrypoints") or []) or "<Unknown>",
                     "description": hook.get("description", "<Unknown>"),
+                    "install_status": install_status,
+                    "install_status_color": status_color,
                     "name_unknown": "1" if hook.get("name") in (None, "<Unknown>") else "0",
                     "version_unknown": "1" if hook.get("version") in (None, "<Unknown>") else "0",
                     "entrypoints_unknown": "1"
@@ -68,7 +82,7 @@ def cmd_list(args: argparse.Namespace) -> int:
                 }
             )
         )
-    columns = ("name", "version", "entrypoints", "description")
+    columns = ("name", "version", "installed", "entrypoints", "description")
     table = formatter.format_table(
         "Hooks",
         columns,
@@ -85,12 +99,17 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 def cmd_install(args: argparse.Namespace) -> int:
     if args.target == "all":
-        result = hook_app.install_all(root=args.root, upgrade=args.upgrade)
+        result = hook_app.install_all(root=args.root, upgrade=args.upgrade, force=args.force)
         logger.info("Installed %d hook(s).", len(result["installed"]))
         if result["skipped"]:
             logger.info("Skipped %d hook(s).", len(result["skipped"]))
         return 0
-    status = hook_app.install_hook(args.target, root=args.root, upgrade=args.upgrade)
+    status = hook_app.install_hook(
+        args.target,
+        root=args.root,
+        upgrade=args.upgrade,
+        force=args.force,
+    )
     if status == "installed":
         logger.info("Installed hook: %s", args.target)
     else:
@@ -160,6 +179,11 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "--upgrade",
         action="store_true",
         help="Reinstall when a newer version is available.",
+    )
+    install_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Reinstall even if the same or older version is installed.",
     )
     install_parser.set_defaults(hook_func=cmd_install)
 

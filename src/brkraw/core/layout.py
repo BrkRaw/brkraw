@@ -147,69 +147,6 @@ def load_layout_meta(context_map: Optional[Union[str, Path]]) -> Dict[str, Any]:
     return load_context_map_meta(context_map)
 
 
-def render_output_format(
-    loader: Any,
-    scan_id: int,
-    *,
-    output_format_fields: Optional[Iterable[Mapping[str, Any]]] = None,
-    output_format_spec: Optional[Union[str, Path]] = None,
-    context_map: Optional[Union[str, Path]] = None,
-    root: Optional[Union[str, Path]] = None,
-    reco_id: Optional[int] = None,
-) -> str:
-    return render_layout(
-        loader,
-        scan_id,
-        layout_entries=output_format_fields,
-        layout_template=None,
-        context_map=context_map,
-        root=root,
-        reco_id=reco_id,
-        override_info_spec=output_format_spec,
-        override_metadata_spec=None,
-    )
-
-
-def load_output_format_info(
-    loader: Any,
-    scan_id: int,
-    *,
-    output_format_spec: Optional[Union[str, Path]],
-    context_map: Optional[Union[str, Path]],
-    root: Optional[Union[str, Path]] = None,
-    reco_id: Optional[int],
-) -> Dict[str, Any]:
-    return load_layout_info(
-        loader,
-        scan_id,
-        context_map=context_map,
-        root=root,
-        reco_id=reco_id,
-        override_info_spec=output_format_spec,
-        override_metadata_spec=None,
-    )
-
-
-def load_output_format_info_parts(
-    loader: Any,
-    scan_id: int,
-    *,
-    output_format_spec: Optional[Union[str, Path]],
-    context_map: Optional[Union[str, Path]],
-    root: Optional[Union[str, Path]] = None,
-    reco_id: Optional[int],
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    return load_layout_info_parts(
-        loader,
-        scan_id,
-        context_map=context_map,
-        root=root,
-        reco_id=reco_id,
-        override_info_spec=output_format_spec,
-        override_metadata_spec=None,
-    )
-
-
 def render_slicepack_suffixes(
     info: Mapping[str, Any],
     *,

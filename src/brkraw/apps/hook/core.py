@@ -32,10 +32,12 @@ def list_hooks(*, root: Optional[Union[str, Path]] = None) -> List[Dict[str, Any
     hooks = _collect_hooks()
     registry = _load_registry(root=root)
     installed = registry.get("hooks", {})
+    root_path = config_core.resolve_root(root)
     for hook in hooks:
         entry = installed.get(hook["name"])
         hook["installed"] = bool(entry)
         hook["installed_version"] = entry.get("version") if isinstance(entry, dict) else None
+        hook["install_status"] = _install_status(entry, root=root_path)
     return hooks
 
 
@@ -43,12 +45,13 @@ def install_all(
     *,
     root: Optional[Union[str, Path]] = None,
     upgrade: bool = False,
+    force: bool = False,
 ) -> Dict[str, List[str]]:
     hooks = _collect_hooks()
     installed: List[str] = []
     skipped: List[str] = []
     for hook in hooks:
-        status = _install_hook(hook, root=root, upgrade=upgrade)
+        status = _install_hook(hook, root=root, upgrade=upgrade, force=force)
         if status == "installed":
             installed.append(hook["name"])
         else:
@@ -61,9 +64,10 @@ def install_hook(
     *,
     root: Optional[Union[str, Path]] = None,
     upgrade: bool = False,
+    force: bool = False,
 ) -> str:
     hook = _resolve_hook_target(target)
-    return _install_hook(hook, root=root, upgrade=upgrade)
+    return _install_hook(hook, root=root, upgrade=upgrade, force=force)
 
 
 def read_hook_docs(
@@ -117,16 +121,18 @@ def _install_hook(
     *,
     root: Optional[Union[str, Path]],
     upgrade: bool,
+    force: bool,
 ) -> str:
     registry = _load_registry(root=root)
     hooks = registry.setdefault("hooks", {})
     existing = hooks.get(hook["name"])
     if isinstance(existing, dict):
-        if not upgrade:
+        if not upgrade and not force:
             return "skipped"
-        installed_version = existing.get("version")
-        if installed_version and not _is_version_newer(hook["version"], installed_version):
-            return "skipped"
+        if not force:
+            installed_version = existing.get("version")
+            if installed_version and not _is_version_newer(hook["version"], installed_version):
+                return "skipped"
     manifest_path, manifest = _load_manifest(hook["dist"], hook.get("packages"))
     namespace = _namespace_for_hook(hook["name"])
     installed = _install_manifest(
@@ -547,6 +553,25 @@ def _resolve_docs_path(manifest: Mapping[str, Any], manifest_path: Path) -> Opti
     if not isinstance(value, str):
         return None
     return _resolve_manifest_path(manifest_path.parent, value)
+
+
+def _install_status(entry: Any, *, root: Path) -> str:
+    if not isinstance(entry, dict):
+        return "No"
+    paths: List[str] = []
+    for kind in ("specs", "pruner_specs", "rules", "transforms"):
+        items = entry.get(kind, [])
+        if isinstance(items, list):
+            paths.extend([item for item in items if isinstance(item, str) and item.strip()])
+    if not paths:
+        return "Yes"
+    missing = 0
+    for relpath in paths:
+        if not (root / relpath).exists():
+            missing += 1
+    if missing == 0:
+        return "Yes"
+    return "Partially"
 
     a_nums, a_raw = _split(a)
     b_nums, b_raw = _split(b)

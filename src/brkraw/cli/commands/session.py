@@ -38,7 +38,6 @@ def cmd_set(args: argparse.Namespace) -> int:
         and args.reco_id is None
         and not args.param_key
         and not args.param_file
-        and not args.output_format
         and not args.convert_option
     ):
         parser = getattr(args, "parser", None)
@@ -68,8 +67,6 @@ def cmd_set(args: argparse.Namespace) -> int:
         lines.append(_format_export("BRKRAW_PARAM_KEY", args.param_key))
     if args.param_file:
         lines.append(_format_export("BRKRAW_PARAM_FILE", _format_param_files(args.param_file)))
-    if args.output_format:
-        lines.append(_format_export("BRKRAW_OUTPUT_FORMAT", args.output_format))
     if args.convert_option:
         convert_items: List[str] = []
         for item in args.convert_option:
@@ -91,7 +88,6 @@ def cmd_unset(args: argparse.Namespace) -> int:
         "BRKRAW_RECO_ID",
         "BRKRAW_PARAM_KEY",
         "BRKRAW_PARAM_FILE",
-        "BRKRAW_OUTPUT_FORMAT",
     ]
     convert_vars = [
         "BRKRAW_CONVERT_OUTPUT",
@@ -121,8 +117,6 @@ def cmd_unset(args: argparse.Namespace) -> int:
         targets.append("BRKRAW_PARAM_KEY")
     if args.param_file:
         targets.append("BRKRAW_PARAM_FILE")
-    if args.output_format:
-        targets.append("BRKRAW_OUTPUT_FORMAT")
 
     if args.convert_option:
         keys: List[str] = []
@@ -150,7 +144,6 @@ def cmd_env(_: argparse.Namespace) -> int:
     reco_id = os.environ.get("BRKRAW_RECO_ID")
     param_key = os.environ.get("BRKRAW_PARAM_KEY")
     param_file = os.environ.get("BRKRAW_PARAM_FILE")
-    output_format = os.environ.get("BRKRAW_OUTPUT_FORMAT")
     convert_output = os.environ.get("BRKRAW_CONVERT_OUTPUT")
     convert_prefix = os.environ.get("BRKRAW_CONVERT_PREFIX")
     convert_scan_id = os.environ.get("BRKRAW_CONVERT_SCAN_ID")
@@ -172,7 +165,6 @@ def cmd_env(_: argparse.Namespace) -> int:
         and reco_id is None
         and param_key is None
         and param_file is None
-        and output_format is None
         and convert_output is None
         and convert_prefix is None
         and convert_scan_id is None
@@ -201,8 +193,6 @@ def cmd_env(_: argparse.Namespace) -> int:
         print(f"BRKRAW_PARAM_KEY={param_key}")
     if param_file is not None:
         print(f"BRKRAW_PARAM_FILE={param_file}")
-    if output_format is not None:
-        print(f"BRKRAW_OUTPUT_FORMAT={output_format}")
     if convert_output is not None:
         print(f"BRKRAW_CONVERT_OUTPUT={convert_output}")
     if convert_prefix is not None:
@@ -310,11 +300,6 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help="Default parameter file(s) for brkraw params.",
     )
     set_parser.add_argument(
-        "--output-format",
-        choices=["nii", "nii.gz"],
-        help="Default NIfTI output format (BRKRAW_OUTPUT_FORMAT).",
-    )
-    set_parser.add_argument(
         "--convert-option",
         action="append",
         metavar="KEY=VALUE",
@@ -360,11 +345,6 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "--param-file",
         action="store_true",
         help="Unset BRKRAW_PARAM_FILE.",
-    )
-    unset_parser.add_argument(
-        "--output-format",
-        action="store_true",
-        help="Unset BRKRAW_OUTPUT_FORMAT.",
     )
     unset_parser.add_argument(
         "--convert-option",

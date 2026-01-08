@@ -11,9 +11,8 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Mapping, Optional, cast, List, Tuple, get_args, Literal
+from typing import Any, Mapping, Optional, Dict, List, Tuple, Literal, cast, get_args
 
-import nibabel as nib
 import numpy as np
 
 from brkraw.cli.utils import load

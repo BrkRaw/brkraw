@@ -296,14 +296,6 @@ def layout_template(
     return None
 
 
-def output_format_template(
-    root: Optional[Union[str, Path]] = None,
-    default: str = "sub-<Subject.ID>_study-<Study.ID>_scan-<ScanID>_<Protocol>",
-) -> str:
-    config = resolve_config(root=root)
-    return str(config.get("output_format", default))
-
-
 def layout_entries(
     root: Optional[Union[str, Path]] = None,
     default: Optional[list] = None,
@@ -320,19 +312,6 @@ def layout_entries(
     if default is None:
         default = default_config().get("output", {}).get("layout_entries", [])
     return list(default) if isinstance(default, list) else []
-
-
-def output_format_fields(
-    root: Optional[Union[str, Path]] = None,
-    default: Optional[list] = None,
-) -> list:
-    return layout_entries(root=root, default=default)
-
-
-def output_format_spec(root: Optional[Union[str, Path]] = None) -> Optional[str]:
-    config = resolve_config(root=root)
-    value = config.get("output", {}).get("format_spec")
-    return str(value) if isinstance(value, str) and value else None
 
 
 def output_slicepack_suffix(
@@ -354,10 +333,8 @@ def _normalize_config(data: Dict[str, Any]) -> Dict[str, Any]:
         logging_cfg["level"] = config.pop("log_level")
     if "output_width" in config and "print_width" not in logging_cfg:
         logging_cfg["print_width"] = config.pop("output_width")
-    if "output_format_fields" in config and "layout_entries" not in output_cfg:
-        output_cfg["layout_entries"] = config.pop("output_format_fields")
-    if "output_format_spec" in config and "format_spec" not in output_cfg:
-        output_cfg["format_spec"] = config.pop("output_format_spec")
+    config.pop("output_format_fields", None)
+    config.pop("output_format_spec", None)
     if "layout_fields" in output_cfg and "layout_entries" not in output_cfg:
         output_cfg["layout_entries"] = output_cfg["layout_fields"]
     if "float_decimals" in config and "float_decimals" not in output_cfg:

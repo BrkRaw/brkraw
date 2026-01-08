@@ -125,7 +125,7 @@ class ScanLoader(Scan, BaseLoader):
     image_info: Dict[int, Optional["ResolvedImage"]]
     affine_info: Dict[int, Optional["ResolvedAffine"]]
     _converter_hook: Optional[ConverterHook]
-
+    _converter_hook_name: Optional[str]
 
     def get_fid(self, 
                 buffer_start: Optional[int], 
@@ -176,7 +176,8 @@ class ScanLoader(Scan, BaseLoader):
             override_subject_pose: Optional[SubjectPose],
             flip_x: bool,
             xyz_units: XYZUNIT,
-            t_units: TUNIT
+            t_units: TUNIT,
+            hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
             ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
         ...
 
