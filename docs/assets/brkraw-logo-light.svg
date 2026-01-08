@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="36" viewBox="0 0 180 36" role="img" aria-label="BrkRaw logo">
+  <style>
+    .logo-text {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", monospace;
+      font-size: 28px;
+      fill: #111111;
+    }
+    .char {
+      opacity: 0;
+      animation: show 0.01s linear forwards;
+    }
+    .cursor {
+      opacity: 0;
+      animation: show 0.01s linear forwards, blink 0.8s steps(1, end) 0.7s infinite;
+    }
+    @keyframes show {
+      to { opacity: 1; }
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+  </style>
+  <text x="2" y="26" class="logo-text"><tspan>&gt;</tspan><tspan class="char" style="animation-delay: 0.15s;">b</tspan><tspan class="char" style="animation-delay: 0.42s;">r</tspan><tspan class="char" style="animation-delay: 0.70s;">k</tspan><tspan class="char" style="animation-delay: 0.88s;">r</tspan><tspan class="char" style="animation-delay: 1.05s;">a</tspan><tspan class="char" style="animation-delay: 1.22s;">w</tspan><tspan class="cursor" style="animation-delay: 1.40s;">_</tspan></text>
+</svg>
