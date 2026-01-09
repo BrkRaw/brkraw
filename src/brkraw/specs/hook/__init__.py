@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from ..hook.logic import DEFAULT_GROUP, resolve_hook
-from ..hook.validator import validate_hook, CONVERTER_KEYS
-
+from .logic import DEFAULT_GROUP, resolve_hook
+from .validator import validate_hook, CONVERTER_KEYS
 
 __all__ = [
     "CONVERTER_KEYS",
@@ -10,3 +9,4 @@ __all__ = [
     "resolve_hook",
     "validate_hook",
 ]
+

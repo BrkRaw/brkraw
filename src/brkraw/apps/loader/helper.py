@@ -22,7 +22,7 @@ from ...specs.remapper import load_spec, map_parameters, load_context_map, apply
 from ...specs.rules import load_rules, select_rule_use
 from ...dataclasses import Reco, Scan, Study
 from .types import ScanLoader
-from ...specs import converter as converter_core
+from ...specs import hook as converter_core
 from ...resolver import affine as affine_resolver
 from ...resolver import image as image_resolver
 from ...resolver import fid as fid_resolver

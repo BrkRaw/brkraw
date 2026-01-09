@@ -19,7 +19,7 @@ from pathlib import Path
 
 from ...core import config as config_core
 from ...core.config import resolve_root
-from ...specs import converter as converter_core
+from ...specs import hook as converter_core
 from ...specs.pruner import prune_dataset_to_zip
 from ...specs.rules import load_rules, select_rule_use
 from ...dataclasses import Scan, Study

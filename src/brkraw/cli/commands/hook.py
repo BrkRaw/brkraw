@@ -12,7 +12,7 @@ import logging
 from brkraw.apps import hook as hook_app
 from brkraw.core import config as config_core
 from brkraw.core import formatter
-from brkraw.specs import converter as converter_core
+from brkraw.specs import hook as converter_core
 import yaml
 
 logger = logging.getLogger("brkraw")

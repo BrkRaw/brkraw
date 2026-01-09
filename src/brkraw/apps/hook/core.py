@@ -17,7 +17,7 @@ import yaml
 
 from ...core import config as config_core
 from ...core.entrypoints import list_entry_points
-from ...specs.converter.logic import DEFAULT_GROUP
+from ...specs.hook.logic import DEFAULT_GROUP
 from ..addon import installation as addon_install
 from ..addon import dependencies as addon_deps
 from ..addon.io import write_file as _write_file
