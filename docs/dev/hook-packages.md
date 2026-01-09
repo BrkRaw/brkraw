@@ -20,7 +20,7 @@ mrs = "brkraw_mrs.hook:get_hook"
 ```
 
 The returned hook object must conform to the converter hook schema defined in
-`brkraw.specs.converter.validator`.
+`brkraw.specs.hook.validator`.
 
 ---
 
