@@ -113,7 +113,75 @@ Behavior:
 - `cases` is a list of rule objects evaluated only after the parent rule matches
 - each case is merged with the parent rule (case fields override parent fields)
 - cases are evaluated top to bottom; the first matching case is applied
-- if no case matches, the parent rule is applied if it defines a value or default
+- if no case matches, the parent rule is applied only when it defines a value, mapping, or an unconditional default
+
+---
+
+## Using cases for per-scan metadata (short)
+
+Use `cases` when a single dataset must be converted in one run, but scan-level
+metadata or naming needs to diverge. This is common in retrospective BIDS
+standardization where subject IDs, sessions, or modality suffixes depend on
+ScanID.
+
+Example:
+
+```yaml
+Subject.ID:
+  type: mapping
+  values:
+    "MouseA": "001"
+    "MouseB": "002"
+  override: true
+
+Modality:
+  selector: true
+  type: const
+  override: true
+  cases:
+    - when:
+        ScanID: 3
+      value: "T1w"
+    - when:
+        ScanID: 7
+      value: "bold"
+```
+
+---
+
+## BIDS-focused example (short)
+
+Use a context map to normalize subject/session naming, generate per-scan
+metadata, and control BIDS layout in a single pass.
+
+```yaml
+Session:
+  type: mapping
+  values:
+    "baseline": "01"
+    "followup": "02"
+  override: true
+
+Suffix:
+  type: const
+  override: true
+  cases:
+    - when:
+        ScanID: 3
+      value: "T1w"
+    - when:
+        ScanID: 7
+      value: "bold"
+
+__meta__:
+  layout_template: "sub-{Subject.ID}/ses-{Session}/{Suffix}/sub-{Subject.ID}_ses-{Session}_run-{Counter}_{Suffix}"
+```
+
+Notes:
+
+- `Counter` helps disambiguate repeated acquisitions with the same parameters.
+- `Suffix` (or `Modality`) can be driven by `cases` to vary per scan.
+- `selector: true` may be set on the parent or a case; only scans that map a value pass selector filtering.
 
 ### selector
 
@@ -126,6 +194,23 @@ for conversion.
 
 Selector evaluation uses the merged info and metadata outputs, regardless
 of the `target` field.
+
+Selectors can be declared on parent rules or nested cases; any `selector: true`
+in the rule tree marks the key for selection.
+
+Example (Subject + ScanID selection):
+
+```yaml
+Subject.ID:
+  type: mapping
+  values:
+    "MouseA": "001"
+  selector: true
+  cases:
+    - when:
+        ScanID: 3
+      value: "001"
+```
 
 ---
 

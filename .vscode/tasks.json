@@ -9,14 +9,14 @@
   ],
   "tasks": [
     {
-      "label": "MkDocs: Serve",
+      "label": "Standard: MkDocs Serve",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" -m mkdocs serve",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Release: Prep (bump + notes)",
+      "label": "Optional: Release Prep (bump + notes)",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md && \"${command:python.interpreterPath}\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream",
       "windows": {
@@ -26,21 +26,21 @@
       "problemMatcher": []
     },
     {
-      "label": "Release: Prep PR (2-step)",
+      "label": "Standard: Release Prep PR (2-step)",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" scripts/release_pr.py --version ${input:releaseVersion} --base upstream/main --remote-upstream upstream --remote-origin origin",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Release: Tag + Push (upstream)",
+      "label": "Optional: Release Tag + Push (upstream)",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" scripts/tag_and_push.py",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Setup: venv + deps",
+      "label": "Standard: Setup venv + deps",
       "type": "shell",
       "command": "python3 -m venv .venv && . .venv/bin/activate && python -m pip install -U pip && python -m pip install -e \".[dev]\"",
       "windows": {
@@ -55,14 +55,14 @@
       "problemMatcher": []
     },
     {
-      "label": "Docs: Update Contributors (git)",
+      "label": "Optional: Docs Update Contributors (git)",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source git --output docs/dev/contributors.md",
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "Docs: Update Contributors (GitHub API)",
+      "label": "Optional: Docs Update Contributors (GitHub API)",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md",
       "group": "build",

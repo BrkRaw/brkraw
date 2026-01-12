@@ -21,6 +21,54 @@ are active.
 
 ---
 
+## BIDS-focused example (short)
+
+Assume you have a BIDS-oriented info spec, metadata spec, and converter hook
+installed. A single rule file can wire them together for a specific method.
+
+```yaml
+info_spec:
+  - name: "bids-bold-info"
+    when:
+      Method:
+        sources:
+          - file: method
+            key: Method
+    if:
+      eq: ["$Method", "EPI"]
+    use: "bids_bold_info"
+
+metadata_spec:
+  - name: "bids-bold-metadata"
+    when:
+      Method:
+        sources:
+          - file: method
+            key: Method
+    if:
+      eq: ["$Method", "EPI"]
+    use: "bids_bold_metadata"
+
+converter_hook:
+  - name: "bids-bold-hook"
+    when:
+      Method:
+        sources:
+          - file: method
+            key: Method
+    if:
+      eq: ["$Method", "EPI"]
+    use: "bids_bold_hook"
+```
+
+Result (conceptually):
+
+- `brkraw info` becomes modality-specific for EPI scans (info spec).
+- metadata sidecars are shaped for BIDS fields (metadata spec).
+- conversion behavior is customized for that modality (converter hook).
+
+---
+
 ## Evaluation model
 
 Rules are evaluated in this order:

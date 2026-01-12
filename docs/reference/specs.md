@@ -25,6 +25,84 @@ Specs do **not**:
 
 ---
 
+## Info specs (inspection-focused)
+
+Info specs shape what `brkraw info` shows. When paired with a rule, they can
+make the output modality-aware.
+
+Example info spec (assume `bids_bold_info` is installed):
+
+```yaml
+__meta__:
+  name: "bids_bold_info"
+  version: "1.0.0"
+  category: "info_spec"
+
+Modality:
+  sources:
+    - file: method
+      key: Method
+  transform: to_bids_modality
+
+TaskName:
+  sources:
+    - file: method
+      key: PVM_FMRI_Name
+```
+
+Before rule (default info spec):
+
+```text
+Protocol: EPI
+Method: EPI
+```
+
+After rule selects `bids_bold_info`:
+
+```text
+Modality: bold
+TaskName: rest
+```
+
+---
+
+## Metadata specs (sidecar-focused)
+
+Metadata specs control JSON sidecars for conversion. Keep them small and
+structured, then let layout handle filenames.
+
+Example metadata spec (assume `bids_bold_metadata` is installed):
+
+```yaml
+__meta__:
+  name: "bids_bold_metadata"
+  version: "1.0.0"
+  category: "metadata_spec"
+
+RepetitionTime:
+  sources:
+    - file: method
+      key: PVM_RepetitionTime
+  transform: ms_to_s
+
+PhaseEncodingDirection:
+  sources:
+    - file: method
+      key: PVM_EPI_PhaseEncDir
+  transform: to_bids_phase_dir
+```
+
+Resulting sidecar fragment:
+
+```json
+{
+  "RepetitionTime": 2.0,
+  "PhaseEncodingDirection": "j-"
+}
+```
+
+---
+
 ## Spec file structure
 
 A spec is a YAML mapping with two kinds of top-level entries:

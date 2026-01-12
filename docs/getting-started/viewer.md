@@ -1,52 +1,15 @@
-# Dataset viewer (CLI extension)
+# Dataset viewer (GUI hook extension)
 
-`brkraw-viewer` is a graphical dataset viewer distributed as a
-separate CLI extension.
+`brkraw-viewer` is an optional GUI extension that plugs into BrkRaw to provide
+interactive tools for raw-data workflows. It is designed as a GUI hook layer
+so new UI features can be added without changing core BrkRaw logic.
 
-The viewer has been intentionally separated from the BrkRaw core to
-encourage independent contributions and experimentation around GUI
-development.
+The viewer focuses on tasks like orientation QC/reorientation, interactive
+metadata and spec inspection, naming-policy checks, and config editing. This
+keeps the core CLI/API reproducible while enabling richer GUI-based workflows
+when needed.
 
-A new GUI is planned. The current viewer provides a minimal
-implementation based on functionality from earlier BrkRaw versions.
+Project links:
 
----
-
-## Install the viewer
-
-Install the extension package:
-
-```bash
-pip install brkraw-viewer
-```
-
-Verify the command is available:
-
-```bash
-brkraw-viewer --help
-```
-
----
-
-## Launch
-
-Start the viewer:
-
-```bash
-brkraw-viewer
-```
-
-Select a dataset directory, zip archive, or `.PvDatasets` file from the UI.
-
----
-
-## When to use it
-
-The viewer is useful for:
-
-- Browsing study and scan structure
-- Checking scan and reconstruction IDs
-- Inspecting acquisition metadata interactively
-
-For conversion and reproducible workflows, use the BrkRaw CLI or
-Python API instead.
+- BrkRaw Viewer page: <https://brkraw.github.io/brkraw-viewer>
+- GitHub repository: <https://github.com/BrkRaw/brkraw-viewer>

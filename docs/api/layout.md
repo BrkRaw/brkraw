@@ -21,13 +21,32 @@ name = layout_core.render_layout(
 )
 ```
 
+If both `layout_entries` and `layout_template` are provided, the template wins.
+
+```python
+name = layout_core.render_layout(
+    loader,
+    scan_id=3,
+    layout_entries=[{"key": "Subject.ID", "entry": "sub", "sep": "/"}],
+    layout_template="sub-{Subject.ID}/scan-{ScanID}",
+)
+```
+
+Example outputs (same inputs):
+
+```text
+layout_entries only  -> sub-001
+layout_template only -> sub-001/scan-3
+both provided        -> sub-001/scan-3
+```
+
 ### Fixed keys
 
 These placeholders are always available, regardless of mapped metadata:
 
 - `{ScanID}` / `{scan_id}` / `{scanid}`
 - `{RecoID}` / `{reco_id}` / `{recoid}` (may be `None`)
-- `{Counter}` / `{counter}` (optional; use for de-duplication)
+- `{Counter}` / `{counter}` (used for de-duplication)
 
 You can override specs for testing via API-only kwargs:
 

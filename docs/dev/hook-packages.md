@@ -4,8 +4,8 @@ Converter hook packages are Python distributions that provide custom conversion
 logic and (optionally) ship addon assets for case-dependent behavior.
 
 This page covers authoring and packaging. For user-facing behavior and
-terminology, see `docs/reference/extensibility.md` and
-`docs/reference/addons-and-plugins.md`.
+terminology, see [Extensibility model](../reference/extensibility.md) and
+[Addons and plugins](../reference/addons-and-plugins.md).
 
 ---
 

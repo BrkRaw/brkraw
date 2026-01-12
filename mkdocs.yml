@@ -46,6 +46,9 @@ nav:
       - Python API quickstart: getting-started/api.md
       - Configuration basics: getting-started/configuration.md
       - Converter hooks: getting-started/hooks.md
+      - MRS converter (brkraw-mrs): getting-started/mrs.md
+      - BIDS integration (early guidance): getting-started/bids.md
+      - Admin tools (brkraw-backup): getting-started/backup.md
       - Dataset viewer: getting-started/viewer.md
 
   - CLI Reference:
