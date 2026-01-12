@@ -14,7 +14,9 @@ INIT_PATH = REPO_ROOT / "src" / "brkraw" / "__init__.py"
 README_PATH = REPO_ROOT / "README.md"
 RELEASE_NOTES_PATH = REPO_ROOT / "RELEASE_NOTES.md"
 PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
+CONTRIBUTORS_PATH = REPO_ROOT / "docs" / "dev" / "contributors.md"
 RELEASE_PREP_SCRIPT = REPO_ROOT / "scripts" / "release_prep.py"
+UPDATE_CONTRIBUTORS_SCRIPT = REPO_ROOT / "scripts" / "update_contributors.py"
 
 
 def run_git(args: Iterable[str], check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -76,12 +78,26 @@ def ensure_remote_branch(remote: str, branch: str) -> None:
         run_git(["push", "-u", remote, f"HEAD:{branch}"], check=True)
 
 
-def gh_pr_exists(upstream_repo: str, head_ref: str) -> bool:
+def gh_pr_number(upstream_repo: str, head_ref: str) -> str | None:
     result = run_cmd(
-        ["gh", "pr", "view", "--repo", upstream_repo, "--head", head_ref, "--json", "number"],
+        [
+            "gh",
+            "pr",
+            "view",
+            "--repo",
+            upstream_repo,
+            "--head",
+            head_ref,
+            "--json",
+            "number",
+            "--jq",
+            ".number",
+        ],
         check=False,
     )
-    return result.returncode == 0
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
 
 
 def gh_pr_create(
@@ -105,6 +121,20 @@ def gh_pr_create(
     run_cmd(args)
 
 
+def gh_pr_edit(upstream_repo: str, pr_number: str, body: str) -> None:
+    run_cmd(
+        [
+            "gh",
+            "pr",
+            "edit",
+            pr_number,
+            "--repo",
+            upstream_repo,
+            "--body",
+            body,
+        ]
+    )
+
 def run_release_prep(version: str, remote: str) -> None:
     run_cmd(
         [
@@ -117,6 +147,54 @@ def run_release_prep(version: str, remote: str) -> None:
             remote,
         ]
     )
+
+
+def run_update_contributors(repo: str) -> None:
+    run_cmd(
+        [
+            str(Path(__file__).resolve().parent / ".." / ".venv" / "bin" / "python"),
+            str(UPDATE_CONTRIBUTORS_SCRIPT),
+            "--source",
+            "github",
+            "--repo",
+            repo,
+            "--output",
+            str(CONTRIBUTORS_PATH),
+        ]
+    )
+
+
+def gh_pr_add_label(upstream_repo: str, pr_number: str, label: str) -> None:
+    run_cmd(
+        [
+            "gh",
+            "pr",
+            "edit",
+            pr_number,
+            "--repo",
+            upstream_repo,
+            "--add-label",
+            label,
+        ]
+    )
+
+
+def is_prerelease(version: str) -> bool:
+    return bool(re.search(r"(a|b|rc)\d*$", version.lower()))
+
+
+def get_changed_files(base_ref: str) -> list[str]:
+    base_ref = base_ref.strip()
+    merge_base = run_git(["merge-base", base_ref, "HEAD"], check=False)
+    if merge_base.returncode == 0:
+        base_sha = merge_base.stdout.strip()
+        diff_result = run_git(["diff", "--name-only", f"{base_sha}..HEAD"], check=True)
+    else:
+        diff_result = run_git(["diff", "--name-only", f"{base_ref}..HEAD"], check=False)
+        if diff_result.returncode != 0:
+            diff_result = run_git(["diff", "--name-only", "HEAD~3..HEAD"], check=True)
+    files = [line.strip() for line in diff_result.stdout.splitlines() if line.strip()]
+    return files
 
 
 def commit_files(message: str, files: Iterable[Path]) -> None:
@@ -162,7 +240,7 @@ def main() -> int:
     parser.add_argument(
         "--pr-body",
         default=None,
-        help="PR body (default: Release prep for vX.Y.Z)",
+        help="PR body (default: formatted release prep template)",
     )
     parser.add_argument(
         "--prep-message",
@@ -188,20 +266,58 @@ def main() -> int:
 
     ensure_remote_branch(args.remote_origin, branch)
 
-    if not gh_pr_exists(upstream_repo_full, head_ref):
+    pr_number = gh_pr_number(upstream_repo_full, head_ref)
+    if not pr_number:
         title = args.pr_title or f"Release v{args.version}"
-        body = args.pr_body or f"Release prep for v{args.version}."
+        body = args.pr_body or (
+            f"## Release v{args.version}\n\n"
+            "### Summary\n"
+            "- Bump package version and metadata\n"
+            "- Refresh contributors list\n"
+            "- Generate release notes\n\n"
+            "### Files updated\n"
+            "- (pending)\n\n"
+            "### Checklist\n"
+            "- [ ] CI passes\n"
+            "- [ ] Release notes look correct\n"
+            "- [ ] `release` label applied\n"
+            "- [ ] Tag on merge\n"
+        )
         gh_pr_create(upstream_repo_full, base_branch, head_ref, title, body)
+        pr_number = gh_pr_number(upstream_repo_full, head_ref)
+
+    run_update_contributors(upstream_repo_full)
+    contributors_message = "docs: update contributors"
+    commit_files(contributors_message, [CONTRIBUTORS_PATH])
 
     run_release_prep(args.version, args.remote_upstream)
-
     prep_message = args.prep_message.format(version=args.version)
     commit_files(prep_message, [INIT_PATH, README_PATH, PYPROJECT_PATH])
 
     generate_release_notes(args.version, args.base)
-
     notes_message = args.notes_message.format(version=args.version)
     commit_files(notes_message, [RELEASE_NOTES_PATH])
+
+    if pr_number:
+        changed_files = get_changed_files(args.base)
+        files_block = "\n".join(f"- `{path}`" for path in changed_files) if changed_files else "- (none)"
+        body = args.pr_body or (
+            f"## Release v{args.version}\n\n"
+            "### Summary\n"
+            "- Bump package version and metadata\n"
+            "- Refresh contributors list\n"
+            "- Generate release notes\n\n"
+            "### Files updated\n"
+            f"{files_block}\n\n"
+            "### Checklist\n"
+            "- [ ] CI passes\n"
+            "- [ ] Release notes look correct\n"
+            "- [ ] `release` label applied\n"
+            "- [ ] Tag on merge\n"
+        )
+        gh_pr_edit(upstream_repo_full, pr_number, body)
+        if not is_prerelease(args.version):
+            gh_pr_add_label(upstream_repo_full, pr_number, "release")
 
     run_git(["push", args.remote_origin, f"HEAD:{branch}"], check=True)
     return 0
