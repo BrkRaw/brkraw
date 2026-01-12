@@ -1,10 +1,36 @@
-# Release v0.5.0rc1
+# Release v0.5.0
 
-Date: 2026-01-07
-Changes since 0.5.0rc
+Date: 2026-01-12
+Changes since 0.5.0rc1
 
-- 0.5.0rc release (1e8d4f7)
-- docs: ignore MD041 in README for logo header (84584fb)
-- docs: keep README first line as H1 (8657f48)
-- docs: polish README with logo and links (057b924)
-- release: stop auto-editing docs index (05a86c9)
+- chore: prepare release v0.5.0 (5dda19b)
+- Fix bug in the release_pr script (f611538)
+- update: release workflow to use PR instead direct push (4b569cf)
+- tests restructure (3135c04)
+- Add context map cases support (89056fd)
+- rename module name converter -> hook (e1bf4f1)
+- specs: remove converter package (keep alias module) (a184014)
+- specs: add hook module and alias converter (4c459bf)
+- affine: reuse resolver rotate/flip helpers (d38f6a7)
+- affine: support flip/rotation kwargs (a7ecc8c)
+- cli: always dedupe output names (f03e424)
+- cli: enable dedupe by default (517b1ba)
+- cli: fix dataclass preset typing (bfabca6)
+- docs: add hook args/preset guidelines (ed5854a)
+- cli: improve hook preset for kwargs hooks (2b2cfa7)
+- loader: accept hook args by alias name (2500061)
+- cli: expose hook args YAML loader (3add019)
+- tests: avoid direct private imports (0586fa2)
+- cli: avoid counter kwarg type errors (184b28a)
+- cli: add hook args YAML and preset (781bf66)
+- docs: add name on contributors page (1008da9)
+- fix(affine): handle variable slice-pack orientation entries (8825973)
+- docs: update brkraw-viewer description (fc62796)
+- docs: add documentation guidelines and refine integration test roadmap (9d4e3a9)
+- docs: reorganize developer vs reference guidance (0e6403c)
+- feat: layout fixed keys and output de-duplication (458a7b4)
+- fix: optional deps/type checker compatibility (1c76220)
+- MRS addon moved to brkraw-mrs (c1a6138)
+- docs: polish cli/info.md (153918d)
+- docs: add scan/reco data access guide (06e6aa4)
+- Fix discussion body newlines (e858444)
