@@ -26,6 +26,13 @@
       "problemMatcher": []
     },
     {
+      "label": "Release: Prep PR (2-step)",
+      "type": "shell",
+      "command": "\"${command:python.interpreterPath}\" scripts/release_pr.py --version ${input:releaseVersion} --base upstream/main --remote-upstream upstream --remote-origin origin",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "Release: Tag + Push (upstream)",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" scripts/tag_and_push.py",
