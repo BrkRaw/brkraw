@@ -60,10 +60,14 @@ def get_remote_url(remote: str) -> str:
 
 
 def parse_owner_repo(remote_url: str) -> tuple[str, str]:
-    match = re.search(r"[:/](?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\\.git)?$", remote_url)
+    cleaned = remote_url.rstrip("/")
+    match = re.search(r"[:/](?P<owner>[^/]+)/(?P<repo>[^/]+)$", cleaned)
     if not match:
         raise SystemExit(f"Could not parse owner/repo from remote URL: {remote_url}")
-    return match.group("owner"), match.group("repo")
+    repo = match.group("repo")
+    if repo.endswith(".git"):
+        repo = repo[: -len(".git")]
+    return match.group("owner"), repo
 
 
 def ensure_remote_branch(remote: str, branch: str) -> None:
