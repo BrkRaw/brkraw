@@ -114,6 +114,14 @@ Sidecar metadata is generated from:
 - Installed metadata specs
 - Optional context maps
 
+### --no-convert
+
+Skip NIfTI conversion and only write sidecar metadata (requires `--sidecar`).
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --sidecar --no-convert
+```
+
 ## Affine handling
 
 ### --space

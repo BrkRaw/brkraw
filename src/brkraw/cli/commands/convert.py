@@ -81,6 +81,9 @@ def cmd_convert(args: argparse.Namespace) -> int:
     # resolve flags + spaces
     if not args.sidecar:
         args.sidecar = _env_flag("BRKRAW_CONVERT_SIDECAR")
+    if args.no_convert and not args.sidecar:
+        logger.error("--no-convert requires --sidecar.")
+        return 2
     if not args.flip_x:
         args.flip_x = _env_flag("BRKRAW_CONVERT_FLIP_X")
     if args.space is None:
@@ -255,26 +258,30 @@ def cmd_convert(args: argparse.Namespace) -> int:
                 ):
                     logger.debug("Skipping scan %s reco %s (selector mismatch).", scan_id, reco_id)
                     continue
-            nii = loader.convert(
-                scan_id,
-                reco_id=reco_id,
-                format=cast(Literal["nifti", "nifti1"], args.format),
-                space=cast(AffineSpace, args.space),
-                override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
-                override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
-                override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
-                flip_x=args.flip_x,
-                xyz_units=cast(XYZUNIT, args.xyz_units),
-                t_units=cast(TUNIT, args.t_units),
-                hook_args_by_name=hook_args_by_name,
-            )
-            if nii is None:
-                if not batch_all and args.reco_id is not None:
-                    logger.error("No NIfTI output generated for scan %s reco %s.", scan_id, reco_id)
-                    return 2
-                continue
-
-            nii_list = list(nii) if isinstance(nii, tuple) else [nii]
+            if args.no_convert:
+                nii_list: List[Any] = []
+                output_count = 1
+            else:
+                nii = loader.convert(
+                    scan_id,
+                    reco_id=reco_id,
+                    format=cast(Literal["nifti", "nifti1"], args.format),
+                    space=cast(AffineSpace, args.space),
+                    override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
+                    override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
+                    override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
+                    flip_x=args.flip_x,
+                    xyz_units=cast(XYZUNIT, args.xyz_units),
+                    t_units=cast(TUNIT, args.t_units),
+                    hook_args_by_name=hook_args_by_name,
+                )
+                if nii is None:
+                    if not batch_all and args.reco_id is not None:
+                        logger.error("No NIfTI output generated for scan %s reco %s.", scan_id, reco_id)
+                        return 2
+                    continue
+                nii_list = list(nii) if isinstance(nii, tuple) else [nii]
+                output_count = len(nii_list)
 
             slicepack_suffixes: Optional[List[str]] = None
             output_paths: Optional[List[Path]] = None
@@ -320,7 +327,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
                     candidate_base_name = f"{candidate_base_name}_{counter}"
 
                 slicepack_suffixes = None
-                if len(nii_list) > 1:
+                if not args.no_convert and output_count > 1:
                     info = layout_core.load_layout_info(
                         loader,
                         scan_id,
@@ -336,14 +343,14 @@ def cmd_convert(args: argparse.Namespace) -> int:
                 output_paths = _resolve_output_paths(
                     args.output,
                     candidate_base_name,
-                    count=len(nii_list),
+                    count=output_count,
                     compress=bool(args.compress),
                     slicepack_suffix=slicepack_suffix,
                     slicepack_suffixes=slicepack_suffixes,
                 )
                 if output_paths is None:
                     return 2
-                if len(output_paths) != len(nii_list):
+                if len(output_paths) != output_count:
                     logger.error("Output path count does not match NIfTI outputs.")
                     return 2
                 if _paths_collide(output_paths, reserved_paths):
@@ -367,15 +374,24 @@ def cmd_convert(args: argparse.Namespace) -> int:
                     context_map=args.context_map,
                 )
 
-            for path, obj in zip(output_paths, nii_list):
-                path.parent.mkdir(parents=True, exist_ok=True)
-                obj.to_filename(str(path))
-                logger.info("Wrote NIfTI: %s", path)
-                total_written += 1
-                if args.sidecar:
+            if args.no_convert:
+                for path in output_paths:
+                    path.parent.mkdir(parents=True, exist_ok=True)
                     _write_sidecar(path, sidecar_meta)
+                    total_written += 1
+            else:
+                for path, obj in zip(output_paths, nii_list):
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    obj.to_filename(str(path))
+                    logger.info("Wrote NIfTI: %s", path)
+                    total_written += 1
+                    if args.sidecar:
+                        _write_sidecar(path, sidecar_meta)
     if total_written == 0:
-        logger.error("No NIfTI outputs generated.")
+        if args.no_convert:
+            logger.error("No sidecar outputs generated.")
+        else:
+            logger.error("No NIfTI outputs generated.")
         return 2
     return 0
 
@@ -799,6 +815,11 @@ def _add_convert_args(
         "--sidecar",
         action="store_true",
         help="Write a JSON sidecar using metadata rules.",
+    )
+    parser.add_argument(
+        "--no-convert",
+        action="store_true",
+        help="Skip NIfTI conversion and only write sidecar metadata (requires --sidecar).",
     )
     parser.add_argument(
         "--context-map",
