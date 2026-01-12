@@ -107,11 +107,29 @@ def resolve_data_and_affine(
                 list(scan.avail.keys()),
             )
             continue
-        image_info = image_resolver.resolve(scan, rid)
-        # store subject-view affines (scanner unwrap happens in get_affine)
-        affine_info = affine_resolver.resolve(
-            scan, rid, decimals=affine_decimals, unwrap_pose=False,
-        )
+        try:
+            image_info = image_resolver.resolve(scan, rid)
+        except Exception as exc:
+            logger.warning(
+                "Failed to resolve image data for scan %s reco %s: %s",
+                getattr(scan, "scan_id", "?"),
+                rid,
+                exc,
+            )
+            image_info = None
+        try:
+            # store subject-view affines (scanner unwrap happens in get_affine)
+            affine_info = affine_resolver.resolve(
+                scan, rid, decimals=affine_decimals, unwrap_pose=False,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to resolve affine for scan %s reco %s: %s",
+                getattr(scan, "scan_id", "?"),
+                rid,
+                exc,
+            )
+            affine_info = None
 
         if hasattr(scan, "image_info"):
             scan.image_info[rid] = image_info
