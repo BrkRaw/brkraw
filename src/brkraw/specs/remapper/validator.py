@@ -230,11 +230,25 @@ def _validate_map_minimal(map_data: Any) -> List[str]:
     return errors
 
 
-def _validate_map_rule(rule: Any, key: str, errors: List[str], *, idx: Optional[int]) -> None:
+def _validate_map_rule(
+    rule: Any,
+    key: str,
+    errors: List[str],
+    *,
+    idx: Optional[Union[int, str]],
+) -> None:
     label = f"map[{key!r}]" if idx is None else f"map[{key!r}][{idx}]"
     if not isinstance(rule, dict):
         errors.append(f"{label}: rule must be a mapping.")
         return
+    cases = rule.get("cases")
+    if cases is not None:
+        if not isinstance(cases, list):
+            errors.append(f"{label}: cases must be a list.")
+        else:
+            for case_idx, case in enumerate(cases):
+                nested = f"{idx}.cases[{case_idx}]" if idx is not None else f"cases[{case_idx}]"
+                _validate_map_rule(case, key, errors, idx=nested)
     rule_type = rule.get("type")
     if rule_type is None:
         if "values" in rule:
@@ -245,7 +259,7 @@ def _validate_map_rule(rule: Any, key: str, errors: List[str], *, idx: Optional[
         errors.append(f"{label}: invalid type {rule_type!r}.")
     if rule_type == "mapping":
         table = rule.get("values")
-        if not isinstance(table, dict):
+        if not isinstance(table, dict) and cases is None:
             errors.append(f"{label}: values must be a mapping.")
     when = rule.get("when")
     if when is not None and not isinstance(when, dict):

@@ -670,34 +670,95 @@ def _apply_map_rules(
 
 def _normalize_map_rules(raw_rule: Any) -> List[Dict[str, Any]]:
     if isinstance(raw_rule, list):
-        return [dict(rule) for rule in raw_rule if isinstance(rule, Mapping)]
+        rules = [dict(rule) for rule in raw_rule if isinstance(rule, Mapping)]
+        return _expand_case_rules(rules)
     if isinstance(raw_rule, Mapping):
-        return [dict(raw_rule)]
+        return _expand_case_rules([dict(raw_rule)])
     raise ValueError("Map rule must be a mapping or list of mappings.")
 
 
 def _is_selector_rule(raw_rule: Any) -> bool:
-    if isinstance(raw_rule, Mapping):
-        return bool(raw_rule.get("selector"))
-    if isinstance(raw_rule, list):
-        return any(isinstance(rule, Mapping) and rule.get("selector") for rule in raw_rule)
-    return False
+    return any(rule.get("selector") for rule in _iter_rule_objects(raw_rule))
 
 
 def _rule_targets(raw_rule: Any) -> Set[str]:
     targets: Set[str] = set()
-    if isinstance(raw_rule, Mapping):
-        value = raw_rule.get("target")
+    for rule in _iter_rule_objects(raw_rule):
+        value = rule.get("target")
         if isinstance(value, str):
             targets.add(value)
+    return targets
+
+
+def _iter_rule_objects(raw_rule: Any) -> Iterable[Mapping[str, Any]]:
+    if isinstance(raw_rule, Mapping):
+        yield raw_rule
+        cases = raw_rule.get("cases")
+        if isinstance(cases, list):
+            for case in cases:
+                yield from _iter_rule_objects(case)
     elif isinstance(raw_rule, list):
         for rule in raw_rule:
-            if not isinstance(rule, Mapping):
-                continue
-            value = rule.get("target")
-            if isinstance(value, str):
-                targets.add(value)
-    return targets
+            yield from _iter_rule_objects(rule)
+
+
+def _expand_case_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    expanded: List[Dict[str, Any]] = []
+    for rule in rules:
+        expanded.extend(_expand_rule_cases(rule))
+    return expanded
+
+
+def _expand_rule_cases(rule: Dict[str, Any]) -> List[Dict[str, Any]]:
+    cases = rule.get("cases")
+    if not isinstance(cases, list):
+        return [dict(rule)]
+    parent = dict(rule)
+    parent.pop("cases", None)
+    expanded: List[Dict[str, Any]] = []
+    for case in cases:
+        if not isinstance(case, Mapping):
+            continue
+        merged = _merge_case_rule(parent, case)
+        if "cases" in merged:
+            expanded.extend(_expand_rule_cases(merged))
+        else:
+            expanded.append(merged)
+    if _rule_has_value(parent):
+        expanded.append(parent)
+    return expanded
+
+
+def _merge_case_rule(parent: Mapping[str, Any], case: Mapping[str, Any]) -> Dict[str, Any]:
+    merged = dict(parent)
+    parent_when = parent.get("when")
+    case_when = case.get("when")
+    if isinstance(parent_when, Mapping) and isinstance(case_when, Mapping):
+        merged["when"] = {**parent_when, **case_when}
+    elif case_when is not None:
+        merged["when"] = case_when
+    elif parent_when is not None:
+        merged["when"] = parent_when
+    for key, value in case.items():
+        if key == "when":
+            continue
+        merged[key] = value
+    return merged
+
+
+def _rule_has_value(rule: Mapping[str, Any]) -> bool:
+    if "value" in rule:
+        return True
+    if "values" in rule:
+        return isinstance(rule.get("values"), Mapping)
+    if "default" in rule and "when" not in rule:
+        return True
+    rule_type = rule.get("type")
+    if rule_type == "const":
+        return "value" in rule
+    if rule_type == "mapping":
+        return isinstance(rule.get("values"), Mapping)
+    return False
 
 
 def _rule_applies_to_target(raw_rule: Any, target: Optional[str]) -> bool:

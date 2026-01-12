@@ -91,6 +91,30 @@ Notes:
 
 Each rule object supports the following fields.
 
+### cases (hierarchical rules)
+
+```yaml
+OutputKey:
+  when:
+    Subject.ID: "XXX"
+  type: const
+  override: true
+  cases:
+    - when:
+        ScanID: 1
+      value: "A"
+    - when:
+        ScanID: 2
+      value: "B"
+```
+
+Behavior:
+
+- `cases` is a list of rule objects evaluated only after the parent rule matches
+- each case is merged with the parent rule (case fields override parent fields)
+- cases are evaluated top to bottom; the first matching case is applied
+- if no case matches, the parent rule is applied if it defines a value or default
+
 ### selector
 
 ```yaml
@@ -204,6 +228,10 @@ Supported operators include:
 
 Rules are evaluated against the **original spec outputs**, not against values
 modified by earlier context map rules.
+
+When `cases` is used, the parent `when` is evaluated first and each case
+`when` is evaluated against the same original outputs. The effective `when`
+for a case is the combination of parent + case conditions.
 
 ---
 

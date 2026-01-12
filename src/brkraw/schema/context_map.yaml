@@ -55,3 +55,8 @@ $defs:
         type: object
         description: "Conditions evaluated against mapped values."
         additionalProperties: true
+      cases:
+        type: array
+        description: "Nested rule list evaluated after the parent rule matches."
+        items:
+          $ref: "#/$defs/Rule"
