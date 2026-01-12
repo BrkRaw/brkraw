@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from typing import cast
 
 
 def test_affine_post_transform_flip_x() -> None:
@@ -8,7 +9,7 @@ def test_affine_post_transform_flip_x() -> None:
 
     affine = np.eye(4, dtype=float)
     out = _apply_affine_post_transform(affine, kwargs={"flip_x": True})
-    assert np.allclose(out, np.diag([-1.0, 1.0, 1.0, 1.0]))
+    assert np.allclose(cast(np.ndarray, out), np.diag([-1.0, 1.0, 1.0, 1.0]))
 
 
 def test_affine_post_transform_rotation_z() -> None:
@@ -20,7 +21,7 @@ def test_affine_post_transform_rotation_z() -> None:
         [[0.0, -1.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
         dtype=float,
     )
-    assert np.allclose(out, expected, atol=1e-6)
+    assert np.allclose(cast(np.ndarray, out), expected, atol=1e-6)
 
 
 def test_affine_post_transform_tuple() -> None:

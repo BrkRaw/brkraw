@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from pathlib import Path
 from collections import OrderedDict
-from ..helpers import prep_module
+from tests.helpers import prep_module
 
 # Load the parameters module using your helper
 p = prep_module("core", "parameters")
