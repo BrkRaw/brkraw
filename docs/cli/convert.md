@@ -190,6 +190,19 @@ Flip the x-axis in the output affine:
 brkraw convert /path/to/study --scan-id 3 --flip-x
 ```
 
+### --flatten-fg
+
+Flatten frame-group dimensions into a 4D time axis when data is 5D or higher.
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --flatten-fg
+```
+
+Notes:
+
+- 4D or smaller data is unchanged.
+- Extra dimensions are collapsed into the 4th dimension in order.
+
 ## Units and headers
 
 ### Spatial and temporal units
