@@ -6,7 +6,7 @@
 </picture>
 <!-- markdownlint-enable MD041 MD033 MD013 -->
 
-A modular toolkit for preclinical MRI: from raw studies to reproducible outputs.
+A modular toolkit for Bruker MRI raw-data handling.
 
 BrkRaw (v0.5.0rc1) converts raw data into standardized, neuroimaging-ready
 datasets, with extensible rules/specs and plugin hooks.
