@@ -222,6 +222,23 @@ loader.convert(
 )
 ```
 
+### Flatten frame-group dimensions
+
+Flatten frame-group dimensions into a 4D time axis when data is 5D or higher.
+
+```python
+loader.convert(
+    scan_id=3,
+    reco_id=1,
+    flatten_fg=True,
+)
+```
+
+Notes:
+
+- 4D or smaller data is unchanged.
+- Extra dimensions are collapsed into the 4th dimension in order.
+
 ---
 
 ## Units and headers
