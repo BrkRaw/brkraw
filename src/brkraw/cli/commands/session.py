@@ -99,6 +99,7 @@ def cmd_unset(args: argparse.Namespace) -> int:
         "BRKRAW_CONVERT_SPACE",
         "BRKRAW_CONVERT_COMPRESS",
         "BRKRAW_CONVERT_FLIP_X",
+        "BRKRAW_CONVERT_FLATTEN_FG",
         "BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE",
         "BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE",
         "BRKRAW_CONVERT_XYZ_UNITS",
@@ -153,6 +154,7 @@ def cmd_env(_: argparse.Namespace) -> int:
     convert_compress = os.environ.get("BRKRAW_CONVERT_COMPRESS")
     convert_space = os.environ.get("BRKRAW_CONVERT_SPACE")
     convert_flip_x = os.environ.get("BRKRAW_CONVERT_FLIP_X")
+    convert_flatten_fg = os.environ.get("BRKRAW_CONVERT_FLATTEN_FG")
     convert_subject_type = os.environ.get("BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE")
     convert_subject_pose = os.environ.get("BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE")
     convert_xyz_units = os.environ.get("BRKRAW_CONVERT_XYZ_UNITS")
@@ -174,6 +176,7 @@ def cmd_env(_: argparse.Namespace) -> int:
         and convert_compress is None
         and convert_space is None
         and convert_flip_x is None
+        and convert_flatten_fg is None
         and convert_subject_type is None
         and convert_subject_pose is None
         and convert_xyz_units is None
@@ -211,6 +214,8 @@ def cmd_env(_: argparse.Namespace) -> int:
         print(f"BRKRAW_CONVERT_COMPRESS={convert_compress}")
     if convert_flip_x is not None:
         print(f"BRKRAW_CONVERT_FLIP_X={convert_flip_x}")
+    if convert_flatten_fg is not None:
+        print(f"BRKRAW_CONVERT_FLATTEN_FG={convert_flatten_fg}")
     if convert_subject_type is not None:
         print(f"BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE={convert_subject_type}")
     if convert_subject_pose is not None:
@@ -306,7 +311,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help=(
             "Set BRKRAW_CONVERT_<OPTION> as KEY=VALUE (repeatable). "
             "Keys: OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, CONTEXT_MAP, "
-            "COMPRESS, SPACE, FLIP_X, OVERRIDE_SUBJECT_TYPE, "
+            "COMPRESS, SPACE, FLIP_X, FLATTEN_FG, OVERRIDE_SUBJECT_TYPE, "
             "OVERRIDE_SUBJECT_POSE, XYZ_UNITS, T_UNITS, HEADER, FORMAT."
         ),
     )

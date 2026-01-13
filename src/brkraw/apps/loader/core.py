@@ -350,6 +350,7 @@ class BrukerLoader:
                         override_subject_type: Optional[SubjectType] = None,
                         override_subject_pose: Optional[SubjectPose] = None,
                         flip_x: bool = False, 
+                        flatten_fg: bool = False,
                         xyz_units: XYZUNIT = 'mm', 
                         t_units: TUNIT = 'sec'):
         """Return NIfTI image(s) for a scan/reco via attached helper.
@@ -377,6 +378,7 @@ class BrukerLoader:
             override_subject_type=override_subject_type,
             override_subject_pose=override_subject_pose,
             flip_x=flip_x,
+            flatten_fg=flatten_fg,
             xyz_units=xyz_units,
             t_units=t_units,
         )
@@ -392,6 +394,7 @@ class BrukerLoader:
         override_subject_type: Optional[SubjectType] = None,
         override_subject_pose: Optional[SubjectPose] = None,
         flip_x: bool = False,
+        flatten_fg: bool = False,
         xyz_units: XYZUNIT = "mm",
         t_units: TUNIT = "sec",
         hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
@@ -406,6 +409,7 @@ class BrukerLoader:
             override_subject_type=override_subject_type,
             override_subject_pose=override_subject_pose,
             flip_x=flip_x,
+            flatten_fg=flatten_fg,
             xyz_units=xyz_units,
             t_units=t_units,
             hook_args_by_name=hook_args_by_name,

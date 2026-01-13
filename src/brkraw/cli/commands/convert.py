@@ -86,6 +86,8 @@ def cmd_convert(args: argparse.Namespace) -> int:
         return 2
     if not args.flip_x:
         args.flip_x = _env_flag("BRKRAW_CONVERT_FLIP_X")
+    if not args.flatten_fg:
+        args.flatten_fg = _env_flag("BRKRAW_CONVERT_FLATTEN_FG")
     if args.space is None:
         args.space = os.environ.get("BRKRAW_CONVERT_SPACE")
     if args.override_subject_type is None:
@@ -271,6 +273,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
                     override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
                     override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
                     flip_x=args.flip_x,
+                    flatten_fg=args.flatten_fg,
                     xyz_units=cast(XYZUNIT, args.xyz_units),
                     t_units=cast(TUNIT, args.t_units),
                     hook_args_by_name=hook_args_by_name,
@@ -857,6 +860,11 @@ def _add_convert_args(
         "--format",
         choices=["nifti", "nifti1"],
         help="Output format (default: nifti).",
+    )
+    parser.add_argument(
+        "--flatten-fg",
+        action="store_true",
+        help="Flatten frame-group dimensions to 4D when data is 5D or higher.",
     )
     parser.add_argument(
         "--no-compress",
