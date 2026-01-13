@@ -1,4 +1,4 @@
-# Preclinical MRI Dataset Toolkit
+# A modular toolkit for Bruker MRI raw-data handling.
 
 Documentation for BrkRaw.
 
