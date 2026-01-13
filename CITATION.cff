@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "BrkRaw: A modular toolkit for Bruker MRI raw-data handling"
+type: software
+
+authors:
+  - family-names: Lee
+    given-names: Sung-Ho
+    orcid: "https://orcid.org/0000-0001-5292-0747"
+  - family-names: Ban
+    given-names: Woomi
+    orcid: "https://orcid.org/0000-0003-2003-717X"
+  - family-names: Shih
+    given-names: Yen-Yu Ian
+    orcid: "https://orcid.org/0000-0001-6529-911X"
+
+doi: "10.5281/zenodo.3818614"
+repository-code: "https://github.com/BrkRaw/brkraw"
+url: "https://brkraw.github.io"
+
+license: "GPL-3.0-only"
+
+keywords:
+  - Bruker
+  - MRI
+  - preclinical MRI
+  - BIDS
+  - neuroimaging
+
+version: "0.5.0"
+date-released: "2026-01-13"
