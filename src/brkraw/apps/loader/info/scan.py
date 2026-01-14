@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import Any, cast, TYPE_CHECKING, Dict, Optional, Union
 from pathlib import Path
+import logging
 from ....specs.remapper import load_spec, map_parameters
 from ....specs.remapper.validator import validate_spec
 
 
 if TYPE_CHECKING:
     from ..types import ScanLoader, RecoLoader
+
+logger = logging.getLogger("brkraw")
 
 
 def resolve(
@@ -59,14 +62,24 @@ def resolve(
     if len(scan.avail):
         results['Reco(s)'] = {}
         for reco_id in scan.avail.keys():
-            reco_spec = {"Type": {"sources": [
+            reco_spec = {
+                "Type": {
+                    "sources": [
                         {
-                            'file': "visu_pars",
-                            'key': "VisuCoreFrameType",
-                            'reco_id': reco_id
+                            "file": "visu_pars",
+                            "key": "VisuCoreFrameType",
+                            "reco_id": reco_id,
                         }
                     ]
                 }
             }
-            results['Reco(s)'][reco_id] = map_parameters(scan, reco_spec)
+            try:
+                results["Reco(s)"][reco_id] = map_parameters(scan, reco_spec)
+            except (FileNotFoundError, AttributeError) as exc:
+                logger.warning(
+                    "visu_pars missing for scan %s reco %s; skipping reco entry: %s",
+                    getattr(scan, "scan_id", "unknown"),
+                    reco_id,
+                    exc,
+                )
     return results
