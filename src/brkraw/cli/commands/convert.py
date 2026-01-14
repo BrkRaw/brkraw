@@ -190,8 +190,6 @@ def cmd_convert(args: argparse.Namespace) -> int:
     if batch_all and output_is_file:
         logger.error("When omitting --scan-id, --output must be a directory.")
         return 2
-    if not batch_all and args.reco_id is None:
-        args.reco_id = 1
 
     scan_ids = list(loader.avail.keys()) if batch_all else [args.scan_id]
     if not scan_ids:
@@ -781,7 +779,7 @@ def _add_convert_args(
             "-r",
             "--reco-id",
             type=int,
-            help="Reco id to convert (default: 1).",
+            help="Reco id to convert (defaults to all recos when omitted).",
         )
     parser.add_argument(
         "--flip-x",

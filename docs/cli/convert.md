@@ -44,8 +44,7 @@ brkraw convert /path/to/study --scan-id 5 --reco-id 2
 
 Notes:
 
-- Default is 1
-- If omitted and multiple recos exist, all recos are converted
+- If omitted, all recos for the selected scans are converted
 - Some converter hooks may not use reco IDs explicitly
 
 ## Output control
