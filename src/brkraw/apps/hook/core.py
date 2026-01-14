@@ -28,6 +28,18 @@ REGISTRY_FILENAME = "hooks.yaml"
 MANIFEST_NAMES = ("brkraw_hook.yaml", "brkraw_hook.yml")
 
 
+def _metadata_get(
+    dist: Optional[importlib.metadata.Distribution],
+    key: str,
+    default: Optional[str] = None,
+) -> Optional[str]:
+    """Typed helper to read distribution metadata."""
+    if dist is None:
+        return default
+    meta = cast(Mapping[str, str], dist.metadata)
+    return meta.get(key, default)
+
+
 def _packages_distributions() -> Mapping[str, List[str]]:
     packages_distributions = getattr(importlib.metadata, "packages_distributions", None)
     if packages_distributions is not None:
@@ -41,7 +53,7 @@ def _packages_distributions() -> Mapping[str, List[str]]:
             top_level = read_text("top_level.txt")
             if isinstance(top_level, str):
                 top_level_text = top_level
-        dist_name = dist.metadata.get("Name")
+        dist_name = _metadata_get(dist, "Name")
         if not dist_name:
             continue
         for package in top_level_text.splitlines():
@@ -383,26 +395,26 @@ def _resolve_distribution(ep: importlib.metadata.EntryPoint) -> Optional[importl
 def _dist_name(dist: Optional[importlib.metadata.Distribution]) -> Optional[str]:
     if dist is None:
         return None
-    return dist.metadata.get("Name")
+    return _metadata_get(dist, "Name")
 
 
 def _dist_version(dist: Optional[importlib.metadata.Distribution]) -> str:
     if dist is None:
         return "<Unknown>"
-    return dist.metadata.get("Version", "<Unknown>")
+    return _metadata_get(dist, "Version", "<Unknown>") or "<Unknown>"
 
 
 def _dist_description(dist: Optional[importlib.metadata.Distribution]) -> str:
     if dist is None:
         return "<Unknown>"
-    return dist.metadata.get("Summary", "<Unknown>")
+    return _metadata_get(dist, "Summary", "<Unknown>") or "<Unknown>"
 
 
 def _dist_author(dist: Optional[importlib.metadata.Distribution]) -> str:
     if dist is None:
         return "<Unknown>"
     for key in ("Author", "Author-email", "Maintainer", "Maintainer-email"):
-        value = dist.metadata.get(key)
+        value = _metadata_get(dist, key)
         if value:
             return value
     return "<Unknown>"
@@ -417,7 +429,7 @@ def _load_manifest(
     manifest = _find_manifest(dist, packages=packages)
     if manifest is None:
         raise FileNotFoundError(
-            f"No hook manifest found in {dist.metadata.get('Name', '<Unknown>')}"
+            f"No hook manifest found in {_metadata_get(dist, 'Name', '<Unknown>')}"
         )
     data = _read_yaml(manifest)
     return manifest, data
