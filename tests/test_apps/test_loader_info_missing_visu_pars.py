@@ -1,12 +1,7 @@
 import logging
-<<<<<<< HEAD
-
-from brkraw.apps.loader.info import scan as scan_info
-=======
 from typing import cast
 from brkraw.apps.loader.info import scan as resolve_scan
 from brkraw.apps.loader.types import ScanLoader
->>>>>>> fd93d48 (Fix #203: skip info error when visu_pars missing)
 
 
 class DummyVisuPars:
@@ -51,11 +46,7 @@ def test_resolve_skips_reco_without_visu_pars(caplog):
     )
 
     caplog.set_level(logging.WARNING, logger="brkraw")
-<<<<<<< HEAD
-    result = scan_info.resolve(scan, spec={}, transforms={}, validate=False)
-=======
     result = resolve_scan(cast(ScanLoader, scan), spec={}, transforms={}, validate=False)
->>>>>>> fd93d48 (Fix #203: skip info error when visu_pars missing)
 
     assert result["Reco(s)"][1]["Type"] == "frame_type"
     assert 2 not in result["Reco(s)"]
