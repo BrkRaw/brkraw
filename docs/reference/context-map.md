@@ -149,10 +149,10 @@ Modality:
 
 ---
 
-## Project-focused example (short)
+## BIDS-focused example (short)
 
 Use a context map to normalize subject/session naming, generate per-scan
-metadata, and control project layout in a single pass.
+metadata, and control BIDS layout in a single pass.
 
 ```yaml
 Session:

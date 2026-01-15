@@ -14,7 +14,7 @@ Specs are used to:
 
 - define fields shown by `brkraw info`
 - generate structured metadata dictionaries
-- populate sidecar JSON files (for example DICOM-style metadata)
+- populate sidecar JSON files (for example BIDS-style metadata)
 - provide normalized values for layout and naming
 
 Specs do **not**:
@@ -30,23 +30,24 @@ Specs do **not**:
 Info specs shape what `brkraw info` shows. When paired with a rule, they can
 make the output modality-aware.
 
-Example info spec (assume `mr_info` is installed):
+Example info spec (assume `bids_bold_info` is installed):
 
 ```yaml
 __meta__:
-  name: "mr_info"
+  name: "bids_bold_info"
   version: "1.0.0"
   category: "info_spec"
 
-Protocol:
+Modality:
   sources:
     - file: method
       key: Method
+  transform: to_bids_modality
 
-SequenceName:
+TaskName:
   sources:
-    - file: acqp
-      key: ACQ_scan_name
+    - file: method
+      key: PVM_FMRI_Name
 ```
 
 Before rule (default info spec):
@@ -56,11 +57,11 @@ Protocol: EPI
 Method: EPI
 ```
 
-After rule selects `mr_info`:
+After rule selects `bids_bold_info`:
 
 ```text
-Protocol: EPI
-SequenceName: epi_bold
+Modality: bold
+TaskName: rest
 ```
 
 ---
@@ -70,31 +71,33 @@ SequenceName: epi_bold
 Metadata specs control JSON sidecars for conversion. Keep them small and
 structured, then let layout handle filenames.
 
-Example metadata spec (assume `dicom_mr_metadata` is installed):
+Example metadata spec (assume `bids_bold_metadata` is installed):
 
 ```yaml
 __meta__:
-  name: "dicom_mr_metadata"
+  name: "bids_bold_metadata"
   version: "1.0.0"
   category: "metadata_spec"
 
 RepetitionTime:
   sources:
-    - file: visu_pars
-      key: VisuAcqRepetitionTime
+    - file: method
+      key: PVM_RepetitionTime
+  transform: ms_to_s
 
-EchoTime:
+PhaseEncodingDirection:
   sources:
-    - file: visu_pars
-      key: VisuAcqEchoTime
+    - file: method
+      key: PVM_EPI_PhaseEncDir
+  transform: to_bids_phase_dir
 ```
 
 Resulting sidecar fragment:
 
 ```json
 {
-  "RepetitionTime": 2000.0,
-  "EchoTime": 30.0
+  "RepetitionTime": 2.0,
+  "PhaseEncodingDirection": "j-"
 }
 ```
 

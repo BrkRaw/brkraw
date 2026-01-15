@@ -1,0 +1,127 @@
+__meta__:
+  name: "metadata_func"
+  version: "0.0.1"
+  description: "Functional (EPI) metadata mapping for BIDS 1.10.1."
+  category: "metadata_spec"
+  include:
+    - "metadata_common.yaml"
+
+TaskName:
+  inputs:
+    value:
+      const: "CHANGE_ME"
+  transform: pick_value
+
+RepetitionTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqRepetitionTime
+  transform: to_seconds
+
+EchoTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqEchoTime
+  transform: to_seconds
+
+FlipAngle:
+  sources:
+    - file: visu_pars
+      key: VisuAcqFlipAngle
+
+SliceTiming:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+VolumeTiming:
+  inputs:
+    tr:
+      sources:
+        - file: visu_pars
+          key: VisuAcqRepetitionTime
+    nr:
+      sources:
+        - file: method
+          key: PVM_NRepetitions
+  transform: volume_timing
+
+PhaseEncodingDirection:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+EffectiveEchoSpacing:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+TotalReadoutTime:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+MultibandAccelerationFactor:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+NumberOfVolumesDiscardedByScanner:
+  sources:
+    - file: method
+      key: PVM_DummyScans
+
+NumberOfVolumesDiscardedByUser:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+DelayTime:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+AcquisitionDuration:
+  inputs:
+    value:
+      sources:
+        - file: method
+          key: PVM_ScanTime
+  transform: first_seconds
+
+DelayAfterTrigger:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+Instructions:
+  inputs:
+    value:
+      const: "CHANGE_ME"
+  transform: pick_value
+
+TaskDescription:
+  inputs:
+    value:
+      const: "CHANGE_ME"
+  transform: pick_value
+
+CogAtlasID:
+  inputs:
+    value:
+      const: "https://www.cognitiveatlas.org/fillYourID"
+  transform: pick_value
+
+CogPOID:
+  inputs:
+    value:
+      const: "http://www.cogpo.org/fillYourID"
+  transform: pick_value

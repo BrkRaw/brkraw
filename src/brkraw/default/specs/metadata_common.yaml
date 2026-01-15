@@ -1,0 +1,129 @@
+__meta__:
+  name: "metadata_common"
+  version: "0.0.1"
+  description: "Common BIDS 1.10.1 metadata mapping for Bruker PvDataset."
+  category: "metadata_spec"
+  transforms_source: "metadata_transforms.py"
+
+Manufacturer:
+  sources:
+    - file: visu_pars
+      key: VisuManufacturer
+  transform: strip_jcamp_string
+
+ManufacturersModelName:
+  sources:
+    - file: visu_pars
+      key: VisuStation
+  transform: strip_jcamp_string
+
+DeviceSerialNumber:
+  sources:
+    - file: visu_pars
+      key: VisuSystemOrderNumber
+
+StationName:
+  sources:
+    - file: visu_pars
+      key: VisuStation
+  transform: strip_jcamp_string
+
+SoftwareVersions:
+  sources:
+    - file: visu_pars
+      key: VisuAcqSoftwareVersion
+  transform: strip_jcamp_string
+
+MagneticFieldStrength:
+  inputs:
+    freq:
+      sources:
+        - file: visu_pars
+          key: VisuAcqImagingFrequency
+  transform: freq_to_field
+
+ReceiveCoilName:
+  sources:
+    - file: visu_pars
+      key: VisuCoilReceiveName
+  transform: strip_jcamp_string
+
+ReceiveCoilActiveElements:
+  sources:
+    - file: visu_pars
+      key: VisuCoilReceiveType
+  transform: strip_jcamp_string
+
+TransmitCoilName:
+  sources:
+    - file: visu_pars
+      key: VisuCoilTransmitName
+  transform: strip_jcamp_string
+
+CoilCombinationMethod:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+GradientSetType:
+  sources:
+    - file: acqp
+      key: ACQ_status
+  transform: strip_jcamp_string
+
+PulseSequenceType:
+  sources:
+    - file: method
+      key: PULPROG
+  transform: strip_jcamp_string
+
+ScanningSequence:
+  sources:
+    - file: visu_pars
+      key: VisuAcqSequenceName
+  transform: strip_jcamp_string
+
+SequenceVariant:
+  sources:
+    - file: visu_pars
+      key: VisuAcqEchoSequenceType
+  transform: strip_jcamp_string
+
+SequenceName:
+  sources:
+    - file: visu_pars
+      key: VisuAcquisitionProtocol
+    - file: acqp
+      key: ACQ_protocol_name
+  transform: strip_jcamp_string
+
+PulseSequenceDetails:
+  sources:
+    - file: acqp
+      key: ACQ_scan_name
+  transform: strip_jcamp_string
+
+NonlinearGradientCorrection:
+  sources:
+    - file: visu_pars
+      key: VisuAcqKSpaceTraversal
+  transform: strip_jcamp_string
+
+InstitutionName:
+  sources:
+    - file: visu_pars
+      key: VisuInstitution
+  transform: strip_jcamp_string
+
+InstitutionAddress:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+InstitutionalDepartmentName:
+  inputs:
+    value:
+      const: null
+  transform: pick_value

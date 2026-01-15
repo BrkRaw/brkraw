@@ -21,14 +21,14 @@ are active.
 
 ---
 
-## MR-focused example (short)
+## BIDS-focused example (short)
 
-Assume you have an MR info spec, a DICOM-flavored metadata spec, and a converter
-hook installed. A single rule file can wire them together for a specific method.
+Assume you have a BIDS-oriented info spec, metadata spec, and converter hook
+installed. A single rule file can wire them together for a specific method.
 
 ```yaml
 info_spec:
-  - name: "mr-info"
+  - name: "bids-bold-info"
     when:
       Method:
         sources:
@@ -36,10 +36,10 @@ info_spec:
             key: Method
     if:
       eq: ["$Method", "EPI"]
-    use: "mr_info"
+    use: "bids_bold_info"
 
 metadata_spec:
-  - name: "mr-dicom-metadata"
+  - name: "bids-bold-metadata"
     when:
       Method:
         sources:
@@ -47,10 +47,10 @@ metadata_spec:
             key: Method
     if:
       eq: ["$Method", "EPI"]
-    use: "metadata_dicom"
+    use: "bids_bold_metadata"
 
 converter_hook:
-  - name: "mr-hook"
+  - name: "bids-bold-hook"
     when:
       Method:
         sources:
@@ -58,13 +58,13 @@ converter_hook:
             key: Method
     if:
       eq: ["$Method", "EPI"]
-    use: "mr_hook"
+    use: "bids_bold_hook"
 ```
 
 Result (conceptually):
 
 - `brkraw info` becomes modality-specific for EPI scans (info spec).
-- metadata sidecars follow DICOM-oriented fields (metadata spec).
+- metadata sidecars are shaped for BIDS fields (metadata spec).
 - conversion behavior is customized for that modality (converter hook).
 
 ---

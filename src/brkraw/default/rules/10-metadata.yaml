@@ -1,0 +1,42 @@
+metadata_spec:
+  - name: "metadata-common"
+    description: "Default metadata mapping for Bruker scans."
+    use: "specs/metadata_common.yaml"
+
+  - name: "metadata-anat"
+    description: "Anatomical metadata mapping for RARE/FLASH sequences."
+    when:
+      method:
+        sources:
+          - file: method
+            key: Method
+        transform: normalize_method
+    if:
+      any:
+        - contains: ["$method", "RARE"]
+        - contains: ["$method", "FLASH"]
+    use: "specs/metadata_anat.yaml"
+
+  - name: "metadata-func-epi"
+    description: "Functional metadata mapping for EPI with short TR."
+    when:
+      method:
+        sources:
+          - file: method
+            key: Method
+        transform: normalize_method
+      tr_sec:
+        sources:
+          - file: method
+            key: PVM_RepetitionTime
+        transform: first_seconds
+      num_repeats:
+        sources:
+          - file: method
+            key: PVM_NRepetitions
+    if:
+      all:
+        - contains: ["$method", "EPI"]
+        - le: ["$tr_sec", 4]
+        - gt: ["$num_repeats", 5]
+    use: "specs/metadata_func.yaml"

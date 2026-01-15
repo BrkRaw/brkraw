@@ -1,0 +1,54 @@
+__meta__:
+  name: "metadata_anat"
+  version: "0.0.1"
+  description: "Anatomical metadata mapping for BIDS 1.10.1."
+  category: "metadata_spec"
+  include:
+    - "metadata_common.yaml"
+
+RepetitionTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqRepetitionTime
+  transform: to_seconds
+
+EchoTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqEchoTime
+  transform: to_seconds
+
+InversionTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqInversionTime
+  transform: to_seconds
+
+FlipAngle:
+  sources:
+    - file: visu_pars
+      key: VisuAcqFlipAngle
+
+PhaseEncodingDirection:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+EffectiveEchoSpacing:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+TotalReadoutTime:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
+
+MultibandAccelerationFactor:
+  inputs:
+    value:
+      const: null
+  transform: pick_value
