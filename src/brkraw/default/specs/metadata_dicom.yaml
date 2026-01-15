@@ -1,0 +1,236 @@
+__meta__:
+  name: "metadata_dicom"
+  version: "0.0.1"
+  description: "DICOM metadata mapping for Bruker PvDataset."
+  category: "metadata_spec"
+  transforms_source: "metadata_transforms.py"
+
+ImageType:
+  sources:
+    - file: visu_pars
+      key: VisuSeriesTypeId
+  transform: strip_jcamp_string
+
+AcquisitionDateTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqDate
+  transform: strip_jcamp_string
+
+MagneticFieldStrength:
+  sources:
+    - file: visu_pars
+      key: VisuMagneticFieldStrength
+
+ScanningSequence:
+  sources:
+    - file: visu_pars
+      key: VisuAcqSequenceName
+  transform: strip_jcamp_string
+
+SequenceVariant:
+  sources:
+    - file: visu_pars
+      key: VisuAcqSequenceName
+  transform: strip_jcamp_string
+
+ScanOptions:
+  sources:
+    - file: visu_pars
+      key: VisuAcqSpectralSuppression
+  transform: strip_jcamp_string
+
+RepetitionTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqRepetitionTime
+
+EchoTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqEchoTime
+
+InversionTime:
+  sources:
+    - file: visu_pars
+      key: VisuAcqInversionTime
+
+FlipAngle:
+  sources:
+    - file: visu_pars
+      key: VisuAcqFlipAngle
+
+SliceThickness:
+  sources:
+    - file: visu_pars
+      key: VisuCoreSliceThickness
+
+PixelBandwidth:
+  sources:
+    - file: visu_pars
+      key: VisuAcqPixelBandwidth
+
+InPlanePhaseEncodingDirection:
+  sources:
+    - file: visu_pars
+      key: VisuAcqGradEncoding
+
+PercentSampling:
+  sources:
+    - file: visu_pars
+      key: VisuAcqPartialFourier
+
+PercentPhaseFieldOfView:
+  sources:
+    - file: visu_pars
+      key: VisuCoreExtent
+
+PixelSpacing:
+  inputs:
+    extent:
+      sources:
+        - file: visu_pars
+          key: VisuCoreExtent
+    size:
+      sources:
+        - file: visu_pars
+          key: VisuCoreSize
+  transform: pixel_spacing_from_extent
+
+SliceThickness_FG:
+  sources:
+    - file: visu_pars
+      key: VisuCoreSliceThickness
+
+ImagePositionPatient:
+  sources:
+    - file: visu_pars
+      key: VisuCorePosition
+  transform: as_list
+
+ImageOrientationPatient:
+  sources:
+    - file: visu_pars
+      key: VisuCoreOrientation
+  transform: as_list
+
+RescaleSlope_FG:
+  sources:
+    - file: visu_pars
+      key: VisuCoreDataSlope
+
+RescaleIntercept_FG:
+  sources:
+    - file: visu_pars
+      key: VisuCoreDataOffs
+
+RepetitionTime_FG:
+  sources:
+    - file: visu_pars
+      key: VisuAcqRepetitionTime
+
+EchoTime_FG:
+  sources:
+    - file: visu_pars
+      key: VisuAcqEchoTime
+
+FlipAngle_FG:
+  sources:
+    - file: visu_pars
+      key: VisuAcqFlipAngle
+
+EchoTrainLength:
+  sources:
+    - file: visu_pars
+      key: VisuAcqEchoTrainLength
+
+NumberOfAverages:
+  sources:
+    - file: visu_pars
+      key: VisuAcqNAverages
+
+PartialFourier:
+  sources:
+    - file: visu_pars
+      key: VisuAcqPartialFourier
+
+PhaseEncodingDirectionPositive:
+  sources:
+    - file: visu_pars
+      key: VisuAcqGradEncoding
+
+DiffusionBValue_FG:
+  sources:
+    - file: visu_pars
+      key: VisuAcqDiffusionBMatrix
+
+DiffusionGradientOrientation_FG:
+  sources:
+    - file: visu_pars
+      key: VisuAcqDiffusionGradOrient
+  transform: as_list
+
+MRSpectroscopyAcquisitionType:
+  sources:
+    - file: visu_pars
+      key: VisuMrsAcquisitionType
+  transform: strip_jcamp_string
+
+ResonantNucleus:
+  sources:
+    - file: visu_pars
+      key: VisuMrsResonantNuclei
+  transform: strip_jcamp_string
+
+SpectralWidth_MRS:
+  sources:
+    - file: visu_pars
+      key: VisuMrsSpectralWidth
+
+TransmitterFrequency_MRS:
+  sources:
+    - file: visu_pars
+      key: VisuMrsTransmitterFreq
+
+ChemicalShiftReference:
+  sources:
+    - file: visu_pars
+      key: VisuMrsChemicalShiftRef
+
+NumberOfZeroFills:
+  sources:
+    - file: visu_pars
+      key: VisuMrsZeroFill
+
+KSpaceFiltering:
+  sources:
+    - file: visu_pars
+      key: VisuAcqKSpaceFiltering
+
+PulseSequenceName_MRS:
+  sources:
+    - file: visu_pars
+      key: VisuAcqSequenceName
+  transform: strip_jcamp_string
+
+EchoTime_MRS:
+  sources:
+    - file: visu_pars
+      key: VisuAcqEchoTime
+
+RepetitionTime_MRS:
+  sources:
+    - file: visu_pars
+      key: VisuAcqRepetitionTime
+
+WaterSuppression:
+  sources:
+    - file: visu_pars
+      key: VisuAcqSpectralSuppression
+  transform: strip_jcamp_string
+
+VolumeLocalizationTechnique:
+  sources:
+    - file: visu_pars
+      key: VisuMrsLocalizationTechnique
+  transform: strip_jcamp_string

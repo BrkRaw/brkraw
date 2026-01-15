@@ -1,0 +1,4 @@
+metadata_spec:
+  - name: "metadata-dicom"
+    description: "Default metadata mapping for Bruker scans."
+    use: "specs/metadata_dicom.yaml"

@@ -51,6 +51,24 @@ def as_list(value):
     return [value]
 
 
+def pixel_spacing_from_extent(extent=None, size=None):
+    if extent is None or size is None:
+        return None
+    arr_extent = np.asarray(extent, dtype=float).ravel()
+    arr_size = np.asarray(size, dtype=float).ravel()
+    if arr_extent.size == 0 or arr_size.size == 0:
+        return None
+    if arr_extent.size != arr_size.size:
+        count = min(arr_extent.size, arr_size.size)
+        if count == 0:
+            return None
+        arr_extent = arr_extent[:count]
+        arr_size = arr_size[:count]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        spacing = arr_extent / arr_size
+    return spacing.tolist()
+
+
 def normalize_method(value: Optional[str]) -> str:
     return strip_jcamp_string(value).upper()
 
