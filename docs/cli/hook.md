@@ -39,7 +39,6 @@ The table shows:
 - version: installed package version
 - entrypoints: names registered in `brkraw.converter_hook`
 - installed: one of:
-
   - Yes (all expected assets are present)
   - Partially (registry exists but some files are missing)
   - No (hook detected but not installed into config root)
@@ -84,10 +83,8 @@ Notes:
 
 - Hooks are discovered via the `brkraw.converter_hook` entrypoint group.
 - A hook package must ship a manifest file named:
-
   - `brkraw_hook.yaml` or `brkraw_hook.yml`
 - The manifest lists addon assets to install:
-
   - `specs`, `rules`, `pruner_specs`, `transforms`
 - During install, rule `use:` references may be rewritten so rules point to the namespaced spec paths (for example `specs/<namespace>/<specfile>.yaml`).
 
@@ -136,7 +133,6 @@ brkraw hook docs brkraw-mrs --render
 Notes:
 
 - The manifest must include either:
-
   - `docs: path/to/file.md`
   - or `readme: path/to/file.md`
 - The docs file is resolved relative to the manifest location inside the package.

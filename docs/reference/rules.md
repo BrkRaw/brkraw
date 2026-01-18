@@ -211,7 +211,6 @@ use: "mrs"
 Target selected when the rule matches.
 
 - For `info_spec` and `metadata_spec`, this may be:
-
   - a spec name (recommended)
   - a spec path under the config root
 - For `converter_hook`, this must be a hook name registered under

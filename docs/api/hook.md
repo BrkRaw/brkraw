@@ -39,7 +39,6 @@ A converter hook is a Python package that:
    1. Exposes one or more entry points under the `brkraw.converter_hook` group.
 2. Optionally ships a manifest file named `brkraw_hook.yaml` or `brkraw_hook.yml`.
 3. The manifest may list addon assets to install into the configuration root:
-
    - specs
    - pruner_specs
    - rules

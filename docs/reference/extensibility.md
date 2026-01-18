@@ -84,16 +84,13 @@ if method/acqp/visu parameters match X
 Typical usage patterns:
 
 - Specs only
-
     - Use rules to select different metadata schemas per sequence.
 
 - Converter hooks only
-
     - Route conversion through a specialized reconstruction pipeline for a
     specific sequence.
 
 - Specs + converter hooks
-
     - Use a custom conversion pipeline while still generating consistent metadata
     and output naming.
 

@@ -143,25 +143,17 @@ __meta__:
 ```
 
 - `name`
-
   - lowercase snake_case
   - up to four tokens
   - pattern: `^[a-z][a-z0-9]*(?:_[a-z0-9]+){0,3}$`
-
 - `version`
-
   - free-form string
   - compared lexically unless pinned by rules
-
 - `description`
-
   - human-readable summary
-
 - `category`
-
   - required when selected by rules
   - must be one of:
-
     - `info_spec`
     - `metadata_spec`
 
@@ -184,25 +176,17 @@ __meta__:
 Supported optional fields:
 
 - `transforms_source`
-
   - string or list of strings
   - relative to the spec file unless absolute
   - later files override earlier ones
-
 - `include`
-
   - string or list of spec paths
   - merged before the current spec
-
 - `include_mode`
-
   - `override` (default): current spec wins
   - `strict`: conflict raises an error
-
 - `authors`, `developers`
-
 - `doi`
-
 - `citation`
 
 ---
@@ -242,15 +226,12 @@ FieldName:
 Each source entry supports:
 
 - `file`: one of
-
   - `method`
   - `acqp`
   - `visu_pars`
   - `reco`
   - `subject`
-
 - `key`: parameter name inside that file
-
 - `reco_id`: optional, for `visu_pars` or `reco`
 
 If multiple sources are listed, the **first available value wins**.
@@ -275,13 +256,22 @@ out.joined:
 
 Rules:
 
-- exactly one of `sources` or `inputs` is required
+- exactly one of `sources`, `inputs`, `const`, or `ref` is required
 - `inputs` may reference:
-
   - `sources`
   - `const`
   - `ref` (previously resolved output)
   - `$scan_id`, `$reco_id`
+
+You can also define constant or reference rules directly at the top level:
+
+```yaml
+FieldName:
+  const: 1
+
+FieldCopy:
+  ref: "FieldName"
+```
 
 ---
 

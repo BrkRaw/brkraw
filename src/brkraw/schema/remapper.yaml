@@ -41,6 +41,10 @@ $defs:
         type: object
         additionalProperties: { $ref: "#/$defs/Input" }
         description: "Named inputs that are passed to a transform or returned as-is."
+      const: {}
+      ref:
+        type: string
+        description: "Dot path to a previously resolved output value."
       transform:
         anyOf:
           - type: string
@@ -52,6 +56,8 @@ $defs:
     oneOf:
       - required: ["sources"]
       - required: ["inputs"]
+      - required: ["const"]
+      - required: ["ref"]
 
   Source:
     type: object
