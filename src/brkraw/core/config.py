@@ -49,8 +49,6 @@ viewer:
     enabled: true
     # Maximum number of scan/reco entries to keep (LRU). 0 disables caching.
     max_items: 10
-    # Ask whether to clear cached data when closing the viewer.
-    prompt_on_close: true
 
 # rules_dir: rules
 # specs_dir: specs
