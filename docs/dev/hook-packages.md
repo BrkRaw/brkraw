@@ -157,7 +157,9 @@ def get_dataobj(scan, reco_id=None, **kwargs):
 ```
 
 This keeps the hook resilient to new keys, allows strict validation inside the
-hook, and makes it easy to document defaults.
+hook, and makes it easy to document defaults. BrkRaw Viewer also uses this
+metadata to build converter-hook option forms, so providing `_build_options`
+with a dataclass improves the GUI experience.
 
 ### Make `brkraw hook preset` useful
 
@@ -179,7 +181,8 @@ HOOK_DEFAULTS = {
 ```
 
 If none of these are available and your hook only takes `**kwargs`, BrkRaw
-cannot infer supported keys and the preset will be empty.
+cannot infer supported keys and the preset will be empty. The BrkRaw Viewer
+Convert tab relies on the same preset inference to render hook option inputs.
 
 ### Document supported keys clearly
 
