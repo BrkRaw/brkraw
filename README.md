@@ -28,16 +28,14 @@ If you use BrkRaw in your research, please cite it.
 
 <!-- BEGIN: brkraw-bibtex -->
 ```biblatex
-@software{brkraw_2026,
-  author = {Lee, Sung-Ho and Devenyi, Gabriel A and Ban, Woomi and Shih, Yen-Yu Ian},
+@software{brkraw,
+  author = {Lee, Sung-Ho and Devenyi, Gabriel A. and Ban, Woomi and Shih, Yen-Yu Ian},
   title = {BrkRaw: A modular toolkit for Bruker MRI raw-data handling},
-  year = {2026},
-  version = {0.5.0},
+  version = {0.5.2},
   doi = {10.5281/zenodo.3818614},
   url = {https://github.com/BrkRaw/brkraw},
   note = {Documentation: https://brkraw.github.io},
-  license = {GPL-3.0-only},
-  date = {2026-01-13}
+  license = {GPL-3.0-only}
 }
 ```
 <!-- END: brkraw-bibtex -->
