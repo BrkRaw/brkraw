@@ -154,7 +154,7 @@ def gh_pr_number(upstream_repo: str, head_ref: str) -> str | None:
 
 def gh_pr_create(
     upstream_repo: str, base_branch: str, head_ref: str, title: str, body: str, *, dry_run: bool
-) -> str | None:
+) -> None:
     if dry_run:
         logger.info(
             "[dry-run] Would create PR in %s: base=%s, head=%s",
@@ -164,7 +164,7 @@ def gh_pr_create(
         )
         logger.info("[dry-run] Title: %s", title)
         return None
-    result = run_cmd(
+    run_cmd(
         [
             "gh",
             "pr",
@@ -179,14 +179,9 @@ def gh_pr_create(
             title,
             "--body",
             body,
-            "--json",
-            "number",
-            "--jq",
-            ".number",
         ]
     )
-    value = result.stdout.strip()
-    return value or None
+    return None
 
 
 def gh_pr_edit(upstream_repo: str, pr_number: str, body: str, *, dry_run: bool) -> None:
@@ -232,13 +227,9 @@ def ensure_pr(
     if pr_number:
         return pr_number
 
-    created_pr = gh_pr_create(
-        upstream_repo_full, base_branch, head_ref, title, body, dry_run=dry_run
-    )
+    gh_pr_create(upstream_repo_full, base_branch, head_ref, title, body, dry_run=dry_run)
     if dry_run:
         return "DRY_RUN_PR"
-    if created_pr:
-        return created_pr
 
     pr_number = None
     for attempt in range(5):
