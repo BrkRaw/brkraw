@@ -55,8 +55,8 @@ def update_citation(version: str) -> None:
     text = CITATION_PATH.read_text(encoding="utf-8")
 
     text, count_v = re.subn(
-        r"(?m)^version:\s*[0-9A-Za-z.\-]+$",
-        f"version: {version}",
+        r"(?m)^version:\s*\"?[0-9A-Za-z.\-]+\"?$",
+        f'version: "{version}"',
         text,
         count=1,
     )
@@ -65,8 +65,8 @@ def update_citation(version: str) -> None:
 
     # update date-released
     text, count_d = re.subn(
-        r"(?m)^date-released:\s*\d{4}-\d{2}-\d{2}$",
-        f"date-released: {today}",
+        r"(?m)^date-released:\s*\"?\d{4}-\d{2}-\d{2}\"?$",
+        f'date-released: "{today}"',
         text,
         count=1,
     )
