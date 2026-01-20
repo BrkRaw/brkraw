@@ -17,7 +17,6 @@ datasets, with extensible rules/specs and plugin hooks.
 - Releases: [BrkRaw/brkraw releases](https://github.com/BrkRaw/brkraw/releases)
 - PyPI: [brkraw on PyPI](https://pypi.org/project/brkraw/)
 
-
 ## Citation
 
 If you use BrkRaw in your research, please cite it.
