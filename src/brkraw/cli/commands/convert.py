@@ -13,7 +13,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Mapping, Optional, Dict, List, Tuple, Literal, cast, get_args
+from typing import Any, Mapping, Optional, Dict, List, Tuple, cast, get_args
 
 import numpy as np
 from brkraw.cli.utils import load
@@ -119,7 +119,6 @@ def cmd_convert(args: argparse.Namespace) -> int:
     if args.space is None:
         args.space = "subject_ras"
     for attr, env_key in (
-        ("format", "BRKRAW_CONVERT_FORMAT"),
         ("header", "BRKRAW_CONVERT_HEADER"),
         ("context_map", "BRKRAW_CONVERT_CONTEXT_MAP"),
     ):
@@ -138,13 +137,6 @@ def cmd_convert(args: argparse.Namespace) -> int:
         if output_is_file and args.prefix:
             logger.error("Cannot use --prefix when --output is a file path.")
             return 2
-
-    args.format = _coerce_choice(
-        "BRKRAW_CONVERT_FORMAT",
-        args.format or "nifti",
-        ("nifti", "nifti1"),
-        default="nifti",
-    )
 
     try:
         render_layout_supports_counter = "counter" in inspect.signature(layout_core.render_layout).parameters
@@ -265,7 +257,6 @@ def cmd_convert(args: argparse.Namespace) -> int:
                 nii = loader.convert(
                     scan_id,
                     reco_id=reco_id,
-                    format=cast(Literal["nifti", "nifti1"], args.format),
                     space=cast(AffineSpace, args.space),
                     override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
                     override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
@@ -853,11 +844,6 @@ def _add_convert_args(
         "--override-subject-pose",
         choices=list(get_args(SubjectPose)),
         help="Override subject pose for subject-view affines (space=subject_ras).",
-    )
-    parser.add_argument(
-        "--format",
-        choices=["nifti", "nifti1"],
-        help="Output format (default: nifti).",
     )
     parser.add_argument(
         "--flatten-fg",

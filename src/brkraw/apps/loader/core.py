@@ -163,6 +163,7 @@ class BrukerLoader:
             scan.convert = MethodType(_convert, scan)
             scan._converter_hook = None
             scan._converter_hook_name = None
+            scan.converter_func = None
             if rules:
                 try:
                     hook_name = select_rule_use(
@@ -259,9 +260,8 @@ class BrukerLoader:
             partial(_get_affine, decimals=self._affine_decimals),
             scan,
         )
-        scan.get_nifti1image = MethodType(_get_nifti1image, scan)
-        scan.convert = MethodType(_convert, scan)
         scan._converter_hook = None
+        scan.converter_func = None
 
     def get_scan(self, scan_id: int) -> "ScanLoader":
         """Return scan by id.
@@ -372,7 +372,6 @@ class BrukerLoader:
         scan = self.get_scan(scan_id)
         return scan.convert(
             reco_id,
-            format="nifti",
             space=space,
             override_header=override_header,
             override_subject_type=override_subject_type,
@@ -388,7 +387,6 @@ class BrukerLoader:
         scan_id: int,
         reco_id: Optional[int] = None,
         *,
-        format: Literal["nifti", "nifti1"] = "nifti",
         space: AffineSpace = 'subject_ras',
         override_header: Optional[Nifti1HeaderContents] = None,
         override_subject_type: Optional[SubjectType] = None,
@@ -399,11 +397,10 @@ class BrukerLoader:
         t_units: TUNIT = "sec",
         hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
     ):
-        """Convert a scan/reco to the requested output format."""
+        """Convert a scan/reco to output object(s) supporting to_filename()."""
         scan = self.get_scan(scan_id)
         return scan.convert(
             reco_id,
-            format=format,
             space=space,
             override_header=override_header,
             override_subject_type=override_subject_type,

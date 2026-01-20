@@ -69,6 +69,7 @@ dev = [
     "mkdocs-material",
     "pymdown-extensions",
     "pytest",
+    "tomli",
 ]
 minimal = []
 docs = [

@@ -120,8 +120,11 @@ hooks:
 ```
 
 At conversion time, BrkRaw looks up args by the selected hook entrypoint name
-(for example `sordino`, `mrs`) and passes them as keyword arguments to hook
-functions (typically `get_dataobj` and/or `get_affine`).
+(for example `sordino`, `mrs`) and splits them by hook function signature:
+
+- `get_dataobj` receives only kwargs it declares.
+- `get_affine` receives only kwargs it declares.
+- `convert` receives any remaining kwargs (i.e., hook-only conversion options).
 
 If users provide extra keys that your hook does not accept, BrkRaw will drop
 unsupported kwargs (and log the dropped keys at DEBUG) to avoid `TypeError`
@@ -158,8 +161,9 @@ def get_dataobj(scan, reco_id=None, **kwargs):
 
 This keeps the hook resilient to new keys, allows strict validation inside the
 hook, and makes it easy to document defaults. BrkRaw Viewer also uses this
-metadata to build converter-hook option forms, so providing `_build_options`
-with a dataclass improves the GUI experience.
+metadata to build converter-hook option forms. Providing `_build_options`
+with a dataclass (or `HOOK_DEFAULTS`) improves the GUI experience and avoids
+displaying internal parameters like `dataobj`/`affine`.
 
 ### Make `brkraw hook preset` useful
 

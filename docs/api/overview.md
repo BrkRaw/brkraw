@@ -50,7 +50,6 @@ info = loader.info(scope="full", as_dict=True)
 nii = loader.convert(
     scan_id=3,
     reco_id=1,
-    format="nifti",
 )
 ```
 
@@ -61,7 +60,6 @@ for scan_id in loader.avail.keys():
     nii = loader.convert(
         scan_id=scan_id,
         reco_id=1,
-        format="nifti",
     )
 ```
 

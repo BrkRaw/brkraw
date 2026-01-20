@@ -60,7 +60,6 @@ Convert a scan using the default reconstruction.
 nii = loader.convert(
     3,
     reco_id=1,
-    format="nifti",
 )
 ```
 
@@ -123,7 +122,6 @@ for dataset in root.iterdir():
         nii = loader.convert(
             scan_id,
             reco_id=1,
-            format="nifti",
         )
         if nii is not None:
             out = f"{dataset.name}_scan{scan_id}.nii.gz"

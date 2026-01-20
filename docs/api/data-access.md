@@ -39,14 +39,14 @@ Typical helpers on a scan:
 - `scan.get_dataobj(reco_id=None)` → reconstructed NumPy array(s)
 - `scan.get_affine(reco_id=None, space="subject_ras", ...)` → affine matrix/matrices
 - `scan.get_nifti1image(reco_id=None, ...)` → `nibabel.nifti1.Nifti1Image`
-- `scan.convert(reco_id=None, format="nifti", ...)` → NIfTI output object(s)
+- `scan.convert(reco_id=None, ...)` → output object(s) supporting `to_filename`
 - `scan.get_metadata(reco_id=None, ...)` → metadata mapping for sidecars/specs
 - `scan.search_params(key, file=..., reco_id=...)` → parameter search results
 
 The loader also exposes convenience wrappers for common operations:
 
 ```python
-nii = loader.convert(scan_id=3, reco_id=1, format="nifti")
+nii = loader.convert(scan_id=3, reco_id=1)
 aff = loader.get_affine(scan_id=3, reco_id=1, space="subject_ras")
 data = loader.get_dataobj(scan_id=3, reco_id=1)
 ```

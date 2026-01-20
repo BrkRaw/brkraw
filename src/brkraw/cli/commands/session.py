@@ -105,7 +105,6 @@ def cmd_unset(args: argparse.Namespace) -> int:
         "BRKRAW_CONVERT_XYZ_UNITS",
         "BRKRAW_CONVERT_T_UNITS",
         "BRKRAW_CONVERT_HEADER",
-        "BRKRAW_CONVERT_FORMAT",
     ]
     targets: List[str] = []
     if args.path:
@@ -160,7 +159,6 @@ def cmd_env(_: argparse.Namespace) -> int:
     convert_xyz_units = os.environ.get("BRKRAW_CONVERT_XYZ_UNITS")
     convert_t_units = os.environ.get("BRKRAW_CONVERT_T_UNITS")
     convert_header = os.environ.get("BRKRAW_CONVERT_HEADER")
-    convert_format = os.environ.get("BRKRAW_CONVERT_FORMAT")
     if (
         path is None
         and scan_id is None
@@ -182,7 +180,6 @@ def cmd_env(_: argparse.Namespace) -> int:
         and convert_xyz_units is None
         and convert_t_units is None
         and convert_header is None
-        and convert_format is None
     ):
         print("(none)")
         return 0
@@ -226,8 +223,6 @@ def cmd_env(_: argparse.Namespace) -> int:
         print(f"BRKRAW_CONVERT_T_UNITS={convert_t_units}")
     if convert_header is not None:
         print(f"BRKRAW_CONVERT_HEADER={convert_header}")
-    if convert_format is not None:
-        print(f"BRKRAW_CONVERT_FORMAT={convert_format}")
     return 0
 
 
