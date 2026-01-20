@@ -1,7 +1,7 @@
 import io
 import textwrap
 from pathlib import Path
-from ..helpers import prep_module
+from tests.helpers import prep_module
 
 
 import pytest

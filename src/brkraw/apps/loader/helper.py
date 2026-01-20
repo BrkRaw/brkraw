@@ -107,11 +107,29 @@ def resolve_data_and_affine(
                 list(scan.avail.keys()),
             )
             continue
-        image_info = image_resolver.resolve(scan, rid)
-        # store subject-view affines (scanner unwrap happens in get_affine)
-        affine_info = affine_resolver.resolve(
-            scan, rid, decimals=affine_decimals, unwrap_pose=False,
-        )
+        try:
+            image_info = image_resolver.resolve(scan, rid)
+        except Exception as exc:
+            logger.warning(
+                "Failed to resolve image data for scan %s reco %s: %s",
+                getattr(scan, "scan_id", "?"),
+                rid,
+                exc,
+            )
+            image_info = None
+        try:
+            # store subject-view affines (scanner unwrap happens in get_affine)
+            affine_info = affine_resolver.resolve(
+                scan, rid, decimals=affine_decimals, unwrap_pose=False,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to resolve affine for scan %s reco %s: %s",
+                getattr(scan, "scan_id", "?"),
+                rid,
+                exc,
+            )
+            affine_info = None
 
         if hasattr(scan, "image_info"):
             scan.image_info[rid] = image_info
@@ -462,6 +480,7 @@ def get_nifti1image(
     override_subject_type: Optional[SubjectType] = None,
     override_subject_pose: Optional[SubjectPose] = None,
     flip_x: bool = False,
+    flatten_fg: bool = False,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
     hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
@@ -526,6 +545,10 @@ def get_nifti1image(
 
     niiobjs = []
     for i, dataobj in enumerate(dataobjs):
+        if flatten_fg and dataobj.ndim > 4:
+            spatial_shape = dataobj.shape[:3]
+            flattened = int(np.prod(dataobj.shape[3:]))
+            dataobj = dataobj.reshape((*spatial_shape, flattened), order="A")
         affine = affines[i]
         niiobj = Nifti1Image(dataobj, affine)
         nifti1header_contents = nifti_resolver.resolve(
@@ -553,6 +576,7 @@ def convert(
     override_subject_type: Optional[SubjectType] = None,
     override_subject_pose: Optional[SubjectPose] = None,
     flip_x: bool = False,
+    flatten_fg: bool = False,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
     hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
@@ -568,6 +592,7 @@ def convert(
         override_subject_type=override_subject_type,
         override_subject_pose=override_subject_pose,
         flip_x=flip_x,
+        flatten_fg=flatten_fg,
         xyz_units=xyz_units,
         t_units=t_units,
         hook_args_by_name=hook_args_by_name,

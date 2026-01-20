@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ..helpers import prep_module
+from tests.helpers import prep_module
 
 p_fs = prep_module("core", "fs")
 p_zip = prep_module("core", "zip")

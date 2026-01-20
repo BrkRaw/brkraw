@@ -503,9 +503,15 @@ def map_parameters(
                     val = _apply_inputs_transform(inputs, transforms, rule["transform"])
                 else:
                     val = inputs
-            else:
+            elif "sources" in rule:
                 raw = _resolve_value(source, rule.get("sources", []), transforms, result, ids)
                 val = _apply_transform_chain(raw, transforms, rule.get("transform"))
+            elif "const" in rule:
+                val = _apply_transform_chain(rule.get("const"), transforms, rule.get("transform"))
+            elif "ref" in rule:
+                val = _apply_transform_chain(_get_nested(result, rule["ref"]), transforms, rule.get("transform"))
+            else:
+                val = _apply_transform_chain(rule.get("default"), transforms, rule.get("transform"))
 
             if "." in out_key:
                 _set_nested(result, out_key, val)

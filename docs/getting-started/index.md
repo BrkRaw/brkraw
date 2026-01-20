@@ -65,8 +65,17 @@ Select the entry point that best matches your use case:
   Extend BrkRaw with modality-specific converters
   (e.g. NIfTI-MRS output).
 
+- **MRS converter (brkraw-mrs)**  
+  MRS-specific hooks and specs for NIfTI-MRS outputs.
+
+- **BIDS integration (early guidance)**  
+  Current reference path for BIDS-style workflows.
+
 - **Dataset viewer**  
   Interactively inspect Paravision datasets using a lightweight viewer.
+
+- **Admin tools (brkraw-backup)**  
+  Optional admin-focused helpers for managing BrkRaw datasets and artifacts.
 
 ---
 

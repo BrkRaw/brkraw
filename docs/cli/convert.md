@@ -44,8 +44,7 @@ brkraw convert /path/to/study --scan-id 5 --reco-id 2
 
 Notes:
 
-- Default is 1
-- If omitted and multiple recos exist, all recos are converted
+- If omitted, all recos for the selected scans are converted
 - Some converter hooks may not use reco IDs explicitly
 
 ## Output control
@@ -114,6 +113,14 @@ Sidecar metadata is generated from:
 - Installed metadata specs
 - Optional context maps
 
+### --no-convert
+
+Skip NIfTI conversion and only write sidecar metadata (requires `--sidecar`).
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --sidecar --no-convert
+```
+
 ## Affine handling
 
 ### --space
@@ -181,6 +188,19 @@ Flip the x-axis in the output affine:
 ```bash
 brkraw convert /path/to/study --scan-id 3 --flip-x
 ```
+
+### --flatten-fg
+
+Flatten frame-group dimensions into a 4D time axis when data is 5D or higher.
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --flatten-fg
+```
+
+Notes:
+
+- 4D or smaller data is unchanged.
+- Extra dimensions are collapsed into the 4th dimension in order.
 
 ## Units and headers
 

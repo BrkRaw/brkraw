@@ -172,7 +172,7 @@ metadata. These are referred to as *fixed keys*.
 
 - `{ScanID}` / `{scan_id}` / `{scanid}`: current scan id.
 - `{RecoID}` / `{reco_id}` / `{recoid}`: current reconstruction id (may be empty when not applicable).
-- `{Counter}` / `{counter}`: optional run-local counter for de-duplication (used by `brkraw convert --dedupe`).
+- `{Counter}` / `{counter}`: run-local counter used for de-duplication.
 
 These fixed keys work in both:
 

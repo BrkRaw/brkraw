@@ -37,9 +37,9 @@ python -m pip install -e ".[dev]"
 
 3. Optional: run predefined tasks from the Command Palette:
 
-- `Setup: venv + deps`
-- `MkDocs: Serve`
-- `Release: Prep (bump + notes)`
+- `Standard: Setup venv + deps`
+- `Standard: MkDocs Serve`
+- `Standard: Release Prep PR (2-step)`
 
 ---
 
@@ -159,43 +159,19 @@ tools across labs and projects.
 
 ## Release and publishing (GitHub Actions)
 
-BrkRaw uses two GitHub Actions workflows:
+BrkRaw uses a 2-step PR-based release flow:
 
-- `Create Release`: tag push → GitHub Release
-- `Publish Package`: release → PyPI or TestPyPI
-
-PyPI publishing uses Trusted Publishing (OIDC), so no API token is required.
-
-### Release flow (tag-based)
-
-1. Update the version and release notes locally.
-2. Create and push a tag:
-
-```bash
-git tag vX.Y.Z
-git push origin vX.Y.Z
-```
-
-3. `Create Release` runs automatically and creates a GitHub Release.
-4. When the Release is published, `Publish Package` runs automatically.
-
-### Release flow (manual)
-
-1. Open GitHub Actions → `Create Release` → Run workflow.
-2. Enter the tag (for example `vX.Y.Z`) and run.
-3. The workflow checks out the tag and creates the Release.
-4. Publishing proceeds automatically after the Release is published.
-
-### Publish-only flow (manual)
-
-1. Open GitHub Actions → `Publish Package` → Run workflow.
-2. Choose the target (`testpypi` or `pypi`).
-3. Optionally specify a tag. If provided, the workflow validates that the tag
-   matches the version in `pyproject.toml`.
+1. Run `Standard: Release Prep PR (2-step)` to create a release prep PR (version bump,
+   contributors refresh, and release notes).
+2. Review the PR, ensure CI passes, and apply the `release` label.
+3. Merge the PR to `main`.
+4. `Release On Merge` tags the merge commit.
+5. `Create Release` runs for the tag and creates a GitHub Release.
+6. When the Release is published, `Publish Package` runs automatically.
 
 Notes:
 
-- Pre-release tags (`a`, `b`, `rc`) create GitHub pre-releases and skip PyPI
+- Pre-release versions (`a`, `b`, `rc`) create GitHub pre-releases and skip PyPI
   publishing.
 - The publish workflow validates that the tag matches the package version.
 

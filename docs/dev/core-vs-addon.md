@@ -42,6 +42,6 @@ python -m pip install -e ".[dev]"
 
 3. Optional tasks available from the Command Palette:
 
-- `Setup: venv + deps`
-- `MkDocs: Serve`
-- `Release: Prep (bump + notes)`
+- `Standard: Setup venv + deps`
+- `Standard: MkDocs Serve`
+- `Optional: Release Prep (bump + notes)`

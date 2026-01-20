@@ -1,16 +1,20 @@
 # brkraw addon
 
 The `brkraw addon` command manages BrkRaw's extensibility layer.
-It is used to install, inspect, edit, and remove **specs**, **rules**, **pruner specs**, and **transforms** that control how metadata is interpreted and how conversions are performed.
+It is used to install, inspect, edit, and remove **specs**, **rules**,
+ **pruner specs**, and **transforms** that control how metadata is
+ interpreted and how conversions are performed.
 
 This command is central to BrkRaw's design goal:
-**all extensions are shared through a common, user-visible mechanism**, so newly installed hooks or specs work naturally with existing workflows.
+**all extensions are shared through a common, user-visible mechanism**,
+ so newly installed hooks or specs work naturally with existing workflows.
 
 ---
 
 ## What is an addon in BrkRaw?
 
-In BrkRaw, an "addon" refers to one of the following YAML- or script-based components installed under the config root:
+In BrkRaw, an "addon" refers to one of the following YAML- or script-based
+ components installed under the config root:
 
 - Info specs (`info_spec`)
 - Metadata specs (`metadata_spec`)
@@ -25,7 +29,8 @@ All addons live under the BrkRaw config directory (by default `~/.brkraw`).
 
 ## List installed addons
 
-Shows all installed specs, rules, pruner specs, and transforms in a categorized table.
+Shows all installed specs, rules, pruner specs, and transforms in
+ a categorized table.
 
 ```bash
 brkraw addon list
@@ -38,7 +43,8 @@ What this shows:
 - Pruner specs: available pruning templates
 - Transforms: Python files referenced by specs
 
-Unknown or incomplete metadata is displayed in gray to help identify legacy or prototype files.
+Unknown or incomplete metadata is displayed in gray to help identify
+ legacy or prototype files.
 
 ---
 
@@ -57,7 +63,8 @@ Behavior:
 - Referenced transforms are automatically installed if declared
 - Files are copied into the appropriate config subdirectory
 
-This is how third-party extensions (for example, `brkraw-mrs`) integrate with the core CLI.
+This is how third-party extensions (for example, `brkraw-mrs`)
+ integrate with the core CLI.
 
 ---
 
@@ -82,7 +89,6 @@ Notes:
 
 - `TARGET` can be a filename or a logical name
 - The editor is resolved from:
-
   - `config.yaml: editor`
   - `$VISUAL`
   - `$EDITOR`
@@ -124,7 +130,8 @@ The addon system tracks dependencies between components:
 - Specs including other specs
 - Specs referencing transform scripts
 
-When removing addons, BrkRaw warns about downstream dependencies so users can make informed decisions.
+When removing addons, BrkRaw warns about downstream dependencies so users
+ can make informed decisions.
 
 ---
 

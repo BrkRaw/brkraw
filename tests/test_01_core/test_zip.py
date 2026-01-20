@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from ..helpers import prep_module
+from tests.helpers import prep_module
 
 # Load the zip module using your helper
 p = prep_module("core", "zip")

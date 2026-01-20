@@ -3,8 +3,8 @@
 CLI plugins are Python packages that add new subcommands to the `brkraw` CLI.
 
 This page covers authoring and packaging. For user-facing behavior and
-terminology, see `docs/reference/extensibility.md` and
-`docs/reference/addons-and-plugins.md`.
+terminology, see [Extensibility model](../reference/extensibility.md) and
+[Addons and plugins](../reference/addons-and-plugins.md).
 
 ---
 
@@ -57,4 +57,3 @@ The template demonstrates:
 - Command structure and argument parsing
 - Integration with the BrkRaw Python API
 - Packaging and distribution as an external plugin
-

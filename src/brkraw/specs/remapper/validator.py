@@ -14,7 +14,7 @@ import yaml
 from ..meta import validate_meta
 
 _ALLOWED_FILES = {"method", "acqp", "visu_pars", "reco", "subject"}
-_RULE_KEYS = {"sources", "inputs", "transform", "default"}
+_RULE_KEYS = {"sources", "inputs", "const", "ref", "transform", "default"}
 _INPUT_KEYS = {"sources", "const", "ref", "transform", "default", "required"}
 _INLINE_SOURCE_KEYS = {"inputs", "transform"}
 _META_KEY = "__meta__"
@@ -154,12 +154,14 @@ def _validate_spec_minimal(spec: Any) -> List[str]:
         extra = set(rule.keys()) - _RULE_KEYS
         if extra:
             errors.append(f"{path}: unexpected keys {sorted(extra)}.")
-        if not any(k in rule for k in ("sources", "inputs")):
-            errors.append(f"{path}: requires sources or inputs.")
+        if not any(k in rule for k in ("sources", "inputs", "const", "ref")):
+            errors.append(f"{path}: requires sources, inputs, const, or ref.")
         if "sources" in rule:
             _validate_sources(rule["sources"], path, errors)
         if "inputs" in rule:
             _validate_inputs(rule["inputs"], path, errors)
+        if "ref" in rule and not isinstance(rule["ref"], str):
+            errors.append(f"{path}: ref must be a string.")
         if "transform" in rule:
             t = rule["transform"]
             if isinstance(t, list):

@@ -5,7 +5,7 @@ from typing import Optional
 
 import pytest
 
-from .helpers import prep_module
+from tests.helpers import prep_module
 
 p_zip = prep_module("core", "zip")
 p_fs = prep_module("core", "fs")

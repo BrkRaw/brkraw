@@ -42,6 +42,14 @@ output:
   slicepack_suffix: "_slpack{index}"
   # float_decimals: 6
 
+# Viewer settings for brkraw-viewer (optional GUI extension).
+viewer:
+  cache:
+    # Cache loaded scan data in memory to speed up space/pose changes.
+    enabled: true
+    # Maximum number of scan/reco entries to keep (LRU). 0 disables caching.
+    max_items: 10
+
 # rules_dir: rules
 # specs_dir: specs
 # pruner_specs_dir: pruner_specs

@@ -9,6 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INIT_PATH = REPO_ROOT / "src" / "brkraw" / "__init__.py"
 README_PATH = REPO_ROOT / "README.md"
+CITATION_PATH = REPO_ROOT / "CITATION.cff"
 RELEASE_NOTES_PATH = REPO_ROOT / "RELEASE_NOTES.md"
 PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
 
@@ -47,6 +48,32 @@ def update_readme_version(version):
     if count != 1:
         raise RuntimeError("Failed to update version string in README.md")
     README_PATH.write_text(new_text, encoding="utf-8")
+
+
+def update_citation(version: str) -> None:
+    today = dt.date.today().isoformat()
+    text = CITATION_PATH.read_text(encoding="utf-8")
+
+    text, count_v = re.subn(
+        r"(?m)^version:\s*[0-9A-Za-z.\-]+$",
+        f"version: {version}",
+        text,
+        count=1,
+    )
+    if count_v != 1:
+        raise RuntimeError("Failed to update version in CITATION.cff")
+
+    # update date-released
+    text, count_d = re.subn(
+        r"(?m)^date-released:\s*\d{4}-\d{2}-\d{2}$",
+        f"date-released: {today}",
+        text,
+        count=1,
+    )
+    if count_d != 1:
+        raise RuntimeError("Failed to update date-released in CITATION.cff")
+
+    CITATION_PATH.write_text(text, encoding="utf-8")
 
 
 def update_docs_index_version(version, docs_index_path: Path) -> bool:
@@ -153,6 +180,7 @@ def main():
     status_classifier, status_label, is_stable = determine_status(args.version)
     update_init_version(args.version)
     update_readme_version(args.version)
+    update_citation(args.version)
     update_pyproject_classifiers(status_classifier)
     if args.update_docs_index:
         docs_index_path = REPO_ROOT / "docs" / "index.md"

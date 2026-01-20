@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "BrkRaw: A modular toolkit for Bruker MRI raw-data handling"
+type: software
+
+authors:
+  - family-names: Lee
+    given-names: Sung-Ho
+    orcid: "https://orcid.org/0000-0001-5292-0747"
+    affiliation:
+      - "Center for Animal MRI (CAMRI), University of North Carolina at Chapel Hill, Chapel Hill, NC, United States"
+      - "Biomedical Research Imaging Center (BRIC), University of North Carolina at Chapel Hill, Chapel Hill, NC, United States"
+      - "Department of Neurology, UNC School of Medicine, Chapel Hill, NC, United States"
+  - family-names: Devenyi
+    given-names: Gabriel A.
+    orcid: "https://orcid.org/0000-0002-7766-1187"
+    affiliation:
+      - "Cerebral Imaging Centre, Douglas Mental Health University Institute, Montreal, QC, Canada"
+      - "Department of Psychiatry, McGill University, Montreal, QC, Canada"
+  - family-names: Ban
+    given-names: Woomi
+    orcid: "https://orcid.org/0000-0003-2003-717X"
+    affiliation:
+      - "Center for Animal MRI (CAMRI), University of North Carolina at Chapel Hill, Chapel Hill, NC, United States"
+      - "Biomedical Research Imaging Center (BRIC), University of North Carolina at Chapel Hill, Chapel Hill, NC, United States"
+      - "Department of Neurology, UNC School of Medicine, Chapel Hill, NC, United States"
+  - family-names: Shih
+    given-names: Yen-Yu Ian
+    orcid: "https://orcid.org/0000-0001-6529-911X"
+    affiliation:
+      - "Center for Animal MRI (CAMRI), University of North Carolina at Chapel Hill, Chapel Hill, NC, United States"
+      - "Biomedical Research Imaging Center (BRIC), University of North Carolina at Chapel Hill, Chapel Hill, NC, United States"
+      - "Department of Neurology, UNC School of Medicine, Chapel Hill, NC, United States"
+
+doi: "10.5281/zenodo.3818614"
+repository-code: "https://github.com/BrkRaw/brkraw"
+url: "https://brkraw.github.io"
+
+license: "GPL-3.0-only"
+
+keywords:
+  - Bruker
+  - MRI
+  - preclinical MRI
+  - BIDS
+  - neuroimaging
+
+version: "0.5.0"
+date-released: "2026-01-13"

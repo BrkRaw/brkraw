@@ -52,6 +52,7 @@ Convert a single scan using the default reconstruction.
 ```bash
 brkraw convert /path/to/study --scan-id 3
 ```
+If `--scan-id` is supplied without `--reco-id`, BrkRaw converts all available recos.
 
 Specify a reconstruction ID and output directory:
 
