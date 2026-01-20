@@ -51,7 +51,6 @@ def update_readme_version(version):
 
 
 def update_citation(version: str) -> None:
-    today = dt.date.today().isoformat()
     text = CITATION_PATH.read_text(encoding="utf-8")
 
     text, count_v = re.subn(
@@ -62,16 +61,6 @@ def update_citation(version: str) -> None:
     )
     if count_v != 1:
         raise RuntimeError("Failed to update version in CITATION.cff")
-
-    # update date-released
-    text, count_d = re.subn(
-        r"(?m)^date-released:\s*\"?\d{4}-\d{2}-\d{2}\"?$",
-        f'date-released: "{today}"',
-        text,
-        count=1,
-    )
-    if count_d != 1:
-        raise RuntimeError("Failed to update date-released in CITATION.cff")
 
     CITATION_PATH.write_text(text, encoding="utf-8")
 
