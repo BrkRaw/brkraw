@@ -6,6 +6,7 @@ import datetime as dt
 import logging
 import re
 import subprocess
+import time
 from pathlib import Path
 from typing import Iterable
 
@@ -133,15 +134,15 @@ def gh_pr_number(upstream_repo: str, head_ref: str) -> str | None:
         [
             "gh",
             "pr",
-            "view",
+            "list",
             "--repo",
             upstream_repo,
-            "--head",
-            head_ref,
+            "--search",
+            f"head:{head_ref}",
             "--json",
             "number",
             "--jq",
-            ".number",
+            ".[0].number",
         ],
         check=False,
     )
@@ -153,7 +154,7 @@ def gh_pr_number(upstream_repo: str, head_ref: str) -> str | None:
 
 def gh_pr_create(
     upstream_repo: str, base_branch: str, head_ref: str, title: str, body: str, *, dry_run: bool
-) -> None:
+) -> str | None:
     if dry_run:
         logger.info(
             "[dry-run] Would create PR in %s: base=%s, head=%s",
@@ -162,8 +163,8 @@ def gh_pr_create(
             head_ref,
         )
         logger.info("[dry-run] Title: %s", title)
-        return
-    run_cmd(
+        return None
+    result = run_cmd(
         [
             "gh",
             "pr",
@@ -178,8 +179,14 @@ def gh_pr_create(
             title,
             "--body",
             body,
+            "--json",
+            "number",
+            "--jq",
+            ".number",
         ]
     )
+    value = result.stdout.strip()
+    return value or None
 
 
 def gh_pr_edit(upstream_repo: str, pr_number: str, body: str, *, dry_run: bool) -> None:
@@ -225,11 +232,22 @@ def ensure_pr(
     if pr_number:
         return pr_number
 
-    gh_pr_create(upstream_repo_full, base_branch, head_ref, title, body, dry_run=dry_run)
+    created_pr = gh_pr_create(
+        upstream_repo_full, base_branch, head_ref, title, body, dry_run=dry_run
+    )
     if dry_run:
         return "DRY_RUN_PR"
+    if created_pr:
+        return created_pr
 
-    pr_number = gh_pr_number(upstream_repo_full, head_ref)
+    pr_number = None
+    for attempt in range(5):
+        pr_number = gh_pr_number(upstream_repo_full, head_ref)
+        if pr_number:
+            break
+        if attempt < 4:
+            logger.info("Waiting for PR to become visible (%s/5)...", attempt + 1)
+            time.sleep(3)
     if not pr_number:
         raise SystemExit("PR created but could not retrieve PR number.")
     return pr_number
