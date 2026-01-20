@@ -123,13 +123,14 @@ def uninstall_hook(
     *,
     root: Optional[Union[str, Path]] = None,
     force: bool = False,
-) -> Tuple[str, Dict[str, List[str]]]:
+) -> Tuple[str, Dict[str, List[str]], bool]:
     registry = _load_registry(root=root)
     hooks = registry.get("hooks", {})
     hook_name = _resolve_hook_name(target)
     entry = hooks.get(hook_name)
     if entry is None:
         raise LookupError(f"Hook not installed: {hook_name}")
+    module_missing = not list_entry_points(DEFAULT_GROUP, name=hook_name)
     removed: Dict[str, List[str]] = {
         "specs": [],
         "pruner_specs": [],
@@ -148,7 +149,7 @@ def uninstall_hook(
             removed[kind].append(relpath)
     hooks.pop(hook_name, None)
     _save_registry(registry, root=root)
-    return hook_name, removed
+    return hook_name, removed, module_missing
 
 
 def _install_hook(

@@ -125,7 +125,7 @@ def cmd_install(args: argparse.Namespace) -> int:
 
 def cmd_uninstall(args: argparse.Namespace) -> int:
     try:
-        hook_name, removed = hook_app.uninstall_hook(
+        hook_name, removed, module_missing = hook_app.uninstall_hook(
             args.target,
             root=args.root,
             force=args.force,
@@ -138,6 +138,10 @@ def cmd_uninstall(args: argparse.Namespace) -> int:
         return 2
     removed_count = sum(len(items) for items in removed.values())
     logger.info("Removed %d file(s).", removed_count)
+    if module_missing:
+        logger.info(
+            "Hook module is not installed; removed registry entries only."
+        )
     logger.info("To uninstall the package, run: pip uninstall %s", hook_name)
     return 0
 
