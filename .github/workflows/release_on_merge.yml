@@ -31,7 +31,7 @@ jobs:
 
           text = Path("src/brkraw/__init__.py").read_text(encoding="utf-8")
           match = re.search(
-              r"^__version__(?:\\s*:\\s*[^=]+)?\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]",
+              r"^\\s*__version__(?:\\s*:\\s*[^=]+)?\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]",
               text,
               re.M,
           )
