@@ -2,7 +2,8 @@
 
 ## Environment
 - Use the project-local virtualenv at `.venv` (interpreter: `.venv/bin/python`) when running Python commands.
-- Target Python version for development: >= 3.8. If a change would break versions supported by `pyproject.toml`, call it out before proceeding.
+- Target Python version for development: >= 3.8. If a change would break
+ versions supported by `pyproject.toml`, call it out before proceeding.
 
 ## Project constraints
 - This repository is a Python package.

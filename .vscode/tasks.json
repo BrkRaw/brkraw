@@ -48,6 +48,13 @@
       "problemMatcher": []
     },
     {
+      "label": "Optional: Release Notes Only",
+      "type": "shell",
+      "command": "\"${command:python.interpreterPath}\" scripts/release_notes.py --fetch-tags --remote upstream",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "Optional: Release Tag + Push (upstream)",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" scripts/tag_and_push.py",
