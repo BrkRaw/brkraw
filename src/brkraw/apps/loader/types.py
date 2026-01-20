@@ -142,7 +142,6 @@ class ScanLoader(Scan, BaseLoader):
             affines: Tuple["np.ndarray", ...],
             *, 
             override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
-            flip_x: bool,
             xyz_units: XYZUNIT, 
             t_units: TUNIT
             ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
@@ -156,7 +155,6 @@ class ScanLoader(Scan, BaseLoader):
             override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
             override_subject_type: Optional[SubjectType],
             override_subject_pose: Optional[SubjectPose],
-            flip_x: bool,
             flatten_fg: bool,
             xyz_units: XYZUNIT,
             t_units: TUNIT,

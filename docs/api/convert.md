@@ -215,7 +215,6 @@ Flip axes in the output affine.
 loader.convert(
     scan_id=3,
     reco_id=1,
-    flip_x=True,
 )
 ```
 

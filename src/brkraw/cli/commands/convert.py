@@ -84,8 +84,6 @@ def cmd_convert(args: argparse.Namespace) -> int:
     if args.no_convert and not args.sidecar:
         logger.error("--no-convert requires --sidecar.")
         return 2
-    if not args.flip_x:
-        args.flip_x = _env_flag("BRKRAW_CONVERT_FLIP_X")
     if not args.flatten_fg:
         args.flatten_fg = _env_flag("BRKRAW_CONVERT_FLATTEN_FG")
     if args.space is None:
@@ -261,7 +259,6 @@ def cmd_convert(args: argparse.Namespace) -> int:
                     override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
                     override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
                     override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
-                    flip_x=args.flip_x,
                     flatten_fg=args.flatten_fg,
                     xyz_units=cast(XYZUNIT, args.xyz_units),
                     t_units=cast(TUNIT, args.t_units),
@@ -772,11 +769,6 @@ def _add_convert_args(
             type=int,
             help="Reco id to convert (defaults to all recos when omitted).",
         )
-    parser.add_argument(
-        "--flip-x",
-        action="store_true",
-        help="Flip x-axis in NIfTI header.",
-    )
     parser.add_argument(
         "--xyz-units",
         choices=list(get_args(XYZUNIT)),

@@ -477,7 +477,6 @@ def get_nifti1image(
     dataobjs: Tuple[np.ndarray, ...],
     affines: Tuple[np.ndarray, ...],
     *,
-    flip_x: bool = False,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
     override_header: Optional[Nifti1HeaderContents] = None,
@@ -487,7 +486,6 @@ def get_nifti1image(
     Args:
         self: Scan or ScanLoader instance.
         reco_id: Reco identifier to read (defaults to the first available).
-        flip_x: If True, set NIfTI header x-flip flag.
         xyz_units: Spatial units for NIfTI header.
         t_units: Temporal units for NIfTI header.
         override_header: Optional header values to apply.
@@ -507,7 +505,7 @@ def get_nifti1image(
         affine = affines[i]
         niiobj = Nifti1Image(dataobj, affine)
         nifti1header_contents = nifti_resolver.resolve(
-            image_info, flip_x=flip_x, xyz_units=xyz_units, t_units=t_units
+            image_info, xyz_units=xyz_units, t_units=t_units
         )
         if override_header:
             for key, value in override_header.items():
@@ -529,7 +527,6 @@ def convert(
     override_header: Optional[Nifti1HeaderContents] = None,
     override_subject_type: Optional[SubjectType] = None,
     override_subject_pose: Optional[SubjectPose] = None,
-    flip_x: bool = False,
     flatten_fg: bool = False,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
@@ -543,12 +540,10 @@ def convert(
         override_header: Optional header values to apply.
         override_subject_type: Subject type override for subject-view wrapping.
         override_subject_pose: Subject pose override for subject-view wrapping.
-        flip_x: If True, set NIfTI header x-flip flag.
         flatten_fg: If True, flatten foreground dimensions.
         xyz_units: Spatial units for NIfTI header.
         t_units: Temporal units for NIfTI header.
         hook_args_by_name: Optional hook args mapping (split per helper signature).
-        flip_x: If True, set NIfTI header x-flip flag.
         flatten_fg: If True, flatten foreground dimensions.
         xyz_units: Spatial units for NIfTI header.
         t_units: Temporal units for NIfTI header.
@@ -625,7 +620,6 @@ def convert(
         )
 
     nifti1image_kwargs = {
-        "flip_x": flip_x,
         "xyz_units": xyz_units,
         "t_units": t_units,
         "override_header": override_header,

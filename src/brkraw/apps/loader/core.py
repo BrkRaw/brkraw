@@ -349,7 +349,6 @@ class BrukerLoader:
                         override_header: Optional[Nifti1HeaderContents] = None,
                         override_subject_type: Optional[SubjectType] = None,
                         override_subject_pose: Optional[SubjectPose] = None,
-                        flip_x: bool = False, 
                         flatten_fg: bool = False,
                         xyz_units: XYZUNIT = 'mm', 
                         t_units: TUNIT = 'sec'):
@@ -362,7 +361,6 @@ class BrukerLoader:
             override_header: Optional header values to apply.
             override_subject_type: Subject type override for subject view.
             override_subject_pose: Subject pose override for subject view.
-            flip_x: If True, set NIfTI header x-flip flag.
             xyz_units: Spatial units for NIfTI header.
             t_units: Temporal units for NIfTI header.
 
@@ -376,7 +374,6 @@ class BrukerLoader:
             override_header=override_header,
             override_subject_type=override_subject_type,
             override_subject_pose=override_subject_pose,
-            flip_x=flip_x,
             flatten_fg=flatten_fg,
             xyz_units=xyz_units,
             t_units=t_units,
@@ -391,7 +388,6 @@ class BrukerLoader:
         override_header: Optional[Nifti1HeaderContents] = None,
         override_subject_type: Optional[SubjectType] = None,
         override_subject_pose: Optional[SubjectPose] = None,
-        flip_x: bool = False,
         flatten_fg: bool = False,
         xyz_units: XYZUNIT = "mm",
         t_units: TUNIT = "sec",
@@ -405,7 +401,6 @@ class BrukerLoader:
             override_header=override_header,
             override_subject_type=override_subject_type,
             override_subject_pose=override_subject_pose,
-            flip_x=flip_x,
             flatten_fg=flatten_fg,
             xyz_units=xyz_units,
             t_units=t_units,

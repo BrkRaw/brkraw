@@ -4,8 +4,6 @@ title: "BrkRaw NIfTI Header Overrides"
 type: object
 additionalProperties: false
 properties:
-  flip_x:
-    type: boolean
   slice_code:
     type: integer
   slope_inter:
