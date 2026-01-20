@@ -37,7 +37,11 @@ def fetch_tags(remote: str) -> None:
 
 def read_version() -> str:
     init_text = INIT_PATH.read_text(encoding="utf-8")
-    match = re.search(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", init_text, re.M)
+    match = re.search(
+        r"^__version__(?:\s*:\s*[^=]+)?\s*=\s*['\"]([^'\"]+)['\"]",
+        init_text,
+        re.M,
+    )
     if not match:
         raise SystemExit("No __version__ found in src/brkraw/__init__.py")
     return match.group(1)
