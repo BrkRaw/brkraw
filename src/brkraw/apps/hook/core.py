@@ -129,6 +129,18 @@ def uninstall_hook(
     hook_name = _resolve_hook_name(target)
     entry = hooks.get(hook_name)
     if entry is None:
+        entry_matches = [
+            name
+            for name, data in hooks.items()
+            if target in (data.get("entrypoints") or [])
+        ]
+        if len(entry_matches) == 1:
+            hook_name = entry_matches[0]
+            entry = hooks.get(hook_name)
+        elif entry_matches:
+            names = ", ".join(sorted(entry_matches))
+            raise ValueError(f"Multiple hooks match {target}: {names}")
+    if entry is None:
         raise LookupError(f"Hook not installed: {hook_name}")
     module_missing = not list_entry_points(DEFAULT_GROUP, name=hook_name)
     removed: Dict[str, List[str]] = {
