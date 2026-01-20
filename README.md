@@ -23,7 +23,7 @@ datasets, with extensible rules/specs and plugin hooks.
 If you use BrkRaw in your research, please cite it.
 
 - Citation metadata: [CITATION.cff](./CITATION.cff)
-- DOI (Zenodo): https://doi.org/10.5281/zenodo.3818614
+- DOI (Zenodo): [10.5281/zenodo.3818614](https://doi.org/10.5281/zenodo.3818614)
 
 ### Cite as (BibTeX)
 
