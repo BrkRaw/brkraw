@@ -112,6 +112,12 @@ def load_layout_info_parts(
         if not isinstance(mapped, dict):
             raise ValueError("override_info_spec must resolve to a mapping.")
         info = mapped
+        study_info = info_resolver.study(loader) or {}
+        if isinstance(study_info, dict):
+            if "Study" in study_info and "Study" not in info:
+                info["Study"] = study_info["Study"]
+            if "Subject" in study_info and "Subject" not in info:
+                info["Subject"] = study_info["Subject"]
     else:
         study_info = info_resolver.study(loader) or {}
         scan_info = info_resolver.scan(scan) or {}
