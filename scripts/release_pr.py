@@ -227,7 +227,7 @@ def gh_pr_add_label(upstream_repo: str, pr_number: str, label: str, *, dry_run: 
             "-X",
             "POST",
             "-f",
-            f"labels[]={label}",
+            f'labels=["{label}"]',
         ]
     )
 
