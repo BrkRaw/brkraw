@@ -560,6 +560,21 @@ def convert(
     resolved_reco_id = _resolve_reco_id(self, reco_id)
     if resolved_reco_id is None:
         return None
+
+    hook_name = getattr(self, "_converter_hook_name", None)
+    if isinstance(hook_name, str) and hook_name:
+        logger.debug(
+            "Convert starting for scan %s reco %s with hook %s",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+            hook_name,
+        )
+    else:
+        logger.debug(
+            "Convert starting for scan %s reco %s (no hook)",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+        )
     
     hook_kwargs = _resolve_hook_kwargs(self, hook_args_by_name)
     data_kwargs = _filter_hook_kwargs(self.get_dataobj, hook_kwargs)
@@ -569,8 +584,19 @@ def convert(
         if key not in data_kwargs
     }
     if data_kwargs:
+        logger.debug(
+            "Calling get_dataobj for scan %s reco %s with args %s",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+            data_kwargs,
+        )
         dataobjs = self.get_dataobj(resolved_reco_id, **data_kwargs)
     else:
+        logger.debug(
+            "Calling get_dataobj for scan %s reco %s (no args)",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+        )
         dataobjs = self.get_dataobj(resolved_reco_id)
     affine_kwargs = _filter_hook_kwargs(self.get_affine, hook_kwargs)
     convert_kwargs = {
@@ -579,6 +605,12 @@ def convert(
         if key not in affine_kwargs
     }
     if affine_kwargs:
+        logger.debug(
+            "Calling get_affine for scan %s reco %s with args %s",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+            affine_kwargs,
+        )
         affines = self.get_affine(
             resolved_reco_id,
             space=space,
@@ -587,6 +619,11 @@ def convert(
             **affine_kwargs,
         )
     else:
+        logger.debug(
+            "Calling get_affine for scan %s reco %s (no args)",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+        )
         affines = self.get_affine(
             resolved_reco_id,
             space=space,
@@ -613,6 +650,12 @@ def convert(
     converter_func = getattr(self, "converter_func", None)
     if isinstance(converter_func, ConvertType):
         hook_call_kwargs = _filter_hook_kwargs(converter_func, convert_kwargs)
+        logger.debug(
+            "Calling converter hook for scan %s reco %s with args %s",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+            hook_call_kwargs,
+        )
         return converter_func(
             dataobj=dataobjs,
             affine=affines,
@@ -643,6 +686,12 @@ def _resolve_hook_kwargs(
     hook_name = getattr(scan, "_converter_hook_name", None)
     if not isinstance(hook_name, str) or not hook_name:
         return {}
+    logger.debug(
+        "Resolving hook args for scan %s hook %s (available: %s)",
+        getattr(scan, "scan_id", "?"),
+        hook_name,
+        sorted(hook_args_by_name.keys()),
+    )
     values = hook_args_by_name.get(hook_name)
     if values is None:
         seen: set[str] = set()
@@ -678,7 +727,12 @@ def _resolve_hook_kwargs(
                 )
                 values = candidate_values
                 break
-    return dict(values) if isinstance(values, Mapping) else {}
+    resolved = dict(values) if isinstance(values, Mapping) else {}
+    if resolved:
+        logger.debug("Resolved hook args for %s: %s", hook_name, resolved)
+    else:
+        logger.debug("No hook args resolved for %s.", hook_name)
+    return resolved
 
 
 def _filter_hook_kwargs(func: Any, hook_kwargs: Mapping[str, Any]) -> Dict[str, Any]:
@@ -820,6 +874,11 @@ def apply_converter_hook(
     """Override scan conversion helpers using a converter hook."""
     converter_core.validate_hook(converter_hook)
     plugin = dict(converter_hook)
+    logger.debug(
+        "Binding converter hook for scan %s: %s",
+        getattr(scan, "scan_id", "?"),
+        sorted(plugin.keys()),
+    )
     if "get_dataobj" in plugin and not isinstance(plugin["get_dataobj"], GetDataobjType):
         raise TypeError("Converter hook 'get_dataobj' must match GetDataobjType.")
     if "get_affine" in plugin and not isinstance(plugin["get_affine"], GetAffineType):
@@ -838,3 +897,8 @@ def apply_converter_hook(
         scan.converter_func = MethodType(plugin["convert"], scan)
     else:
         scan.converter_func = None
+    logger.debug(
+        "Converter hook bound for scan %s (hook=%s)",
+        getattr(scan, "scan_id", "?"),
+        getattr(scan, "_converter_hook_name", None),
+    )

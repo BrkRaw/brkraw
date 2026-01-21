@@ -674,7 +674,10 @@ def _parse_hook_args(values: List[str]) -> Dict[str, Dict[str, Any]]:
         key = key.strip()
         if not hook_name or not key:
             raise ValueError("Hook args must include hook name and key.")
-        parsed.setdefault(hook_name, {})[key] = _coerce_scalar(value.strip())
+        coerced_value = _coerce_scalar(value.strip())
+        logger.debug("Parsed hook arg %s:%s=%s", hook_name, key, coerced_value)
+        parsed.setdefault(hook_name, {})[key] = coerced_value
+    logger.debug("Parsed hook args: %s", parsed)
     return parsed
 
 
