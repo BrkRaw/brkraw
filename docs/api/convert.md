@@ -28,11 +28,10 @@ Convert a single scan and reconstruction:
 nii = loader.convert(
     scan_id=3,
     reco_id=1,
-    format="nifti",
 )
 ```
 
-The returned object represents the converted image in memory.
+The returned object supports `to_filename()` and represents the converted image in memory.
 Writing to disk is explicit:
 
 ```python
@@ -91,7 +90,6 @@ for scan_id in loader.avail.keys():
     nii = loader.convert(
         scan_id=scan_id,
         reco_id=1,
-        format="nifti",
     )
     if nii is not None:
         out = f"scan{scan_id}.nii.gz"
@@ -112,7 +110,6 @@ for dataset in root.iterdir():
         nii = loader.convert(
             scan_id=scan_id,
             reco_id=1,
-            format="nifti",
         )
 ```
 
@@ -218,7 +215,6 @@ Flip axes in the output affine.
 loader.convert(
     scan_id=3,
     reco_id=1,
-    flip_x=True,
 )
 ```
 

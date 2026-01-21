@@ -5,7 +5,7 @@ Last updated: 2025-12-30
 
 from __future__ import annotations
 
-from typing import Any, Union, Tuple, Dict, Optional, Protocol, Literal, Mapping, Callable, List, TYPE_CHECKING
+from typing import Any, Union, Tuple, Dict, Optional, Protocol, Literal, Mapping, Callable, List, TYPE_CHECKING, runtime_checkable
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeAlias
 else:
@@ -35,6 +35,7 @@ AffineSpace = Literal["raw", "scanner", "subject_ras"]
 P = ParamSpec("P")
 
 
+@runtime_checkable
 class GetDataobjType(Protocol[P]):
     """Callable signature for get_dataobj overrides."""
     def __call__(
@@ -47,6 +48,7 @@ class GetDataobjType(Protocol[P]):
         ...
 
 
+@runtime_checkable
 class GetAffineType(Protocol):
     """Callable signature for get_affine overrides."""
     def __call__(
@@ -63,44 +65,21 @@ class GetAffineType(Protocol):
         ...
 
 
-class GetNifti1ImageType(Protocol):
-    """Callable signature for get_nifti1image overrides."""
-    def __call__(
-        self,
-        scan: "Scan",
-        reco_id: Optional[int] = None,
-        *,
-        override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
-        space: AffineSpace,
-        override_subject_type: Optional[SubjectType],
-        override_subject_pose: Optional[SubjectPose],
-        flip_x: bool,
-        flatten_fg: bool,
-        xyz_units: XYZUNIT,
-        t_units: TUNIT,
-        **kwargs: Any,
-    ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
-        ...
-
-
+@runtime_checkable
 class ConvertType(Protocol):
     """Callable signature for convert overrides."""
     def __call__(
         self,
         scan: "Scan",
-        reco_id: Optional[int] = None,
-        *,
-        format: Union[Literal["nifti", "nifti1"], str],
-        override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
-        space: AffineSpace,
-        override_subject_type: Optional[SubjectType],
-        override_subject_pose: Optional[SubjectPose],
-        flip_x: bool,
-        flatten_fg: bool,
-        xyz_units: XYZUNIT,
-        t_units: TUNIT,
+        dataobj: Union[Tuple["np.ndarray", ...], "np.ndarray"],
+        affine: Union[Tuple["np.ndarray", ...], "np.ndarray"],
         **kwargs: Any,
-    ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
+    ) -> Optional[Union["ToFilename", Tuple["ToFilename", ...]]]:
+        ...
+
+class ToFilename(Protocol):
+    """Result object that can be written to disk."""
+    def to_filename(self, filename: Union[str, "Path"], *args: Any, **kwargs: Any) -> Any:
         ...
 
 
@@ -126,9 +105,11 @@ class ScanLoader(Scan, BaseLoader):
 
     image_info: Dict[int, Optional["ResolvedImage"]]
     affine_info: Dict[int, Optional["ResolvedAffine"]]
+    converter_func: Optional[ConvertType]
     _converter_hook: Optional[ConverterHook]
     _converter_hook_name: Optional[str]
-
+    
+    
     def get_fid(self, 
                 buffer_start: Optional[int], 
                 buffer_size: Optional[int], 
@@ -155,15 +136,12 @@ class ScanLoader(Scan, BaseLoader):
         ...
 
     def get_nifti1image(
-            self, 
-            reco_id: Optional[int] = None, 
+            self,
+            reco_id: int, 
+            dataobjs: Tuple["np.ndarray", ...],
+            affines: Tuple["np.ndarray", ...],
             *, 
             override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
-            space: AffineSpace = "subject_ras",
-            override_subject_type: Optional[SubjectType],
-            override_subject_pose: Optional[SubjectPose],
-            flip_x: bool, 
-            flatten_fg: bool,
             xyz_units: XYZUNIT, 
             t_units: TUNIT
             ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
@@ -173,17 +151,16 @@ class ScanLoader(Scan, BaseLoader):
             self,
             reco_id: Optional[int] = None,
             *,
-            format: Literal["nifti", "nifti1"],
-            override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
             space: AffineSpace = "subject_ras",
+            override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
             override_subject_type: Optional[SubjectType],
             override_subject_pose: Optional[SubjectPose],
-            flip_x: bool,
             flatten_fg: bool,
             xyz_units: XYZUNIT,
             t_units: TUNIT,
             hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
-            ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
+            **kwargs: Any,
+            ) -> Optional[Union["ToFilename", Tuple["ToFilename", ...]]]:
         ...
 
     def get_metadata(
@@ -201,15 +178,15 @@ class RecoLoader(Reco, BaseLoader):
     ...
 
 
-ConverterHook: TypeAlias = Mapping[str, Union[GetDataobjType[Any], GetAffineType, GetNifti1ImageType, ConvertType]]
+ConverterHook: TypeAlias = Mapping[str, Union[GetDataobjType[Any], GetAffineType, ConvertType]]
 """Mapping of converter hook keys to override callables."""
 
 
 __all__ = [
     'GetDataobjType',
     'GetAffineType',
-    'GetNifti1ImageType',
     'ConvertType',
+    'ToFilename',
     'ConverterHook',
     'StudyLoader',
     'ScanLoader',

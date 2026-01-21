@@ -98,14 +98,12 @@ def cmd_unset(args: argparse.Namespace) -> int:
         "BRKRAW_CONVERT_CONTEXT_MAP",
         "BRKRAW_CONVERT_SPACE",
         "BRKRAW_CONVERT_COMPRESS",
-        "BRKRAW_CONVERT_FLIP_X",
         "BRKRAW_CONVERT_FLATTEN_FG",
         "BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE",
         "BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE",
         "BRKRAW_CONVERT_XYZ_UNITS",
         "BRKRAW_CONVERT_T_UNITS",
         "BRKRAW_CONVERT_HEADER",
-        "BRKRAW_CONVERT_FORMAT",
     ]
     targets: List[str] = []
     if args.path:
@@ -153,14 +151,12 @@ def cmd_env(_: argparse.Namespace) -> int:
     convert_context_map = os.environ.get("BRKRAW_CONVERT_CONTEXT_MAP")
     convert_compress = os.environ.get("BRKRAW_CONVERT_COMPRESS")
     convert_space = os.environ.get("BRKRAW_CONVERT_SPACE")
-    convert_flip_x = os.environ.get("BRKRAW_CONVERT_FLIP_X")
     convert_flatten_fg = os.environ.get("BRKRAW_CONVERT_FLATTEN_FG")
     convert_subject_type = os.environ.get("BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE")
     convert_subject_pose = os.environ.get("BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE")
     convert_xyz_units = os.environ.get("BRKRAW_CONVERT_XYZ_UNITS")
     convert_t_units = os.environ.get("BRKRAW_CONVERT_T_UNITS")
     convert_header = os.environ.get("BRKRAW_CONVERT_HEADER")
-    convert_format = os.environ.get("BRKRAW_CONVERT_FORMAT")
     if (
         path is None
         and scan_id is None
@@ -175,14 +171,12 @@ def cmd_env(_: argparse.Namespace) -> int:
         and convert_context_map is None
         and convert_compress is None
         and convert_space is None
-        and convert_flip_x is None
         and convert_flatten_fg is None
         and convert_subject_type is None
         and convert_subject_pose is None
         and convert_xyz_units is None
         and convert_t_units is None
         and convert_header is None
-        and convert_format is None
     ):
         print("(none)")
         return 0
@@ -212,8 +206,6 @@ def cmd_env(_: argparse.Namespace) -> int:
         print(f"BRKRAW_CONVERT_SPACE={convert_space}")
     if convert_compress is not None:
         print(f"BRKRAW_CONVERT_COMPRESS={convert_compress}")
-    if convert_flip_x is not None:
-        print(f"BRKRAW_CONVERT_FLIP_X={convert_flip_x}")
     if convert_flatten_fg is not None:
         print(f"BRKRAW_CONVERT_FLATTEN_FG={convert_flatten_fg}")
     if convert_subject_type is not None:
@@ -226,8 +218,6 @@ def cmd_env(_: argparse.Namespace) -> int:
         print(f"BRKRAW_CONVERT_T_UNITS={convert_t_units}")
     if convert_header is not None:
         print(f"BRKRAW_CONVERT_HEADER={convert_header}")
-    if convert_format is not None:
-        print(f"BRKRAW_CONVERT_FORMAT={convert_format}")
     return 0
 
 
@@ -311,7 +301,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         help=(
             "Set BRKRAW_CONVERT_<OPTION> as KEY=VALUE (repeatable). "
             "Keys: OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, CONTEXT_MAP, "
-            "COMPRESS, SPACE, FLIP_X, FLATTEN_FG, OVERRIDE_SUBJECT_TYPE, "
+            "COMPRESS, SPACE, FLATTEN_FG, OVERRIDE_SUBJECT_TYPE, "
             "OVERRIDE_SUBJECT_POSE, XYZ_UNITS, T_UNITS, HEADER, FORMAT."
         ),
     )

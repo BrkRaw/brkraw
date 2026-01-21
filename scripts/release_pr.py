@@ -130,61 +130,16 @@ def commit_if_changed(
 
 
 def gh_pr_number(upstream_repo: str, head_ref: str) -> str | None:
+    owner, repo = upstream_repo.split("/", 1)
     result = run_cmd(
         [
             "gh",
-            "pr",
-            "view",
-            "--repo",
-            upstream_repo,
-            head_ref,
-            "--json",
-            "number",
-            "--jq",
-            ".number",
-        ],
-        check=False,
-    )
-    if result.returncode == 0:
-        value = result.stdout.strip()
-        if value:
-            return value
-
-    result = run_cmd(
-        [
-            "gh",
-            "pr",
-            "list",
-            "--repo",
-            upstream_repo,
-            "--search",
-            f"head:{head_ref}",
-            "--json",
-            "number",
-            "--jq",
-            ".[0].number",
-        ],
-        check=False,
-    )
-    if result.returncode == 0:
-        value = result.stdout.strip()
-        if value:
-            return value
-
-    head_branch = head_ref.split(":", 1)[-1]
-    result = run_cmd(
-        [
-            "gh",
-            "pr",
-            "list",
-            "--repo",
-            upstream_repo,
-            "--head",
-            head_branch,
-            "--author",
-            "@me",
-            "--json",
-            "number",
+            "api",
+            f"repos/{owner}/{repo}/pulls",
+            "-f",
+            f"head={head_ref}",
+            "-f",
+            "state=all",
             "--jq",
             ".[0].number",
         ],
@@ -208,31 +163,28 @@ def gh_pr_create(
         )
         logger.info("[dry-run] Title: %s", title)
         return None
+    owner, repo = upstream_repo.split("/", 1)
     result = run_cmd(
         [
             "gh",
-            "pr",
-            "create",
-            "--repo",
-            upstream_repo,
-            "--base",
-            base_branch,
-            "--head",
-            head_ref,
-            "--title",
-            title,
-            "--body",
-            body,
+            "api",
+            f"repos/{owner}/{repo}/pulls",
+            "-X",
+            "POST",
+            "-f",
+            f"title={title}",
+            "-f",
+            f"head={head_ref}",
+            "-f",
+            f"base={base_branch}",
+            "-f",
+            f"body={body}",
+            "--jq",
+            ".number",
         ]
     )
     value = result.stdout.strip()
-    if not value:
-        return None
-    match = re.search(r"/pull/(?P<number>\d+)", value)
-    if not match:
-        return None
-    return match.group("number")
-    return None
+    return value or None
 
 
 def gh_pr_edit(upstream_repo: str, pr_number: str, body: str, *, dry_run: bool) -> None:
@@ -243,7 +195,18 @@ def gh_pr_edit(upstream_repo: str, pr_number: str, body: str, *, dry_run: bool) 
             upstream_repo,
         )
         return
-    run_cmd(["gh", "pr", "edit", pr_number, "--repo", upstream_repo, "--body", body])
+    owner, repo = upstream_repo.split("/", 1)
+    run_cmd(
+        [
+            "gh",
+            "api",
+            f"repos/{owner}/{repo}/pulls/{pr_number}",
+            "-X",
+            "PATCH",
+            "-f",
+            f"body={body}",
+        ]
+    )
 
 
 def gh_pr_add_label(upstream_repo: str, pr_number: str, label: str, *, dry_run: bool) -> None:
@@ -255,8 +218,17 @@ def gh_pr_add_label(upstream_repo: str, pr_number: str, label: str, *, dry_run: 
             upstream_repo,
         )
         return
+    owner, repo = upstream_repo.split("/", 1)
     run_cmd(
-        ["gh", "pr", "edit", pr_number, "--repo", upstream_repo, "--add-label", label]
+        [
+            "gh",
+            "api",
+            f"repos/{owner}/{repo}/issues/{pr_number}/labels",
+            "-X",
+            "POST",
+            "-f",
+            f'labels=["{label}"]',
+        ]
     )
 
 

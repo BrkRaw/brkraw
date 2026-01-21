@@ -32,7 +32,6 @@ DimInfo = Tuple[Optional[int], Optional[int], Optional[int]]
 logger = logging.getLogger("brkraw")
 
 class Nifti1HeaderContents(TypedDict, total=False):
-    flip_x: bool
     slice_code: int
     slope_inter: Tuple[float, float]
     time_step: Optional[float]
@@ -57,7 +56,6 @@ class Nifti1HeaderContents(TypedDict, total=False):
 _XYZ_UNITS = set(get_args(XYZUNIT))
 _T_UNITS = set(get_args(TUNIT))
 _HEADER_FIELDS = {
-    "flip_x",
     "slice_code",
     "slope_inter",
     "time_step",
@@ -159,9 +157,7 @@ def _coerce_header_contents(data: Mapping[str, Any]) -> Nifti1HeaderContents:
                 header[key] = None
                 continue
             raise ValueError(f"{key} cannot be null.")
-        if key == "flip_x":
-            header[key] = _coerce_bool(value, name=key)
-        elif key in {"slice_code", "qform_code", "sform_code", "slice_start", "slice_end", "intent_code"}:
+        if key in {"slice_code", "qform_code", "sform_code", "slice_start", "slice_end", "intent_code"}:
             header[key] = int(value)
         elif key in {"time_step", "slice_duration", "cal_min", "cal_max"}:
             header[key] = float(value)
@@ -247,9 +243,8 @@ def _set_dataobj(niiobj: "Nifti1Image", dataobj: np.ndarray) -> None:
 
 
 def resolve(
-    image_info: "ResolvedImage", 
-    flip_x: bool = False, 
-    xyz_units: "XYZUNIT" = 'mm', 
+    image_info: "ResolvedImage",
+    xyz_units: "XYZUNIT" = 'mm',
     t_units: "TUNIT" = 'sec'
 ) -> Nifti1HeaderContents:
     
@@ -273,7 +268,6 @@ def resolve(
     slope = image_info['slope']
     offset = image_info['offset']
     result: Nifti1HeaderContents = {
-        'flip_x': flip_x,
         'slice_code': slice_code,
         'slope_inter': (slope, offset),
         'time_step': time_step,
@@ -295,9 +289,7 @@ def update(
     for c, val in nifti1header_contents.items():
         if val is None or c in ('qform_code', 'sform_code'):
             continue
-        if c == 'flip_x':
-            niiobj.header.default_x_flip = bool(val)
-        elif c == "slice_code":
+        if c == "slice_code":
             if _coerce_int(val, name="slice_code") != 0:
                 niiobj.header['slice_code'] = _coerce_int(val, name="slice_code")
         elif c == "slope_inter":

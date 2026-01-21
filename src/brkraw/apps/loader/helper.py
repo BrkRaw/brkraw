@@ -21,7 +21,7 @@ from ...core.parameters import Parameters
 from ...specs.remapper import load_spec, map_parameters, load_context_map, apply_context_map
 from ...specs.rules import load_rules, select_rule_use
 from ...dataclasses import Reco, Scan, Study
-from .types import ScanLoader
+from .types import ScanLoader, ToFilename, ConvertType, GetDataobjType, GetAffineType
 from ...specs import hook as converter_core
 from ...resolver import affine as affine_resolver
 from ...resolver import image as image_resolver
@@ -473,86 +473,39 @@ def _apply_affine_post_transform(affines: AffineReturn, *, kwargs: Mapping[str, 
 
 def get_nifti1image(
     self: Union["Scan", "ScanLoader"],
-    reco_id: Optional[int] = None,
+    reco_id: int,
+    dataobjs: Tuple[np.ndarray, ...],
+    affines: Tuple[np.ndarray, ...],
     *,
-    space: AffineSpace = "subject_ras",
-    override_header: Optional[Nifti1HeaderContents] = None,
-    override_subject_type: Optional[SubjectType] = None,
-    override_subject_pose: Optional[SubjectPose] = None,
-    flip_x: bool = False,
-    flatten_fg: bool = False,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
-    hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
+    override_header: Optional[Nifti1HeaderContents] = None,
 ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
     """Return NIfTI image(s) for a reco.
 
     Args:
         self: Scan or ScanLoader instance.
         reco_id: Reco identifier to read (defaults to the first available).
-        space: Output affine space ("raw", "scanner", "subject_ras").
-        override_header: Optional header values to apply.
-        override_subject_type: Subject type override for subject-view wrapping.
-        override_subject_pose: Subject pose override for subject-view wrapping.
-        flip_x: If True, set NIfTI header x-flip flag.
         xyz_units: Spatial units for NIfTI header.
         t_units: Temporal units for NIfTI header.
+        override_header: Optional header values to apply.
 
     Returns:
-        Single NIfTI image when one slice pack exists; otherwise a tuple of
-        images. Returns None when required metadata is unavailable.
+        Output object(s) supporting to_filename(). Returns None when required
+        metadata is unavailable.
     """
-
-    if not all(
-        hasattr(self, attr) for attr in ["image_info", "affine_info", "get_dataobj", "get_affine"]
-    ):
-        return None
-
     self = cast(ScanLoader, self)
-    resolved_reco_id = _resolve_reco_id(self, reco_id)
-    if resolved_reco_id is None:
-        return None
-    hook_kwargs = _resolve_hook_kwargs(self, hook_args_by_name)
-    data_kwargs = _filter_hook_kwargs(self.get_dataobj, hook_kwargs)
-    if data_kwargs:
-        dataobjs = self.get_dataobj(resolved_reco_id, **data_kwargs)
-    else:
-        dataobjs = self.get_dataobj(resolved_reco_id)
-    affine_kwargs = _filter_hook_kwargs(self.get_affine, hook_kwargs)
-    if affine_kwargs:
-        affines = self.get_affine(
-            resolved_reco_id,
-            space=space,
-            override_subject_type=override_subject_type,
-            override_subject_pose=override_subject_pose,
-            **affine_kwargs,
-        )
-    else:
-        affines = self.get_affine(
-            resolved_reco_id,
-            space=space,
-            override_subject_type=override_subject_type,
-            override_subject_pose=override_subject_pose,
-        )
-    image_info = self.image_info.get(resolved_reco_id)
-
+    
+    image_info = self.image_info.get(reco_id)
     if dataobjs is None or affines is None or image_info is None:
         return None
 
-    if not isinstance(dataobjs, tuple) and not isinstance(affines, tuple):
-        dataobjs = (dataobjs,)
-        affines = (affines,)
-
     niiobjs = []
     for i, dataobj in enumerate(dataobjs):
-        if flatten_fg and dataobj.ndim > 4:
-            spatial_shape = dataobj.shape[:3]
-            flattened = int(np.prod(dataobj.shape[3:]))
-            dataobj = dataobj.reshape((*spatial_shape, flattened), order="A")
         affine = affines[i]
         niiobj = Nifti1Image(dataobj, affine)
         nifti1header_contents = nifti_resolver.resolve(
-            image_info, flip_x=flip_x, xyz_units=xyz_units, t_units=t_units
+            image_info, xyz_units=xyz_units, t_units=t_units
         )
         if override_header:
             for key, value in override_header.items():
@@ -570,34 +523,159 @@ def convert(
     self: Union["Scan", "ScanLoader"],
     reco_id: Optional[int] = None,
     *,
-    format: Literal["nifti", "nifti1"] = "nifti",
     space: AffineSpace = "subject_ras",
     override_header: Optional[Nifti1HeaderContents] = None,
     override_subject_type: Optional[SubjectType] = None,
     override_subject_pose: Optional[SubjectPose] = None,
-    flip_x: bool = False,
     flatten_fg: bool = False,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
     hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
-) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
-    """Convert a reco to a selected output format."""
-    if format not in {"nifti", "nifti1"}:
-        raise ValueError(f"Unsupported format: {format}")
+    **kwargs: Any,
+) -> Optional[Union["ToFilename", Tuple["ToFilename", ...]]]:
+    """Convert a reco to output object(s).
+    
+    Args:
+        space: Output affine space ("raw", "scanner", "subject_ras").
+        override_header: Optional header values to apply.
+        override_subject_type: Subject type override for subject-view wrapping.
+        override_subject_pose: Subject pose override for subject-view wrapping.
+        flatten_fg: If True, flatten foreground dimensions.
+        xyz_units: Spatial units for NIfTI header.
+        t_units: Temporal units for NIfTI header.
+        hook_args_by_name: Optional hook args mapping (split per helper signature).
+        flatten_fg: If True, flatten foreground dimensions.
+        xyz_units: Spatial units for NIfTI header.
+        t_units: Temporal units for NIfTI header.
+    Returns:
+        Single NIfTI image when one slice pack exists; otherwise a tuple of
+        images. Returns None when required metadata is unavailable.
+    """
+    if not all(
+        hasattr(self, attr) for attr in ["image_info", "affine_info", "get_dataobj", "get_affine"]
+    ):
+        return None
+
+    self = cast(ScanLoader, self)
+    resolved_reco_id = _resolve_reco_id(self, reco_id)
+    if resolved_reco_id is None:
+        return None
+
+    hook_name = getattr(self, "_converter_hook_name", None)
+    if isinstance(hook_name, str) and hook_name:
+        logger.debug(
+            "Convert starting for scan %s reco %s with hook %s",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+            hook_name,
+        )
+    else:
+        logger.debug(
+            "Convert starting for scan %s reco %s (no hook)",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+        )
+    
+    hook_kwargs = _resolve_hook_kwargs(self, hook_args_by_name)
+    data_kwargs = _filter_hook_kwargs(self.get_dataobj, hook_kwargs)
+    convert_kwargs = {
+        key: value
+        for key, value in hook_kwargs.items()
+        if key not in data_kwargs
+    }
+    if data_kwargs:
+        logger.debug(
+            "Calling get_dataobj for scan %s reco %s with args %s",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+            data_kwargs,
+        )
+        dataobjs = self.get_dataobj(resolved_reco_id, **data_kwargs)
+    else:
+        logger.debug(
+            "Calling get_dataobj for scan %s reco %s (no args)",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+        )
+        dataobjs = self.get_dataobj(resolved_reco_id)
+    affine_kwargs = _filter_hook_kwargs(self.get_affine, hook_kwargs)
+    convert_kwargs = {
+        key: value
+        for key, value in convert_kwargs.items()
+        if key not in affine_kwargs
+    }
+    if affine_kwargs:
+        logger.debug(
+            "Calling get_affine for scan %s reco %s with args %s",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+            affine_kwargs,
+        )
+        affines = self.get_affine(
+            resolved_reco_id,
+            space=space,
+            override_subject_type=override_subject_type,
+            override_subject_pose=override_subject_pose,
+            **affine_kwargs,
+        )
+    else:
+        logger.debug(
+            "Calling get_affine for scan %s reco %s (no args)",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+        )
+        affines = self.get_affine(
+            resolved_reco_id,
+            space=space,
+            override_subject_type=override_subject_type,
+            override_subject_pose=override_subject_pose,
+        )
+    
+    if dataobjs is None or affines is None:
+        return None
+    
+    if not isinstance(dataobjs, tuple):
+        dataobjs = (dataobjs,)
+    if not isinstance(affines, tuple):
+        affines = (affines,)
+    
+    dataobjs = list(dataobjs)
+    for i, dataobj in enumerate(dataobjs):
+        if flatten_fg and dataobj.ndim > 4:
+            spatial_shape = dataobj.shape[:3]
+            flattened = int(np.prod(dataobj.shape[3:]))
+            dataobjs[i] = dataobj.reshape((*spatial_shape, flattened), order="A")
+    dataobjs = tuple(dataobjs)
+     
+    converter_func = getattr(self, "converter_func", None)
+    if isinstance(converter_func, ConvertType):
+        hook_call_kwargs = _filter_hook_kwargs(converter_func, convert_kwargs)
+        logger.debug(
+            "Calling converter hook for scan %s reco %s with args %s",
+            getattr(self, "scan_id", "?"),
+            resolved_reco_id,
+            hook_call_kwargs,
+        )
+        return converter_func(
+            dataobj=dataobjs,
+            affine=affines,
+            **hook_call_kwargs,
+        )
+
+    nifti1image_kwargs = {
+        "xyz_units": xyz_units,
+        "t_units": t_units,
+        "override_header": override_header,
+        **kwargs,
+    }
+    nifti1image_kwargs = _filter_hook_kwargs(get_nifti1image, nifti1image_kwargs)
     return get_nifti1image(
         self,
-        reco_id,
-        space=space,
-        override_header=override_header,
-        override_subject_type=override_subject_type,
-        override_subject_pose=override_subject_pose,
-        flip_x=flip_x,
-        flatten_fg=flatten_fg,
-        xyz_units=xyz_units,
-        t_units=t_units,
-        hook_args_by_name=hook_args_by_name,
+        reco_id=resolved_reco_id,
+        dataobjs=dataobjs,
+        affines=affines,
+        **nifti1image_kwargs,
     )
-
 
 def _resolve_hook_kwargs(
     scan: Union["Scan", "ScanLoader"],
@@ -608,6 +686,12 @@ def _resolve_hook_kwargs(
     hook_name = getattr(scan, "_converter_hook_name", None)
     if not isinstance(hook_name, str) or not hook_name:
         return {}
+    logger.debug(
+        "Resolving hook args for scan %s hook %s (available: %s)",
+        getattr(scan, "scan_id", "?"),
+        hook_name,
+        sorted(hook_args_by_name.keys()),
+    )
     values = hook_args_by_name.get(hook_name)
     if values is None:
         seen: set[str] = set()
@@ -643,7 +727,12 @@ def _resolve_hook_kwargs(
                 )
                 values = candidate_values
                 break
-    return dict(values) if isinstance(values, Mapping) else {}
+    resolved = dict(values) if isinstance(values, Mapping) else {}
+    if resolved:
+        logger.debug("Resolved hook args for %s: %s", hook_name, resolved)
+    else:
+        logger.debug("No hook args resolved for %s.", hook_name)
+    return resolved
 
 
 def _filter_hook_kwargs(func: Any, hook_kwargs: Mapping[str, Any]) -> Dict[str, Any]:
@@ -785,6 +874,17 @@ def apply_converter_hook(
     """Override scan conversion helpers using a converter hook."""
     converter_core.validate_hook(converter_hook)
     plugin = dict(converter_hook)
+    logger.debug(
+        "Binding converter hook for scan %s: %s",
+        getattr(scan, "scan_id", "?"),
+        sorted(plugin.keys()),
+    )
+    if "get_dataobj" in plugin and not isinstance(plugin["get_dataobj"], GetDataobjType):
+        raise TypeError("Converter hook 'get_dataobj' must match GetDataobjType.")
+    if "get_affine" in plugin and not isinstance(plugin["get_affine"], GetAffineType):
+        raise TypeError("Converter hook 'get_affine' must match GetAffineType.")
+    if "convert" in plugin and not isinstance(plugin["convert"], ConvertType):
+        raise TypeError("Converter hook 'convert' must match ConvertType.")
     scan._converter_hook = plugin
     if "get_dataobj" in plugin:
         scan.get_dataobj = MethodType(plugin["get_dataobj"], scan)
@@ -794,4 +894,11 @@ def apply_converter_hook(
             get_affine = partial(get_affine, decimals=affine_decimals)
         scan.get_affine = MethodType(get_affine, scan)
     if "convert" in plugin:
-        scan.convert = MethodType(plugin["convert"], scan)
+        scan.converter_func = MethodType(plugin["convert"], scan)
+    else:
+        scan.converter_func = None
+    logger.debug(
+        "Converter hook bound for scan %s (hook=%s)",
+        getattr(scan, "scan_id", "?"),
+        getattr(scan, "_converter_hook_name", None),
+    )
