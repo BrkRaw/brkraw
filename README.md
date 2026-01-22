@@ -6,7 +6,7 @@
 </picture>
 <!-- markdownlint-enable MD041 MD033 MD013 -->
 
-[![DOI](https://zenodo.org/badge/245546149.svg)](https://doi.org/10.5281/zenodo.3818614)
+[![DOI](docs/assets/zenodo_badge.svg)](https://doi.org/10.5281/zenodo.3818614)
 
 A modular toolkit for Bruker MRI raw-data handling.
 
