@@ -252,18 +252,24 @@ def cmd_convert(args: argparse.Namespace) -> int:
                 nii_list: List[Any] = []
                 output_count = 1
             else:
-                nii = loader.convert(
-                    scan_id,
-                    reco_id=reco_id,
-                    space=cast(AffineSpace, args.space),
-                    override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
-                    override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
-                    override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
-                    flatten_fg=args.flatten_fg,
-                    xyz_units=cast(XYZUNIT, args.xyz_units),
-                    t_units=cast(TUNIT, args.t_units),
-                    hook_args_by_name=hook_args_by_name,
-                )
+                try:
+                    nii = loader.convert(
+                        scan_id,
+                        reco_id=reco_id,
+                        space=cast(AffineSpace, args.space),
+                        override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
+                        override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
+                        override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
+                        flatten_fg=args.flatten_fg,
+                        xyz_units=cast(XYZUNIT, args.xyz_units),
+                        t_units=cast(TUNIT, args.t_units),
+                        hook_args_by_name=hook_args_by_name,
+                    )
+                except Exception as exc:
+                    logger.error("Conversion failed for scan %s reco %s: %s", scan_id, reco_id, exc)
+                    if not batch_all and args.reco_id is not None:
+                        return 2
+                    continue
                 if nii is None:
                     if not batch_all and args.reco_id is not None:
                         logger.error("No NIfTI output generated for scan %s reco %s.", scan_id, reco_id)
