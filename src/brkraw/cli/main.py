@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import re
+import os
+import shutil
+import subprocess
 import argparse
 from typing import Callable, List, Optional
 from ..core.entrypoints import list_entry_points as _iter_entry_points
@@ -8,6 +12,50 @@ from brkraw import __version__
 from brkraw.core import config as config_core
 
 PLUGIN_GROUP = "brkraw.cli"
+
+
+def _run_capture(cmd: list[str]) -> str:
+    p = subprocess.run(cmd, check=True, text=True, capture_output=True)
+    return p.stdout
+
+
+def _pv_autoset_env() -> None:
+    if shutil.which("pvcmd") is None:
+        return
+
+    p = subprocess.run(["pvcmd", "-e", "ParxServer"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if p.returncode != 0:
+        return
+
+    out = _run_capture(["pvcmd", "-a", "ParxServer", "-r", "ListPs", "-csv"])
+    matches = [line for line in out.splitlines() if "REQUEST_ATTR" in line]
+
+    if len(matches) == 0:
+        raise SystemExit("ERROR: No ps entry with REQUEST_ATTR found")
+    if len(matches) > 1:
+        msg = "ERROR: Multiple ps entries with REQUEST_ATTR found\n" + "\n".join(matches)
+        raise SystemExit(msg)
+
+    line = matches[0]
+    parts = line.split(";")
+
+    m = None
+    for f in parts:
+        f = f.strip()
+        m = re.match(r"^(?P<exp_path>.+)/(?P<scan_id>\d+)/pdata/(?P<reco_id>\d+)$", f)
+        if m:
+            break
+
+    if not m:
+        raise SystemExit("ERROR: No valid <exp_path>/<scan_id>/pdata/<reco_id> path found")
+
+    exp_path = m.group("exp_path")
+    scan_id = m.group("scan_id")
+    reco_id = m.group("reco_id")
+
+    os.environ["BRKRAW_PATH"] = exp_path
+    os.environ["BRKRAW_SCAN_ID"] = scan_id
+    os.environ["BRKRAW_RECO_ID"] = reco_id
 
 
 def _register_entry_point_commands(
@@ -70,7 +118,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
 
     _register_entry_point_commands(subparsers)
-
+    _pv_autoset_env()
+    
     args = parser.parse_args(argv)
     if not hasattr(args, "func"):
         parser.print_help()
