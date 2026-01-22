@@ -24,7 +24,7 @@ def read_version_from_pyproject(pyproject_path: Path) -> str:
         raise SystemExit("No version in pyproject.toml and no hatch version path found.")
 
     text = Path(version_path).read_text(encoding="utf-8")
-    match = re.search(r"__version__\\s*=\\s*[\"\\x27]([^\"\\x27]+)[\"\\x27]", text)
+    match = re.search(r"__version__\s*=\s*[\"\x27]([^\"\x27]+)[\"\x27]", text)
     if not match:
         raise SystemExit(f"No __version__ found in {version_path}")
     return match.group(1)
