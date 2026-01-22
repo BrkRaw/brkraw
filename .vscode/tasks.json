@@ -31,6 +31,13 @@
       "problemMatcher": []
     },
     {
+      "label": "DryRun: Release Prep PR (2-step)",
+      "type": "shell",
+      "command": "\"${command:python.interpreterPath}\" scripts/release_pr.py --dry-run --version ${input:releaseVersion} --base upstream/main --remote-upstream upstream --remote-origin origin",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "label": "Standard: MkDocs Serve",
       "type": "shell",
       "command": "\"${command:python.interpreterPath}\" -m mkdocs serve",

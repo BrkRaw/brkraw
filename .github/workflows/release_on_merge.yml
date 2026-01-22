@@ -31,7 +31,7 @@ jobs:
 
           text = Path("src/brkraw/__init__.py").read_text(encoding="utf-8").lstrip("\\ufeff")
           match = re.search(
-              r"__version__(?:\s*:\s*[^=]+)?\s*=\s*['\"]([^'\"]+)['\"]",
+              r"__version__(?:\s*:\s*[^=]+)?\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]",
               text,
           )
           if not match:

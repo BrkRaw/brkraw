@@ -31,7 +31,7 @@ If you use BrkRaw in your research, please cite it.
 @software{brkraw,
   author = {Lee, Sung-Ho and Devenyi, Gabriel A. and Ban, Woomi and Shih, Yen-Yu Ian},
   title = {BrkRaw: A modular toolkit for Bruker MRI raw-data handling},
-  version = {0.5.2},
+  version = {0.5.3},
   doi = {10.5281/zenodo.3818614},
   url = {https://github.com/BrkRaw/brkraw},
   note = {Documentation: https://brkraw.github.io},

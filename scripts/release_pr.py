@@ -20,6 +20,7 @@ PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
 CONTRIBUTORS_PATH = REPO_ROOT / "docs" / "dev" / "contributors.md"
 RELEASE_PREP_SCRIPT = REPO_ROOT / "scripts" / "release_prep.py"
 UPDATE_CONTRIBUTORS_SCRIPT = REPO_ROOT / "scripts" / "update_contributors.py"
+UPDATE_README_BIBTEX_SCRIPT = REPO_ROOT / "scripts" / "update_readme_bibtex.py"
 
 logger = logging.getLogger(__name__)
 
@@ -302,6 +303,15 @@ def run_release_prep(version: str, remote: str) -> None:
     )
 
 
+def run_update_readme_bibtex() -> None:
+    run_cmd(
+        [
+            str(Path(__file__).resolve().parent / ".." / ".venv" / "bin" / "python"),
+            str(UPDATE_README_BIBTEX_SCRIPT),
+        ]
+    )
+
+
 def run_update_contributors(repo: str) -> None:
     run_cmd(
         [
@@ -423,6 +433,7 @@ def main() -> int:
 
     # 2) release prep changes
     run_release_prep(args.version, args.remote_upstream)
+    run_update_readme_bibtex()
     release_prep_group = [INIT_PATH, README_PATH, PYPROJECT_PATH, CITATION_PATH]
     commit_if_changed(
         args.prep_message.format(version=args.version),
