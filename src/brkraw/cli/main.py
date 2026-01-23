@@ -74,6 +74,7 @@ def _register_entry_point_commands(
     preferred = [
         "init",
         "config",
+        "cache",
         "session",
         "info",
         "params",

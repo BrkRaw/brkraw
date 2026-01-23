@@ -65,6 +65,7 @@ class ConfigPaths:
     pruner_specs_dir: Path
     rules_dir: Path
     transforms_dir: Path
+    cache_dir: Path
 
 
 def resolve_root(root: Optional[Union[str, Path]] = None) -> Path:
@@ -85,6 +86,7 @@ def get_paths(root: Optional[Union[str, Path]] = None) -> ConfigPaths:
         pruner_specs_dir=base / "pruner_specs",
         rules_dir=base / "rules",
         transforms_dir=base / "transforms",
+        cache_dir=base / "cache",
     )
 
 
@@ -101,6 +103,7 @@ def get_path(name: str, root: Optional[Union[str, Path]] = None) -> Path:
         "pruner_specs": paths_obj.pruner_specs_dir,
         "rules": paths_obj.rules_dir,
         "transforms": paths_obj.transforms_dir,
+        "cache": paths_obj.cache_dir,
     }
     if name not in mapping:
         raise KeyError(f"Unknown config path: {name}")
@@ -126,6 +129,7 @@ def ensure_initialized(
     paths.pruner_specs_dir.mkdir(parents=True, exist_ok=True)
     paths.rules_dir.mkdir(parents=True, exist_ok=True)
     paths.transforms_dir.mkdir(parents=True, exist_ok=True)
+    paths.cache_dir.mkdir(parents=True, exist_ok=True)
     if create_config and not paths.config_file.exists():
         paths.config_file.write_text(DEFAULT_CONFIG_YAML, encoding="utf-8")
     return paths
@@ -138,6 +142,10 @@ def init(
     exist_ok: bool = True,
 ) -> ConfigPaths:
     return ensure_initialized(root=root, create_config=create_config, exist_ok=exist_ok)
+
+
+def cache_dir(root: Optional[Union[str, Path]] = None) -> Path:
+    return get_paths(root=root).cache_dir
 
 
 def load_config(root: Optional[Union[str, Path]] = None) -> Optional[Dict[str, Any]]:
@@ -211,6 +219,7 @@ def clear_config(
     keep_specs: bool = False,
     keep_pruner_specs: bool = False,
     keep_transforms: bool = False,
+    keep_cache: bool = False,
 ) -> None:
     paths = get_paths(root=root)
     if not paths.root.exists():
@@ -225,6 +234,8 @@ def clear_config(
         _remove_tree(paths.pruner_specs_dir)
     if paths.transforms_dir.exists() and not keep_transforms:
         _remove_tree(paths.transforms_dir)
+    if paths.cache_dir.exists() and not keep_cache:
+        _remove_tree(paths.cache_dir)
     try:
         paths.root.rmdir()
     except OSError:
@@ -239,6 +250,7 @@ def clear(
     keep_specs: bool = False,
     keep_pruner_specs: bool = False,
     keep_transforms: bool = False,
+    keep_cache: bool = False,
 ) -> None:
     clear_config(
         root=root,
@@ -247,6 +259,7 @@ def clear(
         keep_specs=keep_specs,
         keep_pruner_specs=keep_pruner_specs,
         keep_transforms=keep_transforms,
+        keep_cache=keep_cache,
     )
 
 

@@ -179,7 +179,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     path_parser = config_sub.add_parser("path", help="Print a specific config path.")
     path_parser.add_argument(
         "name",
-        choices=["root", "config", "rules", "specs", "transforms"],
+        choices=["root", "config", "rules", "specs", "transforms", "cache"],
         help="Path key to print.",
     )
     path_parser.set_defaults(config_func=cmd_path)

@@ -57,6 +57,7 @@ nav:
       - info: cli/info.md
       - convert: cli/convert.md
       - prune: cli/prune.md
+      - cache: cli/cache.md
       - config: cli/config.md
       - addon: cli/addon.md
       - hook: cli/hook.md
