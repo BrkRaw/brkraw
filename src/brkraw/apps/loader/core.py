@@ -392,6 +392,7 @@ class BrukerLoader:
         xyz_units: XYZUNIT = "mm",
         t_units: TUNIT = "sec",
         hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        **kwargs: Any,
     ):
         """Convert a scan/reco to output object(s) supporting to_filename()."""
         scan = self.get_scan(scan_id)
@@ -405,6 +406,7 @@ class BrukerLoader:
             xyz_units=xyz_units,
             t_units=t_units,
             hook_args_by_name=hook_args_by_name,
+            **kwargs,
         )
 
     def get_metadata(
