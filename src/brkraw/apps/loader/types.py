@@ -191,6 +191,10 @@ __all__ = [
     'StudyLoader',
     'ScanLoader',
     'RecoLoader',
+    'SubjectType',
+    'SubjectPose',
+    'AffineReturn',
+    'AffineSpace',
 ]
 
 def __dir__() -> List[str]:
