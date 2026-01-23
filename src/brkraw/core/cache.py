@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import logging
 import shutil
 from pathlib import Path
@@ -26,10 +27,17 @@ def get_info(root: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
 
     total_size = 0
     file_count = 0
-    for item in cache_path.glob("**/*"):
-        if item.is_file():
-            total_size += item.stat().st_size
-            file_count += 1
+    
+    for dirpath, _, filenames in os.walk(str(cache_path), followlinks=True):
+        for f in filenames:
+            try:
+                fp = Path(dirpath) / f
+                if fp.is_symlink():
+                    continue
+                total_size += fp.stat().st_size
+                file_count += 1
+            except OSError as e:
+                continue
     
     return {
         "path": cache_path,

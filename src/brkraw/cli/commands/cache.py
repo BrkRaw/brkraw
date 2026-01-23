@@ -27,10 +27,10 @@ def cmd_info(args: argparse.Namespace) -> int:
     unit = "B"
     size_f = float(size)
     for u in ["B", "KB", "MB", "GB", "TB"]:
+        unit = u
         if size_f < 1024:
             break
         size_f /= 1024
-        unit = u
 
     print(f"Path:  {path}")
     print(f"Size:  {size_f:.2f} {unit}")
