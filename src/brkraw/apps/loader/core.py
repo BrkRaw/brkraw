@@ -22,7 +22,7 @@ from ...core.config import resolve_root
 from ...specs import hook as converter_core
 from ...specs.pruner import prune_dataset_to_zip
 from ...specs.rules import load_rules, select_rule_use
-from ...dataclasses import Scan, Study
+from ...dataclasses import Scan, Study, LazyScan
 from .types import StudyLoader, ScanLoader, RecoLoader
 from .formatter import format_info_tables
 
@@ -474,7 +474,7 @@ class BrukerLoader:
         return BrukerLoader(out_path, affine_decimals=self._affine_decimals)
 
     @property
-    def avail(self) -> Mapping[int, Union["Scan", "ScanLoader"]]:
+    def avail(self) -> Mapping[int, Union["Scan", "LazyScan", "ScanLoader"]]:
         """Available scans keyed by scan id."""
         return self._study.avail
     

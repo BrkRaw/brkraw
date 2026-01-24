@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Union, Optional, TypedDict, cast
 import numpy as np
 from .helpers import get_file
-from ..dataclasses import Scan, Reco
+from ..dataclasses import Scan, Reco, LazyScan
 
 
 WORDTYPE = {
@@ -42,8 +42,16 @@ def _get_dtype(byte_order: str, word_type: str) -> np.dtype:
     return np.dtype(f"{BYTEORDER[byte_order]}{WORDTYPE[word_type]}")
 
 
-def resolve(obj: Union["Scan", "Reco"]) -> Optional[ResolvedDatatype]:
+def resolve(obj: Union["LazyScan", "Scan", "Reco"]) -> Optional[ResolvedDatatype]:
     """Return dtype/slope/offset metadata for a Scan or Reco."""
+    # Accept LazyScan-like proxies by materializing them.
+    if not isinstance(obj, (Scan, Reco)) and hasattr(obj, "materialize"):
+        try:
+            obj = obj.materialize()
+        except Exception as e:
+            raise TypeError(
+                f"resolve() failed to materialize proxy object {type(obj)!r}: {e}"
+            ) from e
     if isinstance(obj, Scan):
         try:
             p = get_file(obj, 'acqp')

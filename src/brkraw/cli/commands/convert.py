@@ -86,6 +86,28 @@ def cmd_convert(args: argparse.Namespace) -> int:
         return 2
     if not args.flatten_fg:
         args.flatten_fg = _env_flag("BRKRAW_CONVERT_FLATTEN_FG")
+
+    # resolve cycle_index/cycle_count from env
+    if args.cycle_index is None:
+        value = os.environ.get("BRKRAW_CONVERT_CYCLE_INDEX")
+        if value:
+            try:
+                args.cycle_index = int(value)
+            except ValueError:
+                logger.error("Invalid BRKRAW_CONVERT_CYCLE_INDEX: %s", value)
+                return 2
+    if args.cycle_count is None:
+        value = os.environ.get("BRKRAW_CONVERT_CYCLE_COUNT")
+        if value:
+            try:
+                args.cycle_count = int(value)
+            except ValueError:
+                logger.error("Invalid BRKRAW_CONVERT_CYCLE_COUNT: %s", value)
+                return 2
+    # if cycle_count is set but cycle_index is not, default cycle_index to 0
+    if args.cycle_index is None and args.cycle_count is not None:
+        args.cycle_index = 0
+
     if args.space is None:
         args.space = os.environ.get("BRKRAW_CONVERT_SPACE")
     if args.override_subject_type is None:
@@ -264,6 +286,8 @@ def cmd_convert(args: argparse.Namespace) -> int:
                         xyz_units=cast(XYZUNIT, args.xyz_units),
                         t_units=cast(TUNIT, args.t_units),
                         hook_args_by_name=hook_args_by_name,
+                        cycle_index=args.cycle_index,
+                        cycle_count=args.cycle_count,
                     )
                 except Exception as exc:
                     logger.error("Conversion failed for scan %s reco %s: %s", scan_id, reco_id, exc)
@@ -850,6 +874,16 @@ def _add_convert_args(
         "--flatten-fg",
         action="store_true",
         help="Flatten frame-group dimensions to 4D when data is 5D or higher.",
+    )
+    parser.add_argument(
+        "--cycle-index",
+        type=int,
+        help="Start cycle index (last axis). When set, read only a subset of cycles.",
+    )
+    parser.add_argument(
+        "--cycle-count",
+        type=int,
+        help="Number of cycles to read starting at --cycle-index. When omitted, reads to the end.",
     )
     parser.add_argument(
         "--no-compress",

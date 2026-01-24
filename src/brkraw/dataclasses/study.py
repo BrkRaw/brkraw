@@ -1,21 +1,59 @@
+
 from __future__ import annotations
+
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Mapping, Union, TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Dict, List, Mapping, Optional, Union
 
 from ..core.fs import DatasetFS
 from .node import DatasetNode
 from .scan import Scan
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ..apps.loader.types import ScanLoader
 
 
 @dataclass
+class LazyScan:
+    """Lightweight lazy Scan proxy.
+
+    This defers `Scan.from_fs(...)` until the scan is actually accessed.
+    It implements attribute forwarding so it can be used where a Scan is expected.
+    """
+
+    fs: DatasetFS
+    scan_id: int
+    scan_root: str
+    _scan: Optional[Scan] = field(default=None, init=False, repr=False)
+
+    def materialize(self) -> Scan:
+        if self._scan is None:
+            logger.debug(
+                "Materializing Scan.from_fs for scan_id=%s scan_root=%s",
+                self.scan_id,
+                self.scan_root,
+            )
+            self._scan = Scan.from_fs(self.fs, self.scan_id, self.scan_root)
+        return self._scan
+
+    def __getattr__(self, name: str):
+        # Delegate unknown attributes to the underlying Scan.
+        return getattr(self.materialize(), name)
+
+    def __repr__(self) -> str:
+        if self._scan is None:
+            return f"LazyScan(id={self.scan_id} root='{self.scan_root}')"
+        return repr(self._scan)
+
+
+@dataclass
 class Study(DatasetNode):
     fs: DatasetFS
     relroot: str = ""
-    scans: Dict[int, Scan] = field(default_factory=dict)
+    scans: Dict[int, Union[Scan, LazyScan, "ScanLoader"]] = field(default_factory=dict)
     _cache: Dict[str, object] = field(default_factory=dict, init=False, repr=False)
 
     @classmethod
@@ -42,17 +80,27 @@ class Study(DatasetNode):
 
     @classmethod
     def discover(cls, fs: DatasetFS) -> List["Study"]:
-        """Bottom-up discovery using reco markers (2dseq + visu_pars)."""
-        reco_dirs: List[str] = []
-        for dirpath, dirnames, filenames in fs.walk():
-            rel = fs.strip_anchor(dirpath)
-            names = set(filenames)
-            if "2dseq" in names and "visu_pars" in names:
-                reco_dirs.append(rel)
+        """Bottom-up discovery using reco markers (2dseq + visu_pars).
 
+        Notes:
+            Discovery is I/O bound on large studies or slow filesystems.
+            We minimize filesystem calls by:
+            - disabling per-directory sorting in fs.walk
+            - avoiding per-directory set() allocations
+            - caching scan-level existence checks (method/acqp)
+        """
         studies: Dict[str, Study] = {}
-        for reco_dir in reco_dirs:
-            parts = [p for p in reco_dir.split("/") if p]
+        scan_ok_cache: Dict[str, bool] = {}
+
+        # Order does not matter for discovery; avoid sorting costs in the walker.
+        for dirpath, _dirnames, filenames in fs.walk(sort_entries=False):
+            rel = fs.strip_anchor(dirpath)
+
+            # Fast membership checks without allocating set(filenames).
+            if "2dseq" not in filenames or "visu_pars" not in filenames:
+                continue
+
+            parts = [p for p in rel.split("/") if p]
             if "pdata" not in parts:
                 continue
             pdata_idx = parts.index("pdata")
@@ -70,12 +118,18 @@ class Study(DatasetNode):
 
             scan_root = "/".join(parts[:pdata_idx])
             study_root = "/".join(parts[:pdata_idx - 1])
-            
-            if not (
-                fs.exists(f"{scan_root}/method")
-                and fs.exists(f"{scan_root}/acqp")
-                and fs.exists(f"{reco_dir}/reco")
-            ):
+
+            # Validate scan-level markers once per scan_root.
+            ok = scan_ok_cache.get(scan_root)
+            if ok is None:
+                ok = fs.exists(f"{scan_root}/method") and fs.exists(f"{scan_root}/acqp")
+                scan_ok_cache[scan_root] = ok
+            if not ok:
+                continue
+
+            # Validate reco file. In most PV layouts, `reco` lives in the same pdata/<reco_id> dir.
+            # Prefer checking the listing we already have, fall back to exists() for safety.
+            if "reco" not in filenames and not fs.exists(f"{rel}/reco"):
                 continue
 
             study = studies.get(study_root)
@@ -84,16 +138,36 @@ class Study(DatasetNode):
                 studies[study_root] = study
 
             if scan_id not in study.scans:
-                study.scans[scan_id] = Scan.from_fs(fs, scan_id, scan_root)
+                # Defer Scan.from_fs(...) until the scan is actually accessed.
+                study.scans[scan_id] = LazyScan(fs=fs, scan_id=scan_id, scan_root=scan_root)
 
         return [studies[k] for k in sorted(studies.keys())]
 
     @property
-    def avail(self) -> Mapping[int, Union[Scan, "ScanLoader"]]:
+    def avail(self) -> Mapping[int, Union[Scan, LazyScan, "ScanLoader"]]:
         return {k: self.scans[k] for k in sorted(self.scans)}
 
     def get_scan(self, scan_id: int) -> Scan:
-        return self.scans[scan_id]
+        obj = self.scans[scan_id]
+        if isinstance(obj, LazyScan):
+            # Materialize once, but keep the proxy stored in `self.scans`.
+            # BrukerLoader binds helper methods (convert/get_affine/etc.) to the object
+            # stored in `self.scans`. Replacing it with a raw Scan can drop those bindings.
+            logger.debug("Accessing scan_id=%s via LazyScan proxy", scan_id)
+            obj.materialize()
+            return obj  # type: ignore[return-value]
+        if isinstance(obj, Scan):
+            return obj
+
+        logger.debug("Accessing scan_id=%s with unexpected type=%r", scan_id, type(obj))
+        try:
+            scan = obj  # type: ignore[assignment]
+            if isinstance(scan, Scan):
+                return scan
+        except Exception:
+            logger.exception("Failed to resolve scan_id=%s to Scan", scan_id)
+
+        raise TypeError(f"Scan {scan_id} is not loaded as a Scan (got {type(obj)!r})")
 
     @property
     def has_subject(self) -> bool:

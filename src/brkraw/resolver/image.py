@@ -22,10 +22,10 @@ if TYPE_CHECKING:
 
 
 class ResolvedImage(TypedDict):
-    dataobj: np.ndarray
+    dataobj: Optional[np.ndarray]
     slope: float
     offset: float
-    shape_desc: List[str]
+    shape_desc: Optional[List[str]]
     sliceorder_scheme: Optional[str]
     num_cycles: int
     time_per_cycle: Optional[float]
@@ -81,7 +81,10 @@ def ensure_3d_spatial_data(dataobj: np.ndarray, shape_info: "ResolvedShape") -> 
         ValueError: When data dimensionality and shape_desc disagree or z-axis
             descriptor is missing.
     """
-    shape = shape_info['shape']
+    # NOTE: `shape_info['shape']` describes the full dataset. When we read only a
+    # subset of cycles (block read), `dataobj.shape` may differ (typically the last
+    # dimension). Use the actual `dataobj.shape` for validation and swapping.
+    shape = list(dataobj.shape)
     shape_desc = list(shape_info['shape_desc'])
 
     if dataobj.ndim != len(shape_desc):
@@ -108,18 +111,100 @@ def ensure_3d_spatial_data(dataobj: np.ndarray, shape_info: "ResolvedShape") -> 
     return new_dataobj, normalized_shape_desc
 
 
-def _read_2dseq_data(reco: "Reco", dtype: np.dtype, shape: Sequence[int]) -> np.ndarray:
-    """Read 2dseq file into a Fortran-ordered NumPy array with shape validation."""
-    expected_size = int(np.prod(shape)) * np.dtype(dtype).itemsize
+def _read_2dseq_data(
+        reco: "Reco",
+        dtype: np.dtype,
+        shape: Sequence[int],
+        *,
+        cycle_index: Optional[int] = None,
+        cycle_count: Optional[int] = None,
+        total_cycles: Optional[int] = None,
+    ) -> np.ndarray:
+    """Read 2dseq into a Fortran-ordered NumPy array.
+
+    Default behavior reads the full dataset.
+
+    When `cycle_index` is provided, read a contiguous block of cycles starting at
+    `cycle_index`. Use `cycle_count` to limit how many cycles to read. If
+    `cycle_count` is None, read through the end.
+
+    Notes:
+        This assumes cycles are stored contiguously by cycle in the 2dseq stream.
+        BrkRaw treats the cycle axis as the LAST dimension of `shape`.
+    """
+    itemsize = np.dtype(dtype).itemsize
+
+    # Full read path (default).
+    if cycle_index is None:
+        expected_size = int(np.prod(shape)) * itemsize
+        with get_file(reco, "2dseq") as f:
+            f.seek(0)
+            raw = f.read()
+        if len(raw) != expected_size:
+            raise ValueError(
+                f"2dseq size mismatch: expected {expected_size} bytes for shape {shape}, got {len(raw)}"
+            )
+        try:
+            return np.frombuffer(raw, dtype).reshape(shape, order="F")
+        except ValueError as exc:
+            raise ValueError(f"failed to reshape 2dseq buffer to shape {shape}") from exc
+
+    # Block read path.
+    if total_cycles is None:
+        raise ValueError("total_cycles is required when cycle_index is provided")
+
+    total_cycles = int(total_cycles)
+    if total_cycles <= 0:
+        raise ValueError(f"invalid total_cycles={total_cycles}")
+
+    if cycle_index < 0 or cycle_index >= total_cycles:
+        raise ValueError(f"cycle_index {cycle_index} out of range [0, {total_cycles - 1}]")
+
+    if not shape:
+        raise ValueError("shape is empty")
+
+    # BrkRaw convention: cycle axis is always the last dimension.
+    if int(shape[-1]) != total_cycles:
+        raise ValueError(
+            f"cycle axis mismatch: expected shape[-1]==total_cycles ({total_cycles}), got shape[-1]={shape[-1]} for shape={shape}"
+        )
+
+    elems_per_cycle = int(np.prod(shape[:-1])) if len(shape) > 1 else 1
+    bytes_per_cycle = elems_per_cycle * itemsize
+
+    if cycle_count is None:
+        cycle_count = total_cycles - cycle_index
+    cycle_count = int(cycle_count)
+
+    if cycle_count <= 0:
+        raise ValueError(f"cycle_count must be > 0 (got {cycle_count})")
+    if cycle_index + cycle_count > total_cycles:
+        raise ValueError(
+            f"cycle_index+cycle_count exceeds total_cycles: {cycle_index}+{cycle_count} > {total_cycles}"
+        )
+
+    byte_offset = cycle_index * bytes_per_cycle
+    byte_size = cycle_count * bytes_per_cycle
+
     with get_file(reco, "2dseq") as f:
-        f.seek(0)
-        raw = f.read()
-    if len(raw) != expected_size:
-        raise ValueError(f"2dseq size mismatch: expected {expected_size} bytes for shape {shape}, got {len(raw)}")
+        f.seek(byte_offset)
+        raw = f.read(byte_size)
+
+    if len(raw) != byte_size:
+        raise ValueError(
+            f"2dseq block read size mismatch: expected {byte_size} bytes, got {len(raw)}"
+        )
+
+    # Cycle axis is the last dimension.
+    if len(shape) == 1:
+        block_shape = (cycle_count,)
+    else:
+        block_shape = (*shape[:-1], cycle_count)
+
     try:
-        return np.frombuffer(raw, dtype).reshape(shape, order="F")
+        return np.frombuffer(raw, dtype).reshape(block_shape, order="F")
     except ValueError as exc:
-        raise ValueError(f"failed to reshape 2dseq buffer to shape {shape}") from exc
+        raise ValueError(f"failed to reshape 2dseq block buffer to shape {block_shape}") from exc
 
 
 def _normalize_cycle_info(cycle_info: Optional["ResolvedCycle"]) -> Tuple[int, Optional[float]]:
@@ -129,7 +214,14 @@ def _normalize_cycle_info(cycle_info: Optional["ResolvedCycle"]) -> Tuple[int, O
     return int(cycle_info['num_cycles']), cycle_info.get('time_step')
 
 
-def resolve(scan: "Scan", reco_id: int = 1) -> Optional[ResolvedImage]:
+def resolve(
+    scan: "Scan",
+    reco_id: int = 1,
+    *,
+    load_data: bool = True,
+    cycle_index: Optional[int] = None,
+    cycle_count: Optional[int] = None,
+) -> Optional[ResolvedImage]:
     """Load 2dseq as a NumPy array with associated metadata.
 
     Args:
@@ -161,13 +253,30 @@ def resolve(scan: "Scan", reco_id: int = 1) -> Optional[ResolvedImage]:
         offset = 0.0
     shape = shape_info["shape"]
 
-    try:
-        dataobj = _read_2dseq_data(reco, dtype, shape)
-    except FileNotFoundError:
-        return None
+    total_cycles, _time_per_cycle_tmp = _normalize_cycle_info(shape_info['objs'].cycle)
 
-    dataobj, shape_desc = ensure_3d_spatial_data(dataobj, shape_info)
+    dataobj, shape_desc = None, None
+    if load_data:
+        try:
+            dataobj = _read_2dseq_data(
+                reco,
+                dtype,
+                shape,
+                cycle_index=cycle_index,
+                cycle_count=cycle_count,
+                total_cycles=total_cycles,
+            )
+        except FileNotFoundError:
+            return None
+        dataobj, shape_desc = ensure_3d_spatial_data(dataobj, shape_info)
     num_cycles, time_per_cycle = _normalize_cycle_info(shape_info['objs'].cycle)
+    # If we loaded data (possibly a subset of cycles), report the cycle count
+    # based on the actual array to keep downstream headers consistent.
+    if load_data and dataobj is not None:
+        try:
+            num_cycles = int(dataobj.shape[-1])
+        except Exception:
+            pass
 
     result: ResolvedImage = {
         # image

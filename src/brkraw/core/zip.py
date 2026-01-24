@@ -588,6 +588,8 @@ class ZippedDir:
 def walk(
     zipobj: zipfile.ZipFile,
     top: str = "",
+    *,
+    sort_entries: bool = True,
 ) -> Iterable[Tuple[str, List[ZippedDir], List[ZippedFile]]]:
     """Walk through a ZipFile like os.walk, but with ZippedFile entries.
 
@@ -600,6 +602,9 @@ def walk(
         paths (for example "repo-abc/dir"). When top does not correspond to an
         explicit directory entry, the function still yields a subtree rooted at
         top, and dirpath values are archive paths under that prefix.
+    sort_entries : bool, optional
+        When True, sort directory names and file names for deterministic output.
+        Set to False for faster traversal when ordering does not matter.
 
     Yields
     ------
@@ -613,61 +618,70 @@ def walk(
     """
     tree_map: Dict[str, Dict[str, Any]] = defaultdict(lambda: {"dirs": set(), "files": {}})
 
-    # Normalize and index
-    for arcname in zipobj.namelist():
+    start = top.strip("/")
+    prefix = f"{start}/" if start else ""
+
+    def _is_dir(info: zipfile.ZipInfo) -> bool:
+        # ZipInfo.is_dir() exists on modern Python, but keep a safe fallback.
+        try:
+            return info.is_dir()  # type: ignore[attr-defined]
+        except Exception:
+            return info.filename.endswith("/")
+
+    # Single pass over the archive; restrict to subtree early when top is given.
+    for info in zipobj.infolist():
+        arcname = info.filename
         norm = arcname.rstrip("/")
+        if not norm:
+            continue
+
+        # Restrict to the requested subtree if provided.
+        if start:
+            if norm != start and not norm.startswith(prefix):
+                continue
+
         parts = norm.split("/")
         parent = "/".join(parts[:-1])  # "" at root
         leaf = parts[-1]
 
-        if arcname.endswith("/"):  # a directory entry
+        if _is_dir(info):
             tree_map[parent]["dirs"].add(leaf)
-        else:  # a file entry
-            tree_map[parent]["files"][leaf] = ZippedFile(
-                name=leaf, arcname=norm, zipobj=zipobj
-            )
+        else:
+            tree_map[parent]["files"][leaf] = ZippedFile(name=leaf, arcname=norm, zipobj=zipobj)
 
-        # ensure intermediate directories are known
+        # Ensure intermediate directories are known.
         for i in range(len(parts) - 1):
             up_parent = "/".join(parts[:i])
             up_child = parts[i]
             tree_map[up_parent]["dirs"].add(up_child)
 
-    start = top.rstrip("/")
-
-    # When top does not exist explicitly, build a filtered pseudo-map rooted at top
+    # If the subtree has no entries, return nothing.
     if start and start not in tree_map:
-        pseudo_map: Dict[str, Dict[str, Any]] = defaultdict(lambda: {"dirs": set(), "files": {}})
-        for arcname in zipobj.namelist():
-            if arcname.startswith(start + "/") or arcname.rstrip("/") == start:
-                norm = arcname.rstrip("/")
-                rel = norm[len(start):].lstrip("/")
-                parent = "/".join([start] + ([p for p in rel.split("/")[:-1]] if rel else []))
-                leaf = rel.split("/")[-1] if rel else start.split("/")[-1]
-                if arcname.endswith("/"):
-                    pseudo_map[parent]["dirs"].add(leaf)
-                else:
-                    pseudo_map[parent]["files"][leaf] = ZippedFile(leaf, norm, zipobj)
-                prefix_parts = parent.split("/") if parent else []
-                for i in range(len(prefix_parts)):
-                    up_parent = "/".join(prefix_parts[:i])
-                    up_child = prefix_parts[i]
-                    pseudo_map[up_parent]["dirs"].add(up_child)
-        tree_map = pseudo_map
-        if start and start not in tree_map:
-            return
+        return
 
     built_dirs: Dict[str, ZippedDir] = {}
 
     def _build(path: str) -> ZippedDir:
         if path in built_dirs:
             return built_dirs[path]
-        dirnames = sorted(tree_map[path]["dirs"])
-        files = [tree_map[path]["files"][k] for k in sorted(tree_map[path]["files"].keys())]
+
+        dirset = tree_map[path]["dirs"]
+        files_dict = tree_map[path]["files"]
+
+        if sort_entries:
+            dirnames = sorted(dirset)
+            filekeys = sorted(files_dict.keys())
+        else:
+            # Sets/dicts are already in-memory; avoid sorting for speed.
+            dirnames = list(dirset)
+            filekeys = list(files_dict.keys())
+
+        files = [files_dict[k] for k in filekeys]
         subs: List[ZippedDir] = []
         for name in dirnames:
             sub_path = f"{path}/{name}" if path else name
             subs.append(_build(sub_path))
+
         obj = ZippedDir(
             name=path.rsplit("/", 1)[-1] if path else "",
             path=path,
