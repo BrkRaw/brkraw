@@ -11,9 +11,16 @@ from . import config
 logger = logging.getLogger("brkraw.cache")
 
 
-def get_info(root: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
+def get_info(
+    root: Optional[Union[str, Path]] = None,
+    path: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
     """
     Get information about the current cache directory.
+
+    Args:
+        root: Configuration root directory (used to resolve default cache path).
+        path: Explicit path to the cache directory. If provided, overrides 'root'.
 
     Returns:
         Dict with keys:
@@ -21,7 +28,11 @@ def get_info(root: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
             - size: Total size in bytes
             - count: Number of files
     """
-    cache_path = config.cache_dir(root)
+    if path is not None:
+        cache_path = Path(path)
+    else:
+        cache_path = config.cache_dir(root)
+
     if not cache_path.exists():
         return {"path": cache_path, "size": 0, "count": 0}
 
@@ -46,11 +57,22 @@ def get_info(root: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
     }
 
 
-def clear(root: Optional[Union[str, Path]] = None) -> None:
+def clear(
+    root: Optional[Union[str, Path]] = None,
+    path: Optional[Union[str, Path]] = None,
+) -> None:
     """
     Clear all files in the cache directory.
+
+    Args:
+        root: Configuration root directory (used to resolve default cache path).
+        path: Explicit path to the cache directory. If provided, overrides 'root'.
     """
-    cache_path = config.cache_dir(root)
+    if path is not None:
+        cache_path = Path(path)
+    else:
+        cache_path = config.cache_dir(root)
+
     if not cache_path.exists():
         return
 
