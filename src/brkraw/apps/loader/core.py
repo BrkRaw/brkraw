@@ -300,7 +300,7 @@ class BrukerLoader:
             return None
         return scan.get_fid(buffer_start=buffer_start, buffer_size=buffer_size, as_complex=as_complex)
 
-    def get_dataobj(self, scan_id: int, reco_id: Optional[int] = None) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
+    def get_dataobj(self, scan_id: int, reco_id: Optional[int] = None, **kwargs: Any) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
         """Return reconstructed data for a scan/reco via attached helper.
 
         Args:
@@ -311,7 +311,7 @@ class BrukerLoader:
             Single ndarray when one slice pack exists; otherwise a tuple.
         """
         scan = self.get_scan(scan_id)
-        return scan.get_dataobj(reco_id)
+        return scan.get_dataobj(reco_id, **kwargs)
 
     def get_affine(self, 
                    scan_id: int, 
@@ -320,7 +320,8 @@ class BrukerLoader:
                    space: AffineSpace = 'subject_ras',
                    override_subject_type: Optional[SubjectType] = None,
                    override_subject_pose: Optional[SubjectPose] = None,
-                   decimals: Optional[int] = None
+                   decimals: Optional[int] = None,
+                   **kwargs: Any
                    ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
         """Return affine(s) for a scan/reco via attached helper.
 
@@ -341,7 +342,7 @@ class BrukerLoader:
                                space=space, 
                                override_subject_pose=override_subject_pose, 
                                override_subject_type=override_subject_type,
-                               decimals=decimals)
+                               decimals=decimals, **kwargs)
     
     def get_nifti1image(self, scan_id: int, reco_id: Optional[int] = None,
                         *, 
