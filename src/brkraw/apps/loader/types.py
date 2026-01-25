@@ -5,7 +5,7 @@ Last updated: 2025-12-30
 
 from __future__ import annotations
 
-from typing import Any, Union, Tuple, Dict, Optional, Protocol, Literal, Mapping, Callable, List, TYPE_CHECKING, runtime_checkable
+from typing import Any, Union, Tuple, Dict, Optional, Protocol, Literal, Mapping, List, TYPE_CHECKING, runtime_checkable
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeAlias
 else:
@@ -16,13 +16,14 @@ else:
 from ...dataclasses.study import Study
 from ...dataclasses.scan import Scan
 from ...dataclasses.reco import Reco
+from ...resolver.affine import SubjectType, SubjectPose
 import numpy as np
 
 if TYPE_CHECKING:
     from pathlib import Path
     from ...core.parameters import Parameters
     from ...resolver.image import ResolvedImage
-    from ...resolver.affine import ResolvedAffine, SubjectType, SubjectPose
+    from ...resolver.affine import ResolvedAffine
     from ...resolver.nifti import Nifti1HeaderContents, XYZUNIT, TUNIT
     from nibabel.nifti1 import Nifti1Image
     
@@ -42,6 +43,8 @@ class GetDataobjType(Protocol[P]):
         self,
         scan: "Scan",
         reco_id: Optional[int],
+        cycle_index: Optional[int],
+        cycle_count: Optional[int],
         *args: P.args,
         **kwargs: P.kwargs
     ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
@@ -119,7 +122,11 @@ class ScanLoader(Scan, BaseLoader):
 
     def get_dataobj(
             self, 
-            reco_id: Optional[int] = None
+            reco_id: Optional[int] = None,
+            *,
+            cycle_index: Optional[int] = None,
+            cycle_count: Optional[int] = None,
+            **kwargs: Any
             ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]: 
         ...
 
