@@ -11,7 +11,7 @@ import subprocess
 
 from brkraw.core import config as config_core
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def cmd_config(args: argparse.Namespace) -> int:

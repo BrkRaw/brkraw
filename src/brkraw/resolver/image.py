@@ -10,6 +10,7 @@ from __future__ import annotations
 
 
 from typing import TYPE_CHECKING, Optional, Sequence, TypedDict, List, Tuple
+import logging
 from .datatype import resolve as datatype_resolver
 from .shape import resolve as shape_resolver
 from .helpers import get_reco, get_file, swap_element
@@ -32,6 +33,7 @@ class ResolvedImage(TypedDict):
 
 
 Z_AXIS_DESCRIPTORS = {'spatial', 'slice', 'without_slice'}
+logger = logging.getLogger("brkraw.resolver.image")
 
 
 def _find_z_axis_candidate(shape_desc: Sequence[str]) -> Optional[int]:
@@ -154,7 +156,7 @@ def _read_2dseq_data(
         raise ValueError("total_cycles is required when cycle_index is provided")
 
     total_cycles = int(total_cycles)
-    if total_cycles <= 0:
+    if total_cycles < 1:
         raise ValueError(f"invalid total_cycles={total_cycles}")
 
     if cycle_index < 0 or cycle_index >= total_cycles:
@@ -182,7 +184,7 @@ def _read_2dseq_data(
         raise ValueError(f"cycle_count must be > 0 (got {cycle_count})")
     if cycle_index + cycle_count > total_cycles:
         raise ValueError(
-            f"cycle_index+cycle_count exceeds total_cycles: {cycle_index}+{cycle_count} > {total_cycles}"
+            f"cycle_index+cycle_count exceeds total_cycles: {cycle_index}+{cycle_count} +> {total_cycles}"
         )
 
     byte_offset = cycle_index * bytes_per_cycle
@@ -255,10 +257,24 @@ def resolve(
         offset = 0.0
     shape = shape_info["shape"]
 
-    total_cycles, _time_per_cycle_tmp = _normalize_cycle_info(shape_info['objs'].cycle)
+    total_cycles, time_per_cycle = _normalize_cycle_info(shape_info['objs'].cycle)
 
     dataobj, shape_desc = None, None
     if load_data:
+        if total_cycles == 1:
+            logger.debug(
+                "Cycle slicing disabled: total_cycles=%s shape=%s",
+                total_cycles,
+                shape,
+            )
+            cycle_index = None
+            cycle_count = None
+        else:
+            logger.debug(
+                "Cycle slicing enabled: total_cycles=%s shape=%s",
+                total_cycles,
+                shape,
+            )
         try:
             dataobj = _read_2dseq_data(
                 reco,
@@ -271,15 +287,6 @@ def resolve(
         except FileNotFoundError:
             return None
         dataobj, shape_desc = ensure_3d_spatial_data(dataobj, shape_info)
-    num_cycles, time_per_cycle = _normalize_cycle_info(shape_info['objs'].cycle)
-    # If we loaded data without cycle slicing, sync num_cycles to the array.
-    # When cycle_index/cycle_count are provided, keep metadata num_cycles so
-    # callers can continue lazy loading across full cycles.
-    if load_data and dataobj is not None and cycle_index is None and cycle_count is None:
-        try:
-            num_cycles = int(dataobj.shape[-1])
-        except Exception:
-            pass
 
     result: ResolvedImage = {
         # image
@@ -290,7 +297,7 @@ def resolve(
         'sliceorder_scheme': shape_info['sliceorder_scheme'],
 
         # cycle
-        'num_cycles': num_cycles,
+        'num_cycles': total_cycles,
         'time_per_cycle': time_per_cycle,
     }
     return result

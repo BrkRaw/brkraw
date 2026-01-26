@@ -12,9 +12,6 @@ from .scan import Scan
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
-    from ..apps.loader.types import ScanLoader
-
 
 @dataclass
 class LazyScan:
@@ -53,7 +50,7 @@ class LazyScan:
 class Study(DatasetNode):
     fs: DatasetFS
     relroot: str = ""
-    scans: Dict[int, Union[Scan, LazyScan, "ScanLoader"]] = field(default_factory=dict)
+    scans: Dict[int, "LazyScan"] = field(default_factory=dict)
     _cache: Dict[str, object] = field(default_factory=dict, init=False, repr=False)
 
     @classmethod
@@ -89,14 +86,12 @@ class Study(DatasetNode):
             - avoiding per-directory set() allocations
             - caching scan-level existence checks (method/acqp)
         """
-        studies: Dict[str, Study] = {}
+        studies: Dict[str, "Study"] = {}
         scan_ok_cache: Dict[str, bool] = {}
 
-        # Order does not matter for discovery; avoid sorting costs in the walker.
-        for dirpath, _dirnames, filenames in fs.walk(sort_entries=False):
+        for dirpath, _, filenames in fs.walk(sort_entries=False):
             rel = fs.strip_anchor(dirpath)
 
-            # Fast membership checks without allocating set(filenames).
             if "2dseq" not in filenames or "visu_pars" not in filenames:
                 continue
 
@@ -144,30 +139,11 @@ class Study(DatasetNode):
         return [studies[k] for k in sorted(studies.keys())]
 
     @property
-    def avail(self) -> Mapping[int, Union[Scan, LazyScan, "ScanLoader"]]:
+    def avail(self) -> Mapping[int, "LazyScan"]:
         return {k: self.scans[k] for k in sorted(self.scans)}
 
-    def get_scan(self, scan_id: int) -> Scan:
-        obj = self.scans[scan_id]
-        if isinstance(obj, LazyScan):
-            # Materialize once, but keep the proxy stored in `self.scans`.
-            # BrukerLoader binds helper methods (convert/get_affine/etc.) to the object
-            # stored in `self.scans`. Replacing it with a raw Scan can drop those bindings.
-            logger.debug("Accessing scan_id=%s via LazyScan proxy", scan_id)
-            obj.materialize()
-            return obj  # type: ignore[return-value]
-        if isinstance(obj, Scan):
-            return obj
-
-        logger.debug("Accessing scan_id=%s with unexpected type=%r", scan_id, type(obj))
-        try:
-            scan = obj  # type: ignore[assignment]
-            if isinstance(scan, Scan):
-                return scan
-        except Exception:
-            logger.exception("Failed to resolve scan_id=%s to Scan", scan_id)
-
-        raise TypeError(f"Scan {scan_id} is not loaded as a Scan (got {type(obj)!r})")
+    def get_scan(self, scan_id: int) -> "Scan":
+        return self.scans[scan_id].materialize()
 
     @property
     def has_subject(self) -> bool:

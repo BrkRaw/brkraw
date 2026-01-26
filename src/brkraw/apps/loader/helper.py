@@ -1,8 +1,3 @@
-"""Internal helper functions for BrukerLoader.
-
-Last updated: 2025-12-30
-"""
-
 from __future__ import annotations
 
 from types import MethodType
@@ -14,6 +9,7 @@ from warnings import warn
 import logging
 
 import numpy as np
+from numpy.typing import NDArray
 from nibabel.nifti1 import Nifti1Image
 
 from ...core.config import resolve_root
@@ -21,21 +17,37 @@ from ...core.parameters import Parameters
 from ...specs.remapper import load_spec, map_parameters, load_context_map, apply_context_map
 from ...specs.rules import load_rules, select_rule_use
 from ...dataclasses import Reco, Scan, Study, LazyScan
-from .types import ScanLoader, ToFilename, ConvertType, GetDataobjType, GetAffineType
 from ...specs import hook as converter_core
 from ...resolver import affine as affine_resolver
 from ...resolver import image as image_resolver
 from ...resolver import fid as fid_resolver
 from ...resolver import nifti as nifti_resolver
 from ...resolver.helpers import get_file
-
+from .types import (
+    ScanLoader, 
+    ToFilename, 
+    ConvertType, 
+    GetDataobjType, 
+    GetAffineType
+)
 if TYPE_CHECKING:
     from ...resolver.nifti import Nifti1HeaderContents
-    from .types import SubjectType, SubjectPose, XYZUNIT, TUNIT, AffineReturn, AffineSpace
+    from .types import (
+        SubjectType, 
+        SubjectPose, 
+        XYZUNIT, 
+        TUNIT,
+        Dataobjs,
+        Affines,
+        AffineSpace,
+        ConvertedObj,
+        Metadata
+    )
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 __all__ = [
+    "resolve_reco_id",
     "resolve_data_and_affine",
     "search_parameters",
     "get_dataobj",
@@ -55,7 +67,7 @@ def make_dir(names: List[str]):
     return _dir
 
 
-def _resolve_reco_id(
+def resolve_reco_id(
     scan: Union["Scan", "ScanLoader"],
     reco_id: Optional[int],
 ) -> Optional[int]:
@@ -79,7 +91,7 @@ def _resolve_reco_id(
 
 
 def resolve_data_and_affine(
-    scan: Union["Scan", "ScanLoader", "LazyScan"],
+    scan: "Scan",
     reco_id: Optional[int] = None,
     *,
     affine_decimals: int = 6,
@@ -92,20 +104,9 @@ def resolve_data_and_affine(
         affine_decimals: Decimal rounding applied to resolved affines.
     """
     scan = cast(ScanLoader, scan)
-
-    # Some callers may pass a LazyScan proxy (from Study.discover lazy mode).
-    # Resolver modules often type-check for Scan/Reco, so materialize when available.
-    scan_node = scan
-    if not isinstance(scan, Scan) and hasattr(scan, "materialize"):
-        try:
-            scan_node = cast(LazyScan, scan).materialize()
-        except Exception as exc:
-            logger.warning(
-                "Failed to materialize scan proxy for scan %s: %s",
-                getattr(scan, "scan_id", "?"),
-                exc,
-            )
-            scan_node = scan
+    scan.get_fid = MethodType(fid_resolver.resolve, scan)
+    scan.image_info = {}
+    scan.affine_info = {}
 
     reco_ids = [reco_id] if reco_id is not None else list(scan.avail.keys())
     if not reco_ids:
@@ -122,7 +123,7 @@ def resolve_data_and_affine(
             )
             continue
         try:
-            image_info = image_resolver.resolve(scan_node, rid, load_data=False)
+            image_info = image_resolver.resolve(scan, rid, load_data=False)
         except Exception as exc:
             logger.warning(
                 "Failed to resolve image data for scan %s reco %s: %s",
@@ -134,8 +135,9 @@ def resolve_data_and_affine(
         try:
             # store subject-view affines (scanner unwrap happens in get_affine)
             affine_info = affine_resolver.resolve(
-                scan_node, rid, decimals=affine_decimals, unwrap_pose=False,
+                scan, rid, decimals=affine_decimals, unwrap_pose=False,
             )
+
         except Exception as exc:
             logger.warning(
                 "Failed to resolve affine for scan %s reco %s: %s",
@@ -145,15 +147,64 @@ def resolve_data_and_affine(
             )
             affine_info = None
 
-        if hasattr(scan, "image_info"):
-            scan.image_info[rid] = image_info
+        scan.image_info[rid] = image_info
+        scan.affine_info[rid] = affine_info
+
+def _load_rules(base):
+    try:
+        rules = load_rules(root=base, validate=False)
+    except Exception:
+        rules = {}
+    return rules
+
+
+def resolve_converter_hook(
+    scan: "Scan",
+    base: Path,
+    *,
+    affine_decimals: int = 6,
+):
+    scan = cast(ScanLoader, scan)
+    rules = _load_rules(base)
+    if rules:
+        try:
+            hook_name = select_rule_use(
+                scan,
+                rules.get("converter_hook", []),
+                base=base,
+                resolve_paths=False,
+            )
+        except Exception as exc:
+            logger.debug(
+                "Converter hook rule selection failed for scan %s: %s",
+                getattr(scan, "scan_id", "?"),
+                exc,
+                exc_info=True,
+            )
+            hook_name = None
+    
+        if isinstance(hook_name, str):
+            try:
+                entry = converter_core.resolve_hook(hook_name)
+            except Exception as exc:
+                logger.warning(
+                    "Converter hook %r not available: %s",
+                    hook_name,
+                    exc,
+                )
+                entry = None
+            if entry:
+                logger.debug("Applying converter hook: %s", hook_name)
+                scan._converter_hook_name = hook_name
+                apply_converter_hook(
+                    scan,
+                    entry,
+                    affine_decimals=affine_decimals,
+                )
+            else:
+                logger.debug("Converter hook %r resolved to no entry.", hook_name)
         else:
-            setattr(scan, "image_info", {rid: image_info})
-        if hasattr(scan, "affine_info"):
-            scan.affine_info[rid] = affine_info
-        else:
-            setattr(scan, "affine_info", {rid: affine_info})
-    scan.get_fid = MethodType(fid_resolver.resolve, scan)
+            logger.debug("No converter hook selected for scan %s.", getattr(scan, "scan_id", "?"))
 
 
 def search_parameters(
@@ -256,7 +307,7 @@ def search_parameters(
         if scan_id is None:
             warn("To search from Study object, specifying <scan_id> is required.")
             return None
-        scan = self.get_scan(scan_id)
+        scan = cast(ScanLoader, self.get_scan(scan_id))
         scan_hits = search_node(scan)
         if reco_id is None:
             reco_hits = search_recos(scan)
@@ -295,10 +346,10 @@ def search_parameters(
 
 
 def _finalize_affines(
-    affines: list[np.ndarray],
+    affines: List[NDArray],
     num_slice_packs: int,
     decimals: Optional[int],
-) -> AffineReturn:
+) -> Affines:
     if num_slice_packs == 1:
         affine = affines[0]
         if decimals is not None:
@@ -312,13 +363,10 @@ def _finalize_affines(
 
 
 def get_dataobj(
-    self: Union["Scan", "ScanLoader", "LazyScan"],
+    self: "ScanLoader",
     reco_id: Optional[int] = None,
-    *,
-    cycle_index: Optional[int] = None,
-    cycle_count: Optional[int] = None,
-    **_: Any,
-) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
+    **kwargs: Dict[str, Any]
+) -> Dataobjs:
     """Return reconstructed data for a reco, split by slice pack if needed.
 
     Args:
@@ -332,27 +380,26 @@ def get_dataobj(
         Single ndarray when one slice pack exists; otherwise a tuple of arrays.
         Returns None when required metadata is unavailable.
     """
-    if not hasattr(self, "image_info") or not hasattr(self, "affine_info"):
-        return None
-    self = cast(ScanLoader, self)
-    resolved_reco_id = _resolve_reco_id(self, reco_id)
+    cycle_index = cast(Optional[int], kwargs.get('cycle_index'))
+    cycle_count = cast(Optional[int], kwargs.get('cycle_count'))
+    resolved_reco_id = resolve_reco_id(self, reco_id)
     if resolved_reco_id is None:
         return None
-
+    
     affine_info = self.affine_info.get(resolved_reco_id)
-
-    # Use cached image_info if present. Note: resolve_data_and_affine() may cache
-    # meta-only image_info with dataobj=None to avoid eager 2dseq reads.
+    if affine_info is None:
+        logger.warning(
+            "affine_info is not available for scan %s",
+            getattr(self, "scan_id", "?")
+        )
+        return None
     image_info = self.image_info.get(resolved_reco_id)
-
-    # Decide whether we must (re)load data.
-    need_data = False
     if image_info is None:
-        need_data = True
-    else:
-        # Meta-only cache: dataobj is explicitly None.
-        if image_info.get("dataobj") is None:
-            need_data = True
+        logger.warning(
+            "image_info is not available for scan %s",
+            getattr(self, "scan_id", "?")
+        )
+        return None
 
     # Normalize cycle arguments if provided.
     cycle_args_requested = cycle_index is not None or cycle_count is not None
@@ -361,71 +408,28 @@ def get_dataobj(
 
     # If the dataset has <= 1 cycle, ignore cycle slicing to avoid block reads.
     if cycle_args_requested:
-        total_cycles: Optional[int] = None
-        if image_info is not None and image_info.get("num_cycles") is not None:
-            total_cycles = int(image_info["num_cycles"])
-        elif image_info is None:
-            scan_node: Any = self
-            if not isinstance(self, Scan) and hasattr(self, "materialize"):
-                try:
-                    scan_node = cast(LazyScan, self).materialize()
-                except Exception:
-                    scan_node = self
-            try:
-                meta_info = image_resolver.resolve(scan_node, resolved_reco_id, load_data=False)
-            except TypeError:
-                meta_info = None
-            if meta_info is not None:
-                if image_info is None:
-                    self.image_info[resolved_reco_id] = meta_info
-                if meta_info.get("num_cycles") is not None:
-                    total_cycles = int(meta_info["num_cycles"])
-
-        if total_cycles is not None and total_cycles <= 1:
+        total_cycles = int(image_info["num_cycles"])
+        if total_cycles <= 1:
             cycle_index = None
             cycle_count = None
             cycle_args_requested = False
 
-    # If caller requested cycle slicing, always resolve on-demand.
-    if cycle_args_requested:
-        need_data = True
-
-    if need_data:
-        scan_node: Any = self
-        if not isinstance(self, Scan) and hasattr(self, "materialize"):
-            try:
-                scan_node = cast(LazyScan, self).materialize()
-            except Exception:
-                scan_node = self
-
-        try:
-            image_info = image_resolver.resolve(
-                scan_node,
-                resolved_reco_id,
-                load_data=True,
-                cycle_index=cycle_index,
-                cycle_count=cycle_count,
-            )
-        except TypeError:
-            # Backward compatibility if resolver does not yet accept load_data/cycle args.
-            image_info = image_resolver.resolve(scan_node, resolved_reco_id)
-
-        # Cache the resolved info back onto the scan object.
-        if image_info is not None:
-            self.image_info[resolved_reco_id] = image_info
-
-    if affine_info is None or image_info is None:
-        return None
+    if image_info.get("dataobj") is None:
+        image_info = image_resolver.resolve(
+            self,
+            resolved_reco_id,
+            load_data=True,
+            cycle_index=cycle_index,
+            cycle_count=cycle_count,
+        )
+        self.image_info[resolved_reco_id] = image_info
 
     num_slices = affine_info["num_slices"]
-    dataobj = image_info.get("dataobj")
-    if dataobj is None:
-        return None
-
+    dataobj = cast(dict, image_info).get("dataobj")
     slice_pack = []
     slice_offset = 0
     for _num_slices in num_slices:
-        _dataobj = dataobj[:, :, slice(slice_offset, slice_offset + _num_slices)]
+        _dataobj = cast(NDArray, dataobj)[:, :, slice(slice_offset, slice_offset + _num_slices)]
         slice_offset += _num_slices
         slice_pack.append(_dataobj)
 
@@ -435,7 +439,7 @@ def get_dataobj(
 
 
 def get_affine(
-    self: Union["Scan", "ScanLoader"],
+    self: "ScanLoader",
     reco_id: Optional[int] = None,
     *,
     space: AffineSpace = "subject_ras",
@@ -443,7 +447,7 @@ def get_affine(
     override_subject_pose: Optional["SubjectPose"] = None,
     decimals: Optional[int] = None,
     **kwargs: Any,
-) -> AffineReturn:
+) -> Affines:
     """
     Return affine(s) for a reco in the requested coordinate space.
 
@@ -475,7 +479,7 @@ def get_affine(
         return None
 
     self = cast("ScanLoader", self)
-    resolved_reco_id = _resolve_reco_id(self, reco_id)
+    resolved_reco_id = resolve_reco_id(self, reco_id)
     if resolved_reco_id is None:
         return None
 
@@ -523,7 +527,7 @@ def get_affine(
     return _apply_affine_post_transform(result, kwargs=kwargs)
 
 
-def _apply_affine_post_transform(affines: AffineReturn, *, kwargs: Mapping[str, Any]) -> AffineReturn:
+def _apply_affine_post_transform(affines: Affines, *, kwargs: Mapping[str, Any]) -> Affines:
     """Apply optional flips/rotations to affines right before returning.
 
     These transforms are applied in world space and do not depend on output
@@ -554,7 +558,7 @@ def _apply_affine_post_transform(affines: AffineReturn, *, kwargs: Mapping[str, 
     if not (flip_x or flip_y or flip_z or rad_x or rad_y or rad_z):
         return affines
 
-    def apply_one(a: np.ndarray) -> np.ndarray:
+    def apply_one(a: NDArray) -> NDArray:
         out = np.asarray(a, dtype=float)
         if flip_x or flip_y or flip_z:
             out = affine_resolver.flip_affine(out, flip_x=flip_x, flip_y=flip_y, flip_z=flip_z)
@@ -570,13 +574,13 @@ def _apply_affine_post_transform(affines: AffineReturn, *, kwargs: Mapping[str, 
 def get_nifti1image(
     self: Union["Scan", "ScanLoader"],
     reco_id: int,
-    dataobjs: Tuple[np.ndarray, ...],
-    affines: Tuple[np.ndarray, ...],
+    dataobjs: Tuple[NDArray, ...],
+    affines: Tuple[NDArray, ...],
     *,
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
     override_header: Optional[Nifti1HeaderContents] = None,
-) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
+) -> ConvertedObj:
     """Return NIfTI image(s) for a reco.
 
     Args:
@@ -619,7 +623,7 @@ def get_nifti1image(
 
 
 def convert(
-    self: Union["Scan", "ScanLoader"],
+    self: "ScanLoader",
     reco_id: Optional[int] = None,
     *,
     space: AffineSpace = "subject_ras",
@@ -627,11 +631,9 @@ def convert(
     override_subject_type: Optional[SubjectType] = None,
     override_subject_pose: Optional[SubjectPose] = None,
     flatten_fg: bool = False,
-    xyz_units: XYZUNIT = "mm",
-    t_units: TUNIT = "sec",
     hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
     **kwargs: Any,
-) -> Optional[Union["ToFilename", Tuple["ToFilename", ...]]]:
+) -> ConvertedObj:
     """Convert a reco to output object(s).
     
     Args:
@@ -640,12 +642,8 @@ def convert(
         override_subject_type: Subject type override for subject-view wrapping.
         override_subject_pose: Subject pose override for subject-view wrapping.
         flatten_fg: If True, flatten foreground dimensions.
-        xyz_units: Spatial units for NIfTI header.
-        t_units: Temporal units for NIfTI header.
         hook_args_by_name: Optional hook args mapping (split per helper signature).
         flatten_fg: If True, flatten foreground dimensions.
-        xyz_units: Spatial units for NIfTI header.
-        t_units: Temporal units for NIfTI header.
     Returns:
         Single NIfTI image when one slice pack exists; otherwise a tuple of
         images. Returns None when required metadata is unavailable.
@@ -654,9 +652,10 @@ def convert(
         hasattr(self, attr) for attr in ["image_info", "affine_info", "get_dataobj", "get_affine"]
     ):
         return None
-
+    
     self = cast(ScanLoader, self)
-    resolved_reco_id = _resolve_reco_id(self, reco_id)
+    resolved_reco_id = resolve_reco_id(self, reco_id)
+    logger.debug("Resolved reco_id = %s", resolved_reco_id)
     if resolved_reco_id is None:
         return None
 
@@ -682,6 +681,10 @@ def convert(
     merged_kwargs.update(kwargs)
 
     data_kwargs = _filter_hook_kwargs(self.get_dataobj, merged_kwargs)
+    # flip_* are affine-only options; never pass them to get_dataobj.
+    for key in ("flip_x", "flip_y", "flip_z"):
+        data_kwargs.pop(key, None)
+    
     convert_kwargs = {key: value for key, value in merged_kwargs.items() if key not in data_kwargs}
     if data_kwargs:
         logger.debug(
@@ -698,6 +701,7 @@ def convert(
             resolved_reco_id,
         )
         dataobjs = self.get_dataobj(resolved_reco_id)
+
     affine_kwargs = _filter_hook_kwargs(self.get_affine, merged_kwargs)
     convert_kwargs = {
         key: value
@@ -746,7 +750,7 @@ def convert(
             flattened = int(np.prod(dataobj.shape[3:]))
             dataobjs[i] = dataobj.reshape((*spatial_shape, flattened), order="A")
     dataobjs = tuple(dataobjs)
-     
+
     converter_func = getattr(self, "converter_func", None)
     if isinstance(converter_func, ConvertType):
         hook_call_kwargs = _filter_hook_kwargs(converter_func, convert_kwargs)
@@ -763,8 +767,6 @@ def convert(
         )
 
     nifti1image_kwargs = {
-        "xyz_units": xyz_units,
-        "t_units": t_units,
         "override_header": override_header,
         **kwargs,
     }
@@ -913,7 +915,7 @@ def get_metadata(
     spec: Optional[Union[Mapping[str, Any], str, Path]] = None,
     context_map: Optional[Union[str, Path]] = None,
     return_spec: bool = False,
-):
+) -> Metadata:
     """Resolve metadata using a remapper spec.
 
     Args:
@@ -928,7 +930,7 @@ def get_metadata(
         return_spec is True, returns (metadata, spec_info).
     """
     scan = cast(ScanLoader, self)
-    resolved_reco_id = _resolve_reco_id(scan, reco_id)
+    resolved_reco_id = resolve_reco_id(scan, reco_id)
     if resolved_reco_id is None:
         if return_spec:
             return None, None

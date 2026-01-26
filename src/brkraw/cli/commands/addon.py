@@ -10,7 +10,7 @@ from brkraw.core import config as config_core
 from brkraw.core import formatter
 from brkraw.apps import addon as addon_app
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def cmd_addon(args: argparse.Namespace) -> int:

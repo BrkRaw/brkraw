@@ -1,6 +1,4 @@
 """Formatting helpers for loader info output.
-
-Last updated: 2025-12-30
 """
 
 from __future__ import annotations

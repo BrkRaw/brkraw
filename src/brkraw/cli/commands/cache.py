@@ -6,7 +6,7 @@ from typing import Optional
 
 from ...core import cache
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def cmd_cache(args: argparse.Namespace) -> int:

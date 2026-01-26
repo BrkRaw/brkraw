@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Union, Optional, Tuple, List, Any, cast
 from datetime import datetime, timezone, timedelta
-import numpy as np
 import re
 
 def strip_jcamp_string(value: Optional[str]) -> str:

@@ -14,7 +14,7 @@ import numpy as np
 
 from brkraw.cli.utils import load
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def cmd_params(args: argparse.Namespace) -> int:

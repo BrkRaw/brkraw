@@ -14,7 +14,7 @@ from typing import Iterator, List
 
 from brkraw.apps.loader import BrukerLoader
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 @contextmanager
 def spinner(prefix: str = "Loading") -> Iterator[None]:

@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any, Mapping, Optional, Dict, List, Tuple, cast, get_args
 
@@ -27,7 +26,7 @@ from brkraw.resolver.affine import SubjectPose, SubjectType
 from brkraw.apps.loader.types import AffineSpace
 
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 _INVALID_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -191,6 +190,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
     hook_args_by_name = merge_hook_args(hook_args_by_name, hook_args_cli)
 
     loader = load(args.path, prefix="Loading")
+    logger.debug("Dataset: %s loaded", args.path)
     try:
         override_header = nifti_resolver.load_header_overrides(args.header)
     except ValueError:
@@ -246,7 +246,9 @@ def cmd_convert(args: argparse.Namespace) -> int:
         if scan_id is None:
             continue
         scan = loader.get_scan(scan_id)
+        logger.debug("Processing scan %s.", scan_id)
         reco_ids = [args.reco_id] if args.reco_id is not None else list(scan.avail.keys())
+        logger.debug("Recos: %s", reco_ids or "None")
         if not reco_ids:
             if getattr(scan, "_converter_hook", None):
                 reco_ids = [None]

@@ -265,10 +265,13 @@ def clear(
 
 def configure_logging(
     *,
+    name: Optional[str] = None,
     root: Optional[Union[str, Path]] = None,
     level: Optional[Union[str, int]] = None,
     stream=None,
 ) -> logging.Logger:
+    if name is None:
+        name = "brkraw"
     config = resolve_config(root=root)
     if level is None:
         level = config.get("logging", {}).get("level", "INFO")
@@ -278,9 +281,9 @@ def configure_logging(
         if level == logging.INFO:
             fmt = "%(message)s"
         else:
-            fmt = "%(levelname)s %(asctime)s %(message)s"
+            fmt = "%(asctime)s(%(levelname).1s): [%(name)s] - %(message)s"
         logging.basicConfig(level=level, format=fmt, stream=stream)
-    return logging.getLogger("brkraw")
+    return logging.getLogger(name)
 
 
 def output_width(root: Optional[Union[str, Path]] = None, default: int = 120) -> int:
