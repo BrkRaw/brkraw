@@ -326,6 +326,7 @@ def get_dataobj(
         reco_id: Reco identifier to read (defaults to the first available).
         cycle_index: Optional cycle start index (last axis), reads all cycles when None.
         cycle_count: Optional number of cycles to read from cycle_index; reads to end when None.
+            Ignored when the dataset reports <= 1 total cycle.
 
     Returns:
         Single ndarray when one slice pack exists; otherwise a tuple of arrays.
@@ -353,12 +354,41 @@ def get_dataobj(
         if image_info.get("dataobj") is None:
             need_data = True
 
-    # If caller requested cycle slicing, always resolve on-demand.
-    if cycle_index is not None or cycle_count is not None:
-        need_data = True
-
+    # Normalize cycle arguments if provided.
+    cycle_args_requested = cycle_index is not None or cycle_count is not None
     if cycle_index is None and cycle_count is not None:
         cycle_index = 0
+
+    # If the dataset has <= 1 cycle, ignore cycle slicing to avoid block reads.
+    if cycle_args_requested:
+        total_cycles: Optional[int] = None
+        if image_info is not None and image_info.get("num_cycles") is not None:
+            total_cycles = int(image_info["num_cycles"])
+        elif image_info is None:
+            scan_node: Any = self
+            if not isinstance(self, Scan) and hasattr(self, "materialize"):
+                try:
+                    scan_node = cast(LazyScan, self).materialize()
+                except Exception:
+                    scan_node = self
+            try:
+                meta_info = image_resolver.resolve(scan_node, resolved_reco_id, load_data=False)
+            except TypeError:
+                meta_info = None
+            if meta_info is not None:
+                if image_info is None:
+                    self.image_info[resolved_reco_id] = meta_info
+                if meta_info.get("num_cycles") is not None:
+                    total_cycles = int(meta_info["num_cycles"])
+
+        if total_cycles is not None and total_cycles <= 1:
+            cycle_index = None
+            cycle_count = None
+            cycle_args_requested = False
+
+    # If caller requested cycle slicing, always resolve on-demand.
+    if cycle_args_requested:
+        need_data = True
 
     if need_data:
         scan_node: Any = self

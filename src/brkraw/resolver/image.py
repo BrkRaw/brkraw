@@ -163,13 +163,15 @@ def _read_2dseq_data(
     if not shape:
         raise ValueError("shape is empty")
 
-    # BrkRaw convention: cycle axis is always the last dimension.
-    if int(shape[-1]) != total_cycles:
-        raise ValueError(
-            f"cycle axis mismatch: expected shape[-1]==total_cycles ({total_cycles}), got shape[-1]={shape[-1]} for shape={shape}"
-        )
-
-    elems_per_cycle = int(np.prod(shape[:-1])) if len(shape) > 1 else 1
+    # BrkRaw convention: cycle axis is the last dimension only when cycles > 1.
+    if total_cycles > 1:
+        if int(shape[-1]) != total_cycles:
+            raise ValueError(
+                f"cycle axis mismatch: expected shape[-1]==total_cycles ({total_cycles}), got shape[-1]={shape[-1]} for shape={shape}"
+            )
+        elems_per_cycle = int(np.prod(shape[:-1])) if len(shape) > 1 else 1
+    else:
+        elems_per_cycle = int(np.prod(shape))
     bytes_per_cycle = elems_per_cycle * itemsize
 
     if cycle_count is None:
