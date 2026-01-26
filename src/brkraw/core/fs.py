@@ -221,6 +221,7 @@ class DatasetFS:
         top: str = "",
         *,
         as_objects: bool = False,
+        sort_entries: bool = True,
     ) -> Iterable[Tuple[str, List, List]]:
         """Yield (dirpath, direntries, fileentries) with archive-style paths.
 
@@ -228,13 +229,17 @@ class DatasetFS:
             top: Optional subdirectory to start from (anchor-aware).
             as_objects: When True, return DatasetDir/ZippedDir and
                 DatasetFile/ZippedFile entries; otherwise return name strings.
+            sort_entries: When True, sort directory and file entries for deterministic output.
+                Set to False for faster traversal when ordering does not matter.
 
         Yields:
             Tuples of `(dirpath, direntries, fileentries)` using posix-style paths.
         """
         norm_top = top.strip("/")
-        if self._anchor and norm_top and not norm_top.startswith(self._anchor):
-            norm_top = f"{self._anchor}/{norm_top}"
+        if self._anchor and norm_top:
+            anchored = norm_top == self._anchor or norm_top.startswith(f"{self._anchor}/")
+            if not anchored:
+                norm_top = f"{self._anchor}/{norm_top}"
 
         if self._mode == "dir":
             base = self.root
@@ -254,17 +259,16 @@ class DatasetFS:
                 rel = os.path.relpath(dirpath, base)
                 rel = "" if rel == "." else rel.replace(os.sep, "/")
                 rel = self._ensure_anchor(rel)
-                dirnames = sorted(dirnames)
-                filenames = sorted(filenames)
+                if sort_entries:
+                    dirnames.sort()
+                    filenames.sort()
+
                 if as_objects:
                     dir_objs = [
                         DatasetDir(name=d, path=(f"{rel}/{d}".strip("/")), fs=self) for d in dirnames
                     ]
                     file_objs = [
-                        DatasetFile(
-                            name=f, path=(f"{rel}/{f}".strip("/")), fs=self
-                        )
-                        for f in filenames
+                        DatasetFile(name=f, path=(f"{rel}/{f}".strip("/")), fs=self) for f in filenames
                     ]
                     yield rel, dir_objs, file_objs
                 else:
@@ -272,10 +276,23 @@ class DatasetFS:
         else:
             assert self._zip is not None
             for dirpath, direntries, files in zipcore.walk(self._zip, top=norm_top):
+                if sort_entries:
+                    try:
+                        direntries = sorted(direntries, key=lambda d: d.name)
+                        files = sorted(files, key=lambda f: f.name)
+                    except Exception:
+                        # If entries are plain strings or otherwise unsortable, fall back.
+                        pass
+
                 if as_objects:
                     yield dirpath, direntries, files
                 else:
-                    yield dirpath, [d.name for d in direntries], [f.name for f in files]
+                    dnames = [d.name for d in direntries]
+                    fnames = [f.name for f in files]
+                    if sort_entries:
+                        dnames.sort()
+                        fnames.sort()
+                    yield dirpath, dnames, fnames
 
     def open_binary(self, relpath: str) -> IO[bytes]:
         """Open a file by archive-relative path.

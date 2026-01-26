@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any, Mapping, Optional, Dict, List, Tuple, cast, get_args
 
@@ -27,7 +26,7 @@ from brkraw.resolver.affine import SubjectPose, SubjectType
 from brkraw.apps.loader.types import AffineSpace
 
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 _INVALID_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -86,6 +85,28 @@ def cmd_convert(args: argparse.Namespace) -> int:
         return 2
     if not args.flatten_fg:
         args.flatten_fg = _env_flag("BRKRAW_CONVERT_FLATTEN_FG")
+
+    # resolve cycle_index/cycle_count from env
+    if args.cycle_index is None:
+        value = os.environ.get("BRKRAW_CONVERT_CYCLE_INDEX")
+        if value:
+            try:
+                args.cycle_index = int(value)
+            except ValueError:
+                logger.error("Invalid BRKRAW_CONVERT_CYCLE_INDEX: %s", value)
+                return 2
+    if args.cycle_count is None:
+        value = os.environ.get("BRKRAW_CONVERT_CYCLE_COUNT")
+        if value:
+            try:
+                args.cycle_count = int(value)
+            except ValueError:
+                logger.error("Invalid BRKRAW_CONVERT_CYCLE_COUNT: %s", value)
+                return 2
+    # if cycle_count is set but cycle_index is not, default cycle_index to 0
+    if args.cycle_index is None and args.cycle_count is not None:
+        args.cycle_index = 0
+
     if args.space is None:
         args.space = os.environ.get("BRKRAW_CONVERT_SPACE")
     if args.override_subject_type is None:
@@ -169,6 +190,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
     hook_args_by_name = merge_hook_args(hook_args_by_name, hook_args_cli)
 
     loader = load(args.path, prefix="Loading")
+    logger.debug("Dataset: %s loaded", args.path)
     try:
         override_header = nifti_resolver.load_header_overrides(args.header)
     except ValueError:
@@ -224,7 +246,9 @@ def cmd_convert(args: argparse.Namespace) -> int:
         if scan_id is None:
             continue
         scan = loader.get_scan(scan_id)
+        logger.debug("Processing scan %s.", scan_id)
         reco_ids = [args.reco_id] if args.reco_id is not None else list(scan.avail.keys())
+        logger.debug("Recos: %s", reco_ids or "None")
         if not reco_ids:
             if getattr(scan, "_converter_hook", None):
                 reco_ids = [None]
@@ -252,18 +276,26 @@ def cmd_convert(args: argparse.Namespace) -> int:
                 nii_list: List[Any] = []
                 output_count = 1
             else:
-                nii = loader.convert(
-                    scan_id,
-                    reco_id=reco_id,
-                    space=cast(AffineSpace, args.space),
-                    override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
-                    override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
-                    override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
-                    flatten_fg=args.flatten_fg,
-                    xyz_units=cast(XYZUNIT, args.xyz_units),
-                    t_units=cast(TUNIT, args.t_units),
-                    hook_args_by_name=hook_args_by_name,
-                )
+                try:
+                    nii = loader.convert(
+                        scan_id,
+                        reco_id=reco_id,
+                        space=cast(AffineSpace, args.space),
+                        override_header=cast(Nifti1HeaderContents, override_header) if override_header else None,
+                        override_subject_type=cast(Optional[SubjectType], args.override_subject_type),
+                        override_subject_pose=cast(Optional[SubjectPose], args.override_subject_pose),
+                        flatten_fg=args.flatten_fg,
+                        xyz_units=cast(XYZUNIT, args.xyz_units),
+                        t_units=cast(TUNIT, args.t_units),
+                        hook_args_by_name=hook_args_by_name,
+                        cycle_index=args.cycle_index,
+                        cycle_count=args.cycle_count,
+                    )
+                except Exception as exc:
+                    logger.error("Conversion failed for scan %s reco %s: %s", scan_id, reco_id, exc)
+                    if not batch_all and args.reco_id is not None:
+                        return 2
+                    continue
                 if nii is None:
                     if not batch_all and args.reco_id is not None:
                         logger.error("No NIfTI output generated for scan %s reco %s.", scan_id, reco_id)
@@ -844,6 +876,16 @@ def _add_convert_args(
         "--flatten-fg",
         action="store_true",
         help="Flatten frame-group dimensions to 4D when data is 5D or higher.",
+    )
+    parser.add_argument(
+        "--cycle-index",
+        type=int,
+        help="Start cycle index (last axis). When set, read only a subset of cycles.",
+    )
+    parser.add_argument(
+        "--cycle-count",
+        type=int,
+        help="Number of cycles to read starting at --cycle-index. When omitted, reads to the end.",
     )
     parser.add_argument(
         "--no-compress",

@@ -62,6 +62,7 @@ session = "brkraw.cli.commands.session:register"
 params = "brkraw.cli.commands.params:register"
 convert = "brkraw.cli.commands.convert:register"
 prune = "brkraw.cli.commands.prune:register"
+cache = "brkraw.cli.commands.cache:register"
 
 [project.optional-dependencies]
 dev = [

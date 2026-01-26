@@ -13,7 +13,7 @@ import yaml
 from brkraw.core import config as config_core
 from brkraw.apps import addon as addon_app
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def cmd_init(args: argparse.Namespace) -> int:

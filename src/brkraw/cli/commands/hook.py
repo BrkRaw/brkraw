@@ -15,7 +15,7 @@ from brkraw.core import formatter
 from brkraw.specs import hook as converter_core
 import yaml
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def cmd_hook(args: argparse.Namespace) -> int:

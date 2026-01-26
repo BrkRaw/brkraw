@@ -7,7 +7,7 @@ from pathlib import Path
 from brkraw.core import config as config_core
 from brkraw.cli.utils import load
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def cmd_info(args: argparse.Namespace) -> int:

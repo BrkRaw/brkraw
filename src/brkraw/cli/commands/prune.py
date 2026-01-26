@@ -6,7 +6,7 @@ import argparse
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import yaml
 
@@ -14,7 +14,7 @@ from brkraw.cli.utils import spinner
 from brkraw.core import config as config_core
 from brkraw.specs.pruner import prune_dataset_to_zip_from_spec
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def cmd_prune(args: argparse.Namespace) -> int:

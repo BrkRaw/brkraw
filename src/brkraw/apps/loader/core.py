@@ -3,8 +3,6 @@
 This module binds helper methods onto Scan/Reco objects so callers can fetch
 reconstructed data, affines, NIfTI images, metadata, and parameter search
 results with a simple API.
-
-Last updated: 2025-12-30
 """
 
 from __future__ import annotations
@@ -14,7 +12,12 @@ import re
 import logging
 import sys
 from functools import partial
-from typing import TYPE_CHECKING, Optional, Tuple, Union, Any, Mapping, Callable, cast, List, Dict, Iterable, Literal
+from typing import (
+    TYPE_CHECKING, cast, 
+    Optional, Union, 
+    Any, Callable, Iterable,
+    Tuple, List, Mapping, Dict, Literal,
+)
 from pathlib import Path
 
 from ...core import config as config_core
@@ -22,11 +25,14 @@ from ...core.config import resolve_root
 from ...specs import hook as converter_core
 from ...specs.pruner import prune_dataset_to_zip
 from ...specs.rules import load_rules, select_rule_use
-from ...dataclasses import Scan, Study
-from .types import StudyLoader, ScanLoader, RecoLoader
+from ...dataclasses import Scan, Study, LazyScan
+from .types import (
+    StudyLoader, 
+    ScanLoader, 
+    RecoLoader,
+)
 from .formatter import format_info_tables
 
-logger = logging.getLogger("brkraw")
 from . import info as info_resolver
 from .helper import (
     make_dir,
@@ -35,24 +41,39 @@ from .helper import (
     get_dataobj as _get_dataobj,
     get_metadata as _get_metadata,
     get_nifti1image as _get_nifti1image,
+    resolve_reco_id as _resolve_reco_id,
     search_parameters as _search_parameters,
     apply_converter_hook as _apply_converter_hook,
+    resolve_converter_hook as _resolve_converter_hook,
     resolve_data_and_affine as _resolve_data_and_affine,
 )
 
 if TYPE_CHECKING:
     import numpy as np
     from pathlib import Path
+    from .types import (
+        XYZUNIT, 
+        TUNIT, 
+        SubjectType, 
+        SubjectPose, 
+        InfoScope, 
+        AffineSpace,
+        Dataobjs,
+        Affines,
+        ConvertedObj,
+        Metadata,
+    )
     from ...resolver.nifti import Nifti1HeaderContents
-    from .types import XYZUNIT, TUNIT, SubjectType, SubjectPose, InfoScope, AffineSpace
     
+logger = logging.getLogger(__name__)
 
 
 class BrukerLoader:
     """High-level entrypoint that resolves scans and exposes handy accessors."""
 
     def __init__(self, 
-                 path: Union[str, Path], 
+                 path: Union[str, Path],
+                 disable_hook: bool = False,
                  affine_decimals: Optional[int] = None):
         """
         Create a loader for a Bruker study rooted at `path`.
@@ -68,8 +89,10 @@ class BrukerLoader:
         self._study: Union["Study", "StudyLoader"] = Study.from_path(path)
         if affine_decimals is None:
             affine_decimals = config_core.float_decimals(root=resolve_root(None))
+        self._base = resolve_root(None)
         self._affine_decimals = affine_decimals
         self._sw_version: Optional[str] = self._parse_sw_version()
+        self._hook_disabled = disable_hook
         self._attach_helpers()
 
     def _parse_sw_version(self) -> Optional[str]:
@@ -137,76 +160,33 @@ class BrukerLoader:
         except Exception:
             return None
 
-    def _attach_helpers(self):
-        """Resolve per-scan metadata and bind helper methods."""
-        self._study = cast(StudyLoader, self._study)
-        self._study.search_params = MethodType(_search_parameters, self._study)
-        base = resolve_root(None)
+    def _load_rules(self):
         try:
-            rules = load_rules(root=base, validate=False)
+            rules = load_rules(root=self._base, validate=False)
         except Exception:
             rules = {}
-        for scan in self._study.avail.values():
+        return rules
+
+    def _attach_helpers(self):
+        """Resolve per-scan metadata and bind helper methods."""
+        logger.debug("Attaching helpers to study %s", getattr(self._study.fs, "root", "?"))
+        self._study = cast(StudyLoader, self._study)
+        self._study.search_params = MethodType(_search_parameters, self._study)
+
+        for lazy_scan in self._study.avail.values():
+            scan = lazy_scan.materialize()
             _resolve_data_and_affine(
                 scan, 
                 affine_decimals=self._affine_decimals
                 )
-            scan = cast(ScanLoader, scan)
-
-            # bind helper functions as methods on the scan instance
-            scan.get_dataobj = MethodType(_get_dataobj, scan)
-            scan.get_affine = MethodType(
-                partial(_get_affine, decimals=self._affine_decimals),
-                scan,
-            )
-            scan.get_nifti1image = MethodType(_get_nifti1image, scan)
-            scan.convert = MethodType(_convert, scan)
-            scan._converter_hook = None
-            scan._converter_hook_name = None
-            scan.converter_func = None
-            if rules:
-                try:
-                    hook_name = select_rule_use(
-                        scan,
-                        rules.get("converter_hook", []),
-                        base=base,
-                        resolve_paths=False,
-                    )
-                except Exception as exc:
-                    logger.debug(
-                        "Converter hook rule selection failed for scan %s: %s",
-                        getattr(scan, "scan_id", "?"),
-                        exc,
-                        exc_info=True,
-                    )
-                    hook_name = None
-                if isinstance(hook_name, str):
-                    try:
-                        entry = converter_core.resolve_hook(hook_name)
-                    except Exception as exc:
-                        logger.warning(
-                            "Converter hook %r not available: %s",
-                            hook_name,
-                            exc,
-                        )
-                        entry = None
-                    if entry:
-                        logger.debug("Applying converter hook: %s", hook_name)
-                        scan._converter_hook_name = hook_name
-                        _apply_converter_hook(
-                            scan,
-                            entry,
-                            affine_decimals=self._affine_decimals,
-                        )
-                    else:
-                        logger.debug("Converter hook %r resolved to no entry.", hook_name)
-                else:
-                    logger.debug("No converter hook selected for scan %s.", getattr(scan, "scan_id", "?"))
+            scan = cast(ScanLoader, lazy_scan.materialize())
+            self.reset_converter(scan)
             scan.get_metadata = MethodType(_get_metadata, scan)
             scan.search_params = MethodType(_search_parameters, scan)
             for reco in scan.avail.values():
                 reco = cast(RecoLoader, reco)
                 reco.search_params = MethodType(_search_parameters, reco)
+            
     
     def search_params(self, key: str, 
                       *, 
@@ -247,20 +227,22 @@ class BrukerLoader:
             affine_decimals=self._affine_decimals,
         )
 
-    def restore_converter(self, scan_id: int) -> None:
+    def reset_converter(self, scan: ScanLoader) -> None:
         """Restore default conversion methods for a scan.
 
         Args:
             scan_id: Scan identifier.
         """
-        scan = self.avail[scan_id]
-        scan = cast(ScanLoader, scan)
+        logger.debug("Initializing converter for scan %s", getattr(scan, "scan_id", "?"))
         scan.get_dataobj = MethodType(_get_dataobj, scan)
         scan.get_affine = MethodType(
             partial(_get_affine, decimals=self._affine_decimals),
             scan,
         )
+        scan.get_nifti1image = MethodType(_get_nifti1image, scan)
+        scan.convert = MethodType(_convert, scan)
         scan._converter_hook = None
+        scan._converter_hook_name = None
         scan.converter_func = None
 
     def get_scan(self, scan_id: int) -> "ScanLoader":
@@ -272,8 +254,7 @@ class BrukerLoader:
         Returns:
             Scan loader instance.
         """
-        scan = self._study.get_scan(scan_id)
-        scan = cast(ScanLoader, scan)
+        scan = cast(ScanLoader, self._study.get_scan(scan_id))
         return scan
 
     def get_fid(
@@ -298,9 +279,18 @@ class BrukerLoader:
         scan = self.get_scan(scan_id)
         if not hasattr(scan, 'get_fid'):
             return None
-        return scan.get_fid(buffer_start=buffer_start, buffer_size=buffer_size, as_complex=as_complex)
+        return scan.get_fid(
+            buffer_start=buffer_start, 
+            buffer_size=buffer_size, 
+            as_complex=as_complex
+        )
 
-    def get_dataobj(self, scan_id: int, reco_id: Optional[int] = None) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
+    def get_dataobj(
+            self, 
+            scan_id: int, 
+            reco_id: Optional[int] = None, 
+            **kwargs: Any
+    ) -> Dataobjs:
         """Return reconstructed data for a scan/reco via attached helper.
 
         Args:
@@ -311,17 +301,19 @@ class BrukerLoader:
             Single ndarray when one slice pack exists; otherwise a tuple.
         """
         scan = self.get_scan(scan_id)
-        return scan.get_dataobj(reco_id)
+        return scan.get_dataobj(reco_id, **kwargs)
 
-    def get_affine(self, 
-                   scan_id: int, 
-                   reco_id: Optional[int] = None,
-                   *,
-                   space: AffineSpace = 'subject_ras',
-                   override_subject_type: Optional[SubjectType] = None,
-                   override_subject_pose: Optional[SubjectPose] = None,
-                   decimals: Optional[int] = None
-                   ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
+    def get_affine(
+            self, 
+            scan_id: int, 
+            reco_id: Optional[int] = None,
+            *,
+            space: AffineSpace = 'subject_ras',
+            override_subject_type: Optional[SubjectType] = None,
+            override_subject_pose: Optional[SubjectPose] = None,
+            decimals: Optional[int] = None,
+            **kwargs: Any
+    ) -> Affines:
         """Return affine(s) for a scan/reco via attached helper.
 
         Args:
@@ -341,9 +333,10 @@ class BrukerLoader:
                                space=space, 
                                override_subject_pose=override_subject_pose, 
                                override_subject_type=override_subject_type,
-                               decimals=decimals)
+                               decimals=decimals, **kwargs)
     
-    def get_nifti1image(self, scan_id: int, reco_id: Optional[int] = None,
+    def get_nifti1image(
+            self, scan_id: int, reco_id: Optional[int] = None,
                         *, 
                         space: AffineSpace = 'subject_ras',
                         override_header: Optional[Nifti1HeaderContents] = None,
@@ -351,7 +344,8 @@ class BrukerLoader:
                         override_subject_pose: Optional[SubjectPose] = None,
                         flatten_fg: bool = False,
                         xyz_units: XYZUNIT = 'mm', 
-                        t_units: TUNIT = 'sec'):
+                        t_units: TUNIT = 'sec'
+    ) -> ConvertedObj:
         """Return NIfTI image(s) for a scan/reco via attached helper.
 
         Args:
@@ -368,13 +362,23 @@ class BrukerLoader:
             Single NIfTI image when one slice pack exists; otherwise a tuple.
         """
         scan = self.get_scan(scan_id)
-        return scan.convert(
-            reco_id,
-            space=space,
+        dataobj = scan.get_dataobj(reco_id)
+        affine = scan.get_affine(reco_id, 
+                                 space=space, 
+                                 decimals=self._affine_decimals,
+                                 override_subject_pose=override_subject_pose,
+                                 override_subject_type=override_subject_type,
+                                 flatten_fg=flatten_fg,
+                                 xyz_units=xyz_units,
+                                 t_units=t_units)
+        resolved_reco_id = _resolve_reco_id(scan, reco_id)
+        if resolved_reco_id is None:
+            return None
+        return scan.get_nifti1image(
+            resolved_reco_id,
+            cast(Tuple[np.ndarray, ...], dataobj),
+            cast(Tuple[np.ndarray, ...], affine),
             override_header=override_header,
-            override_subject_type=override_subject_type,
-            override_subject_pose=override_subject_pose,
-            flatten_fg=flatten_fg,
             xyz_units=xyz_units,
             t_units=t_units,
         )
@@ -392,9 +396,21 @@ class BrukerLoader:
         xyz_units: XYZUNIT = "mm",
         t_units: TUNIT = "sec",
         hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
-    ):
+        **kwargs: Any,
+    ) -> ConvertedObj:
         """Convert a scan/reco to output object(s) supporting to_filename()."""
         scan = self.get_scan(scan_id)
+        if not self._hook_disabled:
+            _resolve_converter_hook(scan, self._base, affine_decimals=self._affine_decimals)
+        logger.debug(
+            "convert() scan=%s reco=%s type=%s is_lazy=%s materialized=%s hook=%s",
+            scan_id,
+            reco_id,
+            type(scan).__name__,
+            isinstance(scan, LazyScan),
+            hasattr(scan, "_scan"),
+            getattr(scan, "_converter_hook_name", None),
+        )
         return scan.convert(
             reco_id,
             space=space,
@@ -405,6 +421,7 @@ class BrukerLoader:
             xyz_units=xyz_units,
             t_units=t_units,
             hook_args_by_name=hook_args_by_name,
+            **kwargs,
         )
 
     def get_metadata(
@@ -414,7 +431,7 @@ class BrukerLoader:
         spec: Optional[Union[Mapping[str, Any], str, Path]] = None,
         context_map: Optional[Union[str, Path]] = None,
         return_spec: bool = False,
-    ):
+    ) -> Metadata:
         """Return metadata for a scan/reco.
 
         Args:
@@ -472,7 +489,7 @@ class BrukerLoader:
         return BrukerLoader(out_path, affine_decimals=self._affine_decimals)
 
     @property
-    def avail(self) -> Mapping[int, Union["Scan", "ScanLoader"]]:
+    def avail(self) -> Mapping[int, Union["Scan", "LazyScan", "ScanLoader"]]:
         """Available scans keyed by scan id."""
         return self._study.avail
     

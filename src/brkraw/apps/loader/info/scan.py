@@ -8,9 +8,9 @@ from ....specs.remapper.validator import validate_spec
 
 
 if TYPE_CHECKING:
-    from ..types import ScanLoader, RecoLoader
+    from ..types import ScanLoader
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 
 def resolve(

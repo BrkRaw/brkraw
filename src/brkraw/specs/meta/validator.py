@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 from importlib import resources
 

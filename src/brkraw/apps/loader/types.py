@@ -5,7 +5,7 @@ Last updated: 2025-12-30
 
 from __future__ import annotations
 
-from typing import Any, Union, Tuple, Dict, Optional, Protocol, Literal, Mapping, Callable, List, TYPE_CHECKING, runtime_checkable
+from typing import Any, Union, Tuple, Dict, Optional, Protocol, Literal, Mapping, List, TYPE_CHECKING, runtime_checkable
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeAlias
 else:
@@ -16,21 +16,26 @@ else:
 from ...dataclasses.study import Study
 from ...dataclasses.scan import Scan
 from ...dataclasses.reco import Reco
+from ...resolver.affine import SubjectType, SubjectPose
 import numpy as np
+from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     from pathlib import Path
     from ...core.parameters import Parameters
     from ...resolver.image import ResolvedImage
-    from ...resolver.affine import ResolvedAffine, SubjectType, SubjectPose
+    from ...resolver.affine import ResolvedAffine
     from ...resolver.nifti import Nifti1HeaderContents, XYZUNIT, TUNIT
-    from nibabel.nifti1 import Nifti1Image
-    
 
 
 InfoScope = Literal['full', 'study', 'scan']
-AffineReturn = Optional[Union[np.ndarray, Tuple[np.ndarray, ...]]]
+Dataobjs = Optional[Union[NDArray, Tuple[NDArray, ...]]]
+Affines = Optional[Union[NDArray, Tuple[NDArray, ...]]]
 AffineSpace = Literal["raw", "scanner", "subject_ras"]
+ConvertedObj = Optional[Union["ToFilename", Tuple["ToFilename", ...]]]
+Metadata = Optional[Union[Dict, Tuple[Optional[Dict], ...]]]
+HookArgs = Optional[Mapping[str, Mapping[str, Any]]]
+
 
 P = ParamSpec("P")
 
@@ -42,9 +47,11 @@ class GetDataobjType(Protocol[P]):
         self,
         scan: "Scan",
         reco_id: Optional[int],
+        cycle_index: Optional[int],
+        cycle_count: Optional[int],
         *args: P.args,
         **kwargs: P.kwargs
-    ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
+    ) -> Dataobjs:
         ...
 
 
@@ -61,7 +68,7 @@ class GetAffineType(Protocol):
         override_subject_pose: Optional[SubjectPose],
         decimals: Optional[int] = None,
         **kwargs: Any
-    ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
+    ) -> Affines:
         ...
 
 
@@ -74,7 +81,7 @@ class ConvertType(Protocol):
         dataobj: Union[Tuple["np.ndarray", ...], "np.ndarray"],
         affine: Union[Tuple["np.ndarray", ...], "np.ndarray"],
         **kwargs: Any,
-    ) -> Optional[Union["ToFilename", Tuple["ToFilename", ...]]]:
+    ) -> ConvertedObj:
         ...
 
 class ToFilename(Protocol):
@@ -119,8 +126,12 @@ class ScanLoader(Scan, BaseLoader):
 
     def get_dataobj(
             self, 
-            reco_id: Optional[int] = None
-            ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]: 
+            reco_id: Optional[int] = None,
+            *,
+            cycle_index: Optional[int] = None,
+            cycle_count: Optional[int] = None,
+            **kwargs: Any
+            ) -> Dataobjs: 
         ...
 
     def get_affine(
@@ -132,7 +143,7 @@ class ScanLoader(Scan, BaseLoader):
             override_subject_pose: Optional[SubjectPose],
             decimals: Optional[int] = None,
             **kwargs: Any,
-            ) -> Optional[Union[Tuple["np.ndarray", ...], "np.ndarray"]]:
+            ) -> Affines:
         ...
 
     def get_nifti1image(
@@ -144,7 +155,7 @@ class ScanLoader(Scan, BaseLoader):
             override_header: Optional[Union[dict, "Nifti1HeaderContents"]],
             xyz_units: XYZUNIT, 
             t_units: TUNIT
-            ) -> Optional[Union[Tuple["Nifti1Image", ...], "Nifti1Image"]]:
+            ) -> ConvertedObj:
         ...
 
     def convert(
@@ -158,9 +169,9 @@ class ScanLoader(Scan, BaseLoader):
             flatten_fg: bool,
             xyz_units: XYZUNIT,
             t_units: TUNIT,
-            hook_args_by_name: Optional[Mapping[str, Mapping[str, Any]]] = None,
+            hook_args_by_name: HookArgs = None,
             **kwargs: Any,
-            ) -> Optional[Union["ToFilename", Tuple["ToFilename", ...]]]:
+            ) -> ConvertedObj:
         ...
 
     def get_metadata(
@@ -169,7 +180,7 @@ class ScanLoader(Scan, BaseLoader):
             spec: Optional[Union[Mapping[str, Any], str, "Path"]] = None,
             context_map: Optional[Union[str, "Path"]] = None,
             return_spec: bool = False,
-            ) -> Optional[Union[dict, Tuple[Optional[dict], Optional[dict]]]]:
+            ) -> Metadata:
         ...
 
 
@@ -191,6 +202,14 @@ __all__ = [
     'StudyLoader',
     'ScanLoader',
     'RecoLoader',
+    'SubjectType',
+    'SubjectPose',
+    'Affines',
+    'Dataobjs',
+    'Metadata',
+    'ConvertedObj',
+    'HookArgs',
+    'AffineSpace',
 ]
 
 def __dir__() -> List[str]:

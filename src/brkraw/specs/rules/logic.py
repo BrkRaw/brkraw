@@ -10,7 +10,7 @@ from ..remapper import load_spec, map_parameters
 from .validator import validate_rules
 import logging
 
-logger = logging.getLogger("brkraw")
+logger = logging.getLogger(__name__)
 
 RULE_CATEGORIES = ("info_spec", "metadata_spec", "converter_hook")
 SPEC_CATEGORIES = ("info_spec", "metadata_spec")
@@ -216,8 +216,6 @@ def select_rule_use(
                 logger.debug("Rule %r matched, selected use=%r.", rule.get("name"), selected)
             else:
                 logger.debug("Rule %r matched but has no usable 'use' entry.", rule.get("name"))
-        else:
-            logger.debug("Rule %r did not match.", rule.get("name"))
     logger.debug("Rule selection result: %r", selected)
     return selected
 
