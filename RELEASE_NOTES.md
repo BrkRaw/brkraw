@@ -1,8 +1,33 @@
-# Release v0.5.3
+# Release v0.5.4
 
-Date: 2026-01-21
+Date: 2026-01-26
 Changes since 0.5.2
 
+- chore: prepare release v0.5.4 (7634b95)
+- docs: update contributors (7fa7594)
+- feat(api): introduce public API layer (d38b088)
+- perf: improve loader efficiency and reduce overhead (8998d68)
+- prevent update of num_cycle when slice (e0932a7)
+- Handle single-cycle datasets (09d37f6)
+- update types in loader app (a921da7)
+- patch wrapped get_dataobj in loader takes kwargs (4945816)
+- perf: introduce lazy scan/image loading and enable partial cycle reads (3185440)
+- update docstrings on cache.py (a23b8ae)
+- bug: unit of cached files, updated (6d4323c)
+- feat: add central cache management (CLI 'cache' command and core API) (5898e03)
+- missing kwargs input (59c72fa)
+- expose additional types for hook development (e25c52e)
+- add opiotion to input version using argument (1b02ab6)
+- Make Paravision path detection robust using pdata anchor (691c81b)
+- Handle convert hook errors per scan (c4afa3d)
+- Improve ci workflow and zenodo badge mapping (efeb725)
+- Update Zenodo DOI badge (f6a531a)
+- Refine GitHub Actions and release preparation scripts (d4dcde0)
+- Normalize __version__ regex to use hex escapes for quotes (061d3c5)
+- script: patch issue in finding version from the __init__.py (6ae9ea3)
+- fix: parse __version__ regex in release workflow (73745d5)
+- fix: send labels as array in gh api (23b5391)
+- docs: release notes for v0.5.3 (20dc0a6)
 - fix: avoid gh pr graphql in release_pr (6311e09)
 - docs: release notes for v0.5.3 (2e427de)
 - chore: prepare release v0.5.3 (15e1158)
