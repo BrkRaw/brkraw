@@ -272,9 +272,10 @@ def resolve(
             return None
         dataobj, shape_desc = ensure_3d_spatial_data(dataobj, shape_info)
     num_cycles, time_per_cycle = _normalize_cycle_info(shape_info['objs'].cycle)
-    # If we loaded data (possibly a subset of cycles), report the cycle count
-    # based on the actual array to keep downstream headers consistent.
-    if load_data and dataobj is not None:
+    # If we loaded data without cycle slicing, sync num_cycles to the array.
+    # When cycle_index/cycle_count are provided, keep metadata num_cycles so
+    # callers can continue lazy loading across full cycles.
+    if load_data and dataobj is not None and cycle_index is None and cycle_count is None:
         try:
             num_cycles = int(dataobj.shape[-1])
         except Exception:
