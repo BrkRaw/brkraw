@@ -18,14 +18,14 @@ __all__ = [
     "loader",
     "hook",
     "hook_manager",
+    "hook_resolver",
     "pruner",
     "rules",
     "addon",
     "addon_manager",
     "validate_meta",
     "transform",
-    "scan_resolver",
-    "study_resolver",
+    "info_resolver",
     "affine_resolver",
     "shape_resolver",
     "image_resolver",
@@ -45,10 +45,10 @@ _LAZY: Dict[str, Tuple[str, str | None]] = {
     "loader": ("brkraw.apps", "loader"),
     "hook_manager": ("brkraw.apps", "hook"),
     "addon_manager": ("brkraw.apps", "addon"),
+    "hook_resolver": ("brkraw.apps.loader.helper", "resolve_converter_hook"),
 
     # apps.loader.info resolvers
-    "scan_resolver": ("brkraw.apps.loader.info", "scan"),
-    "study_resolver": ("brkraw.apps.loader.info", "study"),
+    "info_resolver": ("brkraw.apps.loader", "info"),
     "transform": ("brkraw.apps.loader.info", "transform"),
 
     # resolvers
@@ -102,8 +102,10 @@ def __dir__() -> list[str]:
 if TYPE_CHECKING:
     from brkraw.core import formatter as formatter
     from brkraw.apps.loader import BrukerLoader as BrukerLoader
+    from brkraw.apps.loader import info as info_resolver
+    from brkraw.apps.loader.info import transform as transform
+    from brkraw.apps.loader.helper import resolve_converter_hook as hook_resolver
     from brkraw.apps import addon as addon_manager, hook as hook_manager, loader as loader
-    from brkraw.apps.loader.info import scan as scan_resolver, study as study_resolver, transform as transform
     from brkraw.resolver import (
         affine as affine_resolver,
         fid as fid_resolver,
