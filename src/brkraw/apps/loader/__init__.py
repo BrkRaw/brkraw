@@ -6,5 +6,12 @@ from __future__ import annotations
 
 
 from .core import BrukerLoader
-
-__all__ = ["BrukerLoader"]
+from .info import (
+    study as study_resolver, 
+    scan as scan_resolver,
+)
+__all__ = [
+    "BrukerLoader",
+    "study_resolver",
+    "scan_resolver",
+]
