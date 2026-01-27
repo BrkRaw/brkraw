@@ -21,6 +21,5 @@ site/
 .direnv/
 .envrc
 .idea/
-.vscode/
 *.lock
 .tmp
