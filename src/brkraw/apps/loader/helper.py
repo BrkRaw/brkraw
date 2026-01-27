@@ -205,6 +205,7 @@ def resolve_converter_hook(
                 logger.debug("Converter hook %r resolved to no entry.", hook_name)
         else:
             logger.debug("No converter hook selected for scan %s.", getattr(scan, "scan_id", "?"))
+    scan._hook_resolved = True
 
 
 def search_parameters(

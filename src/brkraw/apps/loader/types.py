@@ -115,6 +115,7 @@ class ScanLoader(Scan, BaseLoader):
     converter_func: Optional[ConvertType]
     _converter_hook: Optional[ConverterHook]
     _converter_hook_name: Optional[str]
+    _hook_resolved: bool = False
     
     
     def get_fid(self, 
