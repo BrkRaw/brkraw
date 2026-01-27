@@ -19,6 +19,10 @@ jobs:
   release:
     if: ${{ github.repository == 'BrkRaw/brkraw' }}
     runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.prerelease.outputs.value }}
+      tag: ${{ steps.tag.outputs.value }}
+      zenodo_success: ${{ steps.zenodo.outcome == 'success' }}
     steps:
       - name: Resolve tag
         id: tag
@@ -136,6 +140,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
       - name: Update Zenodo badge
+        id: zenodo
+        if: ${{ steps.prerelease.outputs.value != 'true' }}
         continue-on-error: true
         run: |
           for i in $(seq 1 10); do
@@ -152,3 +158,11 @@ jobs:
             sleep 60
           done
           echo "Zenodo badge still up to date after 10 attempts; giving up."
+
+  publish:
+    if: ${{ github.repository == 'BrkRaw/brkraw' && (needs.release.outputs.prerelease == 'true' || needs.release.outputs.zenodo_success == 'true') }}
+    needs: [release]
+    uses: ./.github/workflows/publish.yml
+    with:
+      target: ${{ needs.release.outputs.prerelease == 'true' && 'testpypi' || 'pypi' }}
+      tag: ${{ needs.release.outputs.tag }}

@@ -513,6 +513,11 @@ def main() -> int:
         dry_run=args.dry_run,
     )
 
+    # push early (unless dry-run)
+    # Rationale: ensure commits are on the PR branch even if later GitHub API steps fail.
+    if not args.dry_run:
+        run_git(["push", args.remote_origin, f"HEAD:{branch}"], check=True)
+
     # PR body update + label (if enabled)
     if pr_number and (not args.no_pr):
         changed_files = get_changed_files(args.base)
@@ -538,12 +543,11 @@ def main() -> int:
         else:
             logger.warning("Label check: closed PR does not contain label 'release'.")
 
-    # push (unless dry-run)
+    # push (dry-run message only)
     if args.dry_run:
         logger.info("[dry-run] Would push branch to %s: %s", args.remote_origin, branch)
         return 0
 
-    run_git(["push", args.remote_origin, f"HEAD:{branch}"], check=True)
     return 0
 
 

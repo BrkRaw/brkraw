@@ -12,6 +12,16 @@ on:
         description: "Tag to publish (optional, e.g. v1.2.3)"
         required: false
         type: string
+  workflow_call:
+    inputs:
+      target:
+        description: "Publish target"
+        type: string
+        default: testpypi
+      tag:
+        description: "Tag to publish (optional, e.g. v1.2.3)"
+        required: false
+        type: string
 
 permissions:
   contents: read
