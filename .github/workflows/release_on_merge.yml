@@ -1,8 +1,7 @@
 name: Release On Merge
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches: [main]
 
 permissions:
@@ -10,7 +9,7 @@ permissions:
 
 jobs:
   tag_release:
-    if: ${{ github.repository == 'BrkRaw/brkraw' && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release') }}
+    if: ${{ github.repository == 'BrkRaw/brkraw' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,20 +17,84 @@ jobs:
           fetch-depth: 0
       - name: Detect version change
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          base_sha="${{ github.event.pull_request.base.sha }}"
-          merge_sha="${{ github.event.pull_request.merge_commit_sha }}"
-          if ! git diff --name-only "$base_sha" "$merge_sha" | grep -q '^src/brkraw/__init__.py$'; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+
+          # Default outputs
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+
+          # Only proceed for merge commits ("Merge pull request ...")
+          if [[ "${{ github.event.head_commit.message }}" != Merge\ pull\ request* ]]; then
+            echo "Not a merge commit. Skipping." 
             exit 0
           fi
+
+          # Find the PR associated with this merge commit and ensure it has the 'release' label.
+          api="https://api.github.com/repos/${REPO}/commits/${SHA}/pulls"
+          pr_json=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Accept: application/vnd.github.groot-preview+json" \
+            "$api" || true)
+          export PR_JSON="$pr_json"
+
+          pr_number=$(python3 - <<'PY'
+          import json, os
+          s = os.environ.get('PR_JSON','')
+          if not s.strip():
+            print('')
+            raise SystemExit(0)
+          data = json.loads(s)
+          if isinstance(data, list) and data:
+            print(data[0].get('number',''))
+          else:
+            print('')
+          PY
+          )
+
+          if [[ -z "${pr_number}" ]]; then
+            echo "No PR associated with ${SHA}. Skipping." 
+            exit 0
+          fi
+
+          labels_api="https://api.github.com/repos/${REPO}/issues/${pr_number}/labels"
+          labels_json=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "$labels_api")
+          export LABELS_JSON="$labels_json"
+
+          has_release=$(python3 - <<'PY'
+          import json, os
+          labels = json.loads(os.environ['LABELS_JSON'])
+          names = {l.get('name','') for l in labels if isinstance(l, dict)}
+          print('true' if 'release' in names else 'false')
+          PY
+          )
+
+          if [[ "${has_release}" != "true" ]]; then
+            echo "PR #${pr_number} does not have 'release' label. Skipping." 
+            exit 0
+          fi
+
+          # Check whether version file changed in this push
+          if ! git diff --name-only "${BEFORE}" "${SHA}" | grep -q '^src/brkraw/__init__.py$'; then
+            echo "src/brkraw/__init__.py not changed. Skipping." 
+            exit 0
+          fi
+
           version=$(python3 - <<'PY'
           import re
           from pathlib import Path
 
-          text = Path("src/brkraw/__init__.py").read_text(encoding="utf-8").lstrip("\\ufeff")
+          text = Path("src/brkraw/__init__.py").read_text(encoding="utf-8").lstrip("\ufeff")
           match = re.search(
-              r"__version__(?:\s*:\s*[^=]+)?\s*=\s*[\x22\x27]([^\x22\x27]+)[\x22\x27]",
+              r"__version__(?:\s*:\s*[^=]+)?\s*=\s*[\"']([^\"']+)[\"']",
               text,
           )
           if not match:
@@ -39,8 +102,10 @@ jobs:
           print(match.group(1))
           PY
           )
+
           echo "changed=true" >> "$GITHUB_OUTPUT"
           echo "value=$version" >> "$GITHUB_OUTPUT"
+        shell: bash
       - name: Create and push tag
         if: ${{ steps.version.outputs.changed == 'true' }}
         run: |
@@ -49,5 +114,5 @@ jobs:
             echo "Tag $tag already exists. Skipping."
             exit 0
           fi
-          git tag "$tag" "${{ github.event.pull_request.merge_commit_sha }}"
+          git tag "$tag" "${{ github.sha }}"
           git push origin "$tag"
