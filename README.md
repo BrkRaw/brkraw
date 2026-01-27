@@ -10,7 +10,7 @@
 
 A modular toolkit for Bruker MRI raw-data handling.
 
-BrkRaw (v0.5.4) converts raw data into standardized, neuroimaging-ready
+BrkRaw (v0.5.5) converts raw data into standardized, neuroimaging-ready
 datasets, with extensible rules/specs and plugin hooks.
 
 - Documentation: [brkraw.github.io](https://brkraw.github.io/)
@@ -31,7 +31,7 @@ If you use BrkRaw in your research, please cite it.
 @software{brkraw,
   author = {Lee, Sung-Ho and Devenyi, Gabriel A. and Ban, Woomi and Shih, Yen-Yu Ian},
   title = {BrkRaw: A modular toolkit for Bruker MRI raw-data handling},
-  version = {0.5.4},
+  version = {0.5.5},
   doi = {10.5281/zenodo.3818614},
   url = {https://github.com/BrkRaw/brkraw},
   note = {Documentation: https://brkraw.github.io},

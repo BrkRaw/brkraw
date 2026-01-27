@@ -19,6 +19,10 @@ jobs:
   release:
     if: ${{ github.repository == 'BrkRaw/brkraw' }}
     runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.prerelease.outputs.value }}
+      tag: ${{ steps.tag.outputs.value }}
+      zenodo_success: ${{ steps.zenodo.outcome == 'success' }}
     steps:
       - name: Resolve tag
         id: tag
@@ -127,3 +131,38 @@ jobs:
           if url:
               print(f"Created discussion: {url}")
           PY
+      - name: Checkout main for Zenodo badge update
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Set up git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Update Zenodo badge
+        id: zenodo
+        if: ${{ steps.prerelease.outputs.value != 'true' }}
+        continue-on-error: true
+        run: |
+          for i in $(seq 1 10); do
+            echo "Zenodo badge update attempt $i/10"
+            python3 scripts/update_zenodo_badge.py --up-to-date-exit-code 2
+            exit_code=$?
+            if [ "$exit_code" -eq 0 ]; then
+              echo "Zenodo badge updated."
+              exit 0
+            fi
+            if [ "$exit_code" -ne 2 ]; then
+              exit "$exit_code"
+            fi
+            sleep 60
+          done
+          echo "Zenodo badge still up to date after 10 attempts; giving up."
+
+  publish:
+    if: ${{ github.repository == 'BrkRaw/brkraw' && (needs.release.outputs.prerelease == 'true' || needs.release.outputs.zenodo_success == 'true') }}
+    needs: [release]
+    uses: ./.github/workflows/publish.yml
+    with:
+      target: ${{ needs.release.outputs.prerelease == 'true' && 'testpypi' || 'pypi' }}
+      tag: ${{ needs.release.outputs.tag }}

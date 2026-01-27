@@ -281,7 +281,7 @@ def configure_logging(
         if level == logging.INFO:
             fmt = "%(message)s"
         else:
-            fmt = "%(asctime)s(%(levelname).1s): [%(name)s] - %(message)s"
+            fmt = "%(asctime)s(%(levelname).1s): %(name)s:%(funcName)s - %(message)s"
         logging.basicConfig(level=level, format=fmt, stream=stream)
     return logging.getLogger(name)
 

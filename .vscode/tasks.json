@@ -11,9 +11,9 @@
     {
       "label": "Standard: Setup venv + deps",
       "type": "shell",
-      "command": "python3 -m venv .venv && . .venv/bin/activate && python -m pip install -U pip && python -m pip install -e \".[dev]\"",
+      "command": "\"${command:python.interpreterPath}\" -m venv .venv && .venv/bin/python -m pip install -U pip && .venv/bin/python -m pip install -e \".[dev]\"",
       "windows": {
-        "command": "py -m venv .venv; .venv\\Scripts\\Activate.ps1; python -m pip install -U pip; python -m pip install -e \".[dev]\"",
+        "command": "\"${command:python.interpreterPath}\" -m venv .venv; .venv\\Scripts\\python -m pip install -U pip; .venv\\Scripts\\python -m pip install -e \".[dev]\"",
         "options": {
           "shell": {
             "executable": "pwsh"

@@ -3,7 +3,17 @@ from __future__ import annotations
 from types import MethodType
 from functools import partial
 import inspect
-from typing import TYPE_CHECKING, Optional, Tuple, Union, Any, Mapping, cast, List, Dict, Literal
+from typing import (
+    TYPE_CHECKING, 
+    cast, 
+    Optional,
+    Tuple, 
+    Union, 
+    Any, 
+    Mapping, 
+    List, 
+    Dict
+)
 from pathlib import Path
 from warnings import warn
 import logging
@@ -16,7 +26,7 @@ from ...core.config import resolve_root
 from ...core.parameters import Parameters
 from ...specs.remapper import load_spec, map_parameters, load_context_map, apply_context_map
 from ...specs.rules import load_rules, select_rule_use
-from ...dataclasses import Reco, Scan, Study, LazyScan
+from ...dataclasses import Reco, Scan, Study
 from ...specs import hook as converter_core
 from ...resolver import affine as affine_resolver
 from ...resolver import image as image_resolver
@@ -25,7 +35,6 @@ from ...resolver import nifti as nifti_resolver
 from ...resolver.helpers import get_file
 from .types import (
     ScanLoader, 
-    ToFilename, 
     ConvertType, 
     GetDataobjType, 
     GetAffineType
@@ -49,6 +58,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "resolve_reco_id",
     "resolve_data_and_affine",
+    "resolve_converter_hook",
     "search_parameters",
     "get_dataobj",
     "get_affine",
@@ -205,6 +215,7 @@ def resolve_converter_hook(
                 logger.debug("Converter hook %r resolved to no entry.", hook_name)
         else:
             logger.debug("No converter hook selected for scan %s.", getattr(scan, "scan_id", "?"))
+    scan._hook_resolved = True
 
 
 def search_parameters(
@@ -414,7 +425,7 @@ def get_dataobj(
             cycle_count = None
             cycle_args_requested = False
 
-    if image_info.get("dataobj") is None:
+    if cycle_args_requested or image_info.get("dataobj") is None:
         image_info = image_resolver.resolve(
             self,
             resolved_reco_id,
