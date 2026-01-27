@@ -32,6 +32,7 @@ __all__ = [
     "fid_resolver",
     "nifti_resolver",
     "types",
+    "config",
 ]
 
 # Lazy import map: name -> (module_path, attribute_name or None)
@@ -46,6 +47,7 @@ _LAZY: Dict[str, Tuple[str, str | None]] = {
     "hook_manager": ("brkraw.apps", "hook"),
     "addon_manager": ("brkraw.apps", "addon"),
     "hook_resolver": ("brkraw.apps.loader.helper", "resolve_converter_hook"),
+    "config": ("brkraw.core", "config"),
 
     # apps.loader.info resolvers
     "info_resolver": ("brkraw.apps.loader", "info"),
@@ -101,6 +103,7 @@ def __dir__() -> list[str]:
 # Importing these only for type-checking keeps runtime imports lazy.
 if TYPE_CHECKING:
     from brkraw.core import formatter as formatter
+    from brkraw.core import config as config
     from brkraw.apps.loader import BrukerLoader as BrukerLoader
     from brkraw.apps.loader import info as info_resolver
     from brkraw.apps.loader.info import transform as transform
