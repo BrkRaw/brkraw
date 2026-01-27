@@ -425,7 +425,7 @@ def get_dataobj(
             cycle_count = None
             cycle_args_requested = False
 
-    if image_info.get("dataobj") is None:
+    if cycle_args_requested or image_info.get("dataobj") is None:
         image_info = image_resolver.resolve(
             self,
             resolved_reco_id,
