@@ -15,6 +15,7 @@ permissions:
   contents: write
   discussions: write
   id-token: write
+  actions: write
 
 jobs:
   release:
@@ -165,10 +166,10 @@ jobs:
           
           echo "Zenodo badge still up to date after 10 attempts; giving up."
 
-  publish:
-    if: ${{ github.repository == 'BrkRaw/brkraw' && (needs.release.outputs.prerelease == 'true' || needs.release.outputs.zenodo_success == 'true') }}
-    needs: [release]
-    uses: ./.github/workflows/publish.yml
-    with:
-      target: ${{ needs.release.outputs.prerelease == 'true' && 'testpypi' || 'pypi' }}
-      tag: ${{ needs.release.outputs.tag }}
+      - name: Trigger publish workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          target="${{ steps.prerelease.outputs.value == 'true' && 'testpypi' || 'pypi' }}"
+          tag="${{ steps.tag.outputs.value }}"
+          gh workflow run publish.yml -f target="$target" -f tag="$tag"

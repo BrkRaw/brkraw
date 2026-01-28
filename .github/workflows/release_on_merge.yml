@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   tag_release:
@@ -116,3 +117,10 @@ jobs:
           fi
           git tag "$tag" "${{ github.sha }}"
           git push origin "$tag"
+      - name: Trigger release workflow
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.version.outputs.value }}"
+          gh workflow run release.yml -f tag="$tag"
