@@ -1,6 +1,13 @@
 from __future__ import annotations
-from typing import Optional, Union, TypedDict, Tuple, Literal, List, Any
-from typing import cast, TYPE_CHECKING
+from typing import Optional, Union, TypedDict, Tuple, Literal, List, Any, TYPE_CHECKING
+from typing import cast
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+else:
+    try:
+        from typing import TypeAlias
+    except ImportError:  # pragma: no cover - fallback for Python 3.8
+        from typing_extensions import TypeAlias
 from .helpers import get_file, get_reco, return_alt_val_if_none
 import logging
 import numpy as np
@@ -11,8 +18,8 @@ if TYPE_CHECKING:
     from ..dataclasses import Scan, Reco
     from ..core.parameters import Parameters
 
-SubjectType = Literal["Biped", "Quadruped", "Phantom", "Other", "OtherAnimal"]
-SubjectPose = Literal[
+SubjectType: TypeAlias = Literal["Biped", "Quadruped", "Phantom", "Other", "OtherAnimal"]
+SubjectPose: TypeAlias = Literal[
     "Head_Supine", "Head_Prone", "Head_Left", "Head_Right",
     "Foot_Supine", "Foot_Prone", "Foot_Left", "Foot_Right",
 ]

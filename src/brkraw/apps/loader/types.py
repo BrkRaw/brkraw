@@ -28,10 +28,10 @@ if TYPE_CHECKING:
     from ...resolver.nifti import Nifti1HeaderContents, XYZUNIT, TUNIT
 
 
-InfoScope = Literal['full', 'study', 'scan']
+InfoScope: TypeAlias = Literal['full', 'study', 'scan']
 Dataobjs = Optional[Union[NDArray, Tuple[NDArray, ...]]]
 Affines = Optional[Union[NDArray, Tuple[NDArray, ...]]]
-AffineSpace = Literal["raw", "scanner", "subject_ras"]
+AffineSpace: TypeAlias = Literal["raw", "scanner", "subject_ras"]
 ConvertedObj = Optional[Union["ToFilename", Tuple["ToFilename", ...]]]
 Metadata = Optional[Union[Dict, Tuple[Optional[Dict], ...]]]
 HookArgs = Optional[Mapping[str, Mapping[str, Any]]]
