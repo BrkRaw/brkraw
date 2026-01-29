@@ -260,7 +260,7 @@ def resolve(
     
     if num_cycles > 1:
         time_step = cast(float, image_info['time_per_cycle']) / 1000.0
-        num_slices = image_info['dataobj'].shape[2]
+        num_slices = cast(np.ndarray, image_info['dataobj']).shape[2]
         slice_duration = time_step / num_slices
     else:
         time_step = None

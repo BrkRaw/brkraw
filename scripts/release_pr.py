@@ -474,16 +474,6 @@ def main() -> int:
     title = args.pr_title or f"Release v{args.version}"
     initial_body = args.pr_body or build_pr_body(args.version, "- (pending)")
 
-    pr_number = ensure_pr(
-        upstream_repo_full=upstream_repo_full,
-        base_branch=base_branch,
-        head_ref=head_ref,
-        title=title,
-        body=initial_body,
-        no_pr=args.no_pr,
-        dry_run=args.dry_run,
-    )
-
     # 1) contributors
     run_update_contributors(upstream_repo_full)
     commit_if_changed(
@@ -517,6 +507,16 @@ def main() -> int:
     # Rationale: ensure commits are on the PR branch even if later GitHub API steps fail.
     if not args.dry_run:
         run_git(["push", args.remote_origin, f"HEAD:{branch}"], check=True)
+
+    pr_number = ensure_pr(
+        upstream_repo_full=upstream_repo_full,
+        base_branch=base_branch,
+        head_ref=head_ref,
+        title=title,
+        body=initial_body,
+        no_pr=args.no_pr,
+        dry_run=args.dry_run,
+    )
 
     # PR body update + label (if enabled)
     if pr_number and (not args.no_pr):
