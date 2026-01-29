@@ -1,17 +1,14 @@
-# Release v0.5.5
+# Release v0.5.6
 
-Date: 2026-01-27
-Changes since 0.5.4
+Date: 2026-01-29
+Changes since 0.5.5
 
-- chore: prepare release v0.5.5 (c3260df)
-- docs: update contributors (a7bf3ef)
-- update: vscode, auto activate environment setting. (95e6868)
-- Chore: wire release → publish workflow (3419d97)
-- Use VS Code interpreter for venv setup task (5aed156)
-- Update release workflow and scripts for Zenodo badge + bibtex generation (e63e007)
-- Patch for brkraw-viewer lazy loading (avoid eager data resolution) (c916625)
-- chore(api): config module (2fa90fc)
-- chore(api): hook resolver (9c36e95)
-- chore(api): minor remapping (f2ef87e)
-- chore(api): ensure naming consistency (9010542)
-- refactor(loader): improve hook handling logic (5c5a0e7)
+- chore: prepare release v0.5.6 (3a23f42)
+- docs: update contributors (b36012b)
+- ci: replace the locaiton of gh command to get pr number (e522e6b)
+- fix: cast NIfTI dataobj shape (f0bae05)
+- fix: make type aliases explicit (ad1d065)
+- ci: add actions:write permission to trigger other workflow. (2a4a71d)
+- ci: fix Zenodo badge update retry logic (ff66a7d)
+- Update Zenodo DOI badge (a6d453e)
+- ci(release): allow OIDC by granting id-token permission (db29a36)
