@@ -30,3 +30,46 @@ def test_resolve_matvec_and_shape_variable_slices_per_pack() -> None:
         assert np.allclose(vec, [0.0, 0.0, expected_min_z])
         assert np.allclose(np.diag(mat), [40.0 / 256.0, 40.0 / 256.0, 1.0])
 
+
+def test_resolve_matvec_and_shape_dim3_slicepacks() -> None:
+    num_slices = [1, 1, 1]
+    slice_thickness = [1.0, 1.0, 1.0]
+
+    rotate = np.array(
+        [
+            [1, 0, 0, 0, 1, 0, 0, 0, 1],
+            [0, 1, 0, -1, 0, 0, 0, 0, 1],
+            [0, 0, 1, 0, 1, 0, -1, 0, 0],
+        ],
+        dtype=float,
+    )
+    origin = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [10.0, 0.0, 0.0],
+            [0.0, 10.0, 0.0],
+        ],
+        dtype=float,
+    )
+
+    visu_pars = {
+        "VisuCoreDim": 3,
+        "VisuCoreOrientation": rotate,
+        "VisuCorePosition": origin,
+        "VisuCoreExtent": np.array([20.0, 20.0, 20.0], dtype=float),
+        "VisuCoreSize": np.array([10, 10, 10], dtype=float),
+        "VisuCoreSlicePacksSlices": np.array([[0, 1], [1, 1], [2, 1]], dtype=int),
+    }
+
+    mat, vec, shape = resolve_matvec_and_shape(visu_pars, 1, num_slices, slice_thickness)
+    assert shape == (10, 10, 10)
+    assert np.allclose(vec, [10.0, 0.0, 0.0])
+    expected = np.array(
+        [
+            [0.0, -2.0, 0.0],
+            [2.0, 0.0, 0.0],
+            [0.0, 0.0, 2.0],
+        ],
+        dtype=float,
+    )
+    assert np.allclose(mat, expected)

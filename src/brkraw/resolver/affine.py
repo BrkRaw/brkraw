@@ -412,11 +412,37 @@ def resolve_matvec_and_shape(visu_pars,
         shape = np.append(shape, _num_slices)
         extent = np.append(extent, _num_slices * _slice_thickness)
     else:
-        _rotate = np.squeeze(rotate)
+        spack_slices = visu_pars.get("VisuCoreSlicePacksSlices")
+        spack_count: Optional[int] = None
+        if spack_slices is not None:
+            spack_arr = np.asarray(spack_slices)
+            if spack_arr.ndim >= 1:
+                spack_count = int(spack_arr.shape[0])
+                if spack_count == 0:
+                    spack_count = None
+
+        def _select_pack_row(arr: np.ndarray, *, width: int, name: str) -> np.ndarray:
+            arr = np.asarray(arr, dtype=float)
+            if arr.ndim == 1:
+                if arr.size != width:
+                    raise ValueError(f"{name} has shape {arr.shape}, expected ({width},)")
+                return arr
+            if arr.ndim != 2 or arr.shape[1] != width:
+                raise ValueError(f"{name} has shape {arr.shape}, expected (*, {width})")
+            if spack_count is None or spack_count == 1:
+                return arr[0, :]
+            if spack_idx < 0 or spack_idx >= arr.shape[0]:
+                raise IndexError(
+                    f"spack_idx out of range for {name}: {spack_idx} (entries: {arr.shape[0]})"
+                )
+            return arr[spack_idx, :]
+
+        _rotate = _select_pack_row(rotate, width=9, name="VisuCoreOrientation")
+        _origin = _select_pack_row(origin, width=3, name="VisuCorePosition")
         row = _rotate[0:3]
         col = _rotate[3:6]
         slc = _rotate[6:9]
-        vec = np.squeeze(origin)
+        vec = np.squeeze(_origin)
 
     rot = np.column_stack([row, col, slc])
     resols = extent / shape

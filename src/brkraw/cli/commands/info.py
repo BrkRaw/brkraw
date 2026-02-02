@@ -39,7 +39,7 @@ def cmd_info(args: argparse.Namespace) -> int:
         width=width,
     )
     if text is not None:
-        logger.info("%s", text)
+        print(text)
     return 0
 
 
