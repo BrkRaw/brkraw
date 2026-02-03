@@ -109,8 +109,10 @@ The default behavior can be customized via:
 output.slicepack_suffix
 ```
 
-Most users should keep the default. Advanced users may include
-orientation labels or other metadata.
+Most users should keep the default.
+If you need richer, study-specific naming, prefer managing mapped metadata
+via rules/specs (and then using layout settings) rather than encoding
+semantics into the slice-pack suffix.
 
 ---
 
@@ -173,61 +175,8 @@ sub-01/ses-1/scan-3_T2w.nii.gz
 
 ---
 
-### BIDS-like layout (informal)
-
-A layout that resembles BIDS naming, useful for inspection or
-preparation, but not intended as a full BIDS implementation.
-
-```yaml
-output:
-  layout_entries:
-    - key: Subject.ID
-      entry: sub
-      sep: "/"
-    - key: Session.ID
-      entry: ses
-      sep: "/"
-    - key: Modality
-      hide: true
-    - key: ScanID
-      entry: scan
-```
-
-Produces paths such as:
-
-```text
-sub-01/ses-1/anat_scan-3.nii.gz
-```
-
-Important notes:
-
-- This layout is **not BIDS-compliant by itself**.
-- scan_id-based naming is often insufficient for BIDS.
-- Modality-aware and project-specific mapping is required for
-  correct BIDS organization.
-
----
-
-## Future direction: brkraw-bids
-
-BrkRaw intentionally avoids hard-coding BIDS logic into the core.
-
-More advanced organization tasks, such as:
-
-- Modality-aware naming
-- scan_id to BIDS entity mapping
-- Project- or study-specific conventions
-- Dataset-wide validation and restructuring
-
-are planned to be handled by a dedicated tool:
-
-```text
-brkraw-bids
-```
-
-This separation keeps BrkRaw focused on reliable data access,
-metadata normalization, and extensible conversion, while allowing
-BIDS-specific logic to evolve independently.
+For BIDS-style naming guidance (including example layouts and a roadmap for
+`brkraw-bids`), see [BIDS integration](bids.md).
 
 ---
 

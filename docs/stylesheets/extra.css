@@ -21,3 +21,49 @@
 .md-nav__source svg * {
   fill: currentColor !important;
 }
+
+figure {
+  margin: 2em auto;
+  text-align: center;
+}
+
+figure img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+figure figcaption {
+  margin-top: 0.6em;
+  font-size: 0.9em;
+  color: #666;
+}
+
+figure figcaption code {
+  background-color: rgba(27, 31, 35, 0.05);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+
+.md-typeset figure {
+  opacity: 0;
+  transform: translateY(25px);
+  animation: fadeUp 2s ease forwards;
+}
+
+/* motion 줄이기 선호하는 사용자 배려 */
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset figure {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

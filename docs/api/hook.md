@@ -20,15 +20,42 @@ configuration root, and uninstallation with dependency checks.
 ## Entry points
 
 ```python
-from brkraw.apps import hook
+from brkraw.api import hook_manager as hook
 ```
+
+Note: `brkraw.api.hook_manager` manages hook packages and their installed addon
+assets. `brkraw.api.hook` refers to the hook *spec* module (entrypoint
+resolution/validation).
 
 Public functions:
 
 - `hook.list_hooks(root=None) -> List[Dict[str, Any]]`
 - `hook.install_all(root=None, upgrade=False, force=False) -> Dict[str, List[str]]`
 - `hook.install_hook(target, root=None, upgrade=False, force=False) -> str`
-- `hook.uninstall_hook(target, root=None, force=False) -> Tuple[str, Dict[str, List[str]]]`
+- `hook.read_hook_docs(target, root=None) -> Tuple[str, str]`
+- `hook.uninstall_hook(target, root=None, force=False) -> Tuple[str, Dict[str, List[str]], bool]`
+
+---
+
+## Where Hooks Apply (Loader vs Scan)
+
+In BrkRaw, converter hooks are applied at the **loader level**.
+
+- Hooks are resolved and attached by `BrukerLoader` when you call loader APIs such as:
+    - `loader.convert(...)`
+    - `loader.get_dataobj(...)`
+    - `loader.get_affine(...)`
+- A hook works by overriding a scan’s conversion helpers (for example `get_dataobj`,
+  `get_affine`, `convert`). The loader is responsible for resolving the hook and
+  wiring those overrides onto the scan before use.
+
+Scan objects are still important, but mainly for **hook development**:
+
+- You typically use scan/reco access (`loader.get_scan(...)`, `scan.get_reco(...)`,
+  reading parameters/files) to implement and test a new hook’s logic.
+- Calling scan methods directly is not the primary “hook application” interface;
+  use the loader for hook-aware execution so hook resolution and hook arguments
+  are handled consistently.
 
 ---
 
@@ -53,7 +80,7 @@ During installation, assets are installed under a hook-specific namespace.
 List hooks discovered from installed Python packages:
 
 ```python
-from brkraw.apps import hook
+from brkraw.api import hook_manager as hook
 
 items = hook.list_hooks()
 for h in items:
@@ -85,7 +112,7 @@ already be available in the environment (for example via pip/conda).
 ### Install a single hook (CLI: `brkraw hook install`)
 
 ```python
-from brkraw.apps import hook
+from brkraw.api import hook_manager as hook
 
 status = hook.install_hook("my-hook-package")
 print(status)  # "installed" or "skipped"
@@ -102,7 +129,7 @@ If no hook matches, installation fails with `LookupError`.
 ### Install all hooks (CLI: `brkraw hook install --all`)
 
 ```python
-from brkraw.apps import hook
+from brkraw.api import hook_manager as hook
 
 result = hook.install_all()
 print(result["installed"])
@@ -148,12 +175,13 @@ Uninstall removes the assets previously installed by the hook, based on the
 registry record.
 
 ```python
-from brkraw.apps import hook
+from brkraw.api import hook_manager as hook
 
-name, removed = hook.uninstall_hook("my-hook-package")
+name, removed, module_missing = hook.uninstall_hook("my-hook-package")
 print(name)
 print(removed["specs"])
 print(removed["rules"])
+print("Python module missing:", module_missing)
 ```
 
 Behavior:
@@ -161,6 +189,9 @@ Behavior:
 - if the hook is not installed (no registry entry), uninstallation fails with `LookupError`
 - removed files are unlinked if present
 - missing files are ignored (no error)
+- the return value includes `module_missing`, which is `True` when the hook's
+  entrypoint cannot be found in the current Python environment (package may have
+  already been uninstalled).
 
 ### Dependency checks and force removal
 

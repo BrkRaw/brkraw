@@ -4,8 +4,8 @@ Converter hook packages are Python distributions that provide custom conversion
 logic and (optionally) ship addon assets for case-dependent behavior.
 
 This page covers authoring and packaging. For user-facing behavior and
-terminology, see [Extensibility model](../reference/extensibility.md) and
-[Addons and plugins](../reference/addons-and-plugins.md).
+terminology, see [Extensibility model](../extensions/extensibility.md) and
+[Addons and plugins](../extensions/addons-and-plugins.md).
 
 ---
 
@@ -16,7 +16,7 @@ Expose your converter hook via the `brkraw.converter_hook` entrypoint group in
 
 ```toml
 [project.entry-points."brkraw.converter_hook"]
-mrs = "brkraw_mrs.hook:get_hook"
+<hook-entrypoint> = "<hook_package>.hook:get_hook"
 ```
 
 The returned hook object must conform to the converter hook schema defined in
@@ -26,9 +26,13 @@ The returned hook object must conform to the converter hook schema defined in
 
 ## Hook manifest
 
-Each hook package must ship a `brkraw_hook.yaml` (or `brkraw_hook.yml`) file.
-This manifest lists addon assets that `brkraw hook install` will copy into the
-user's BrkRaw config directories.
+To support `brkraw hook install`, your hook package should ship a
+`brkraw_hook.yaml` (or `brkraw_hook.yml`) manifest file. This manifest lists
+addon assets that BrkRaw will copy into the user's config directories.
+
+If your hook package does not ship a manifest, it can still provide conversion
+code via the `brkraw.converter_hook` entrypoint, but it will not be able to
+install rules/specs/transforms via the hook installer.
 
 Example `brkraw_hook.yaml`:
 
@@ -38,19 +42,20 @@ specs:
   - specs/info.yaml
   - specs/metadata.yaml
 rules:
-  - rules/mrs.yaml
+  - rules/<hook-entrypoint>.yaml
 transforms:
-  - transforms/mrs_transforms.py
-pruner_specs:
-  - pruner_specs/deid.yaml
+  - transforms/<hook-entrypoint>.py
 ```
+
+Tip: `<hook-entrypoint>` is the name registered in the `brkraw.converter_hook`
+entrypoint group. It is the identifier used by `brkraw hook preset` and by the
+`--hook-arg HOOK:KEY=VALUE` syntax.
 
 ### Manifest rules
 
 - Paths are resolved relative to the manifest file location.
 - `specs` and `rules` must be YAML files.
-- `transforms` are copied into `transforms/<hook_name>/`.
-- `pruner_specs` are installed into `pruner_specs/<hook_name>/`.
+- `transforms` are copied into `transforms/<hook_name>/` (namespaced).
 - Spec installs still honor `__meta__.transforms_source`.
   Referenced transforms are installed automatically and specs are rewritten to
   point to the installed copies.
@@ -60,6 +65,11 @@ pruner_specs:
   specs, the installer rewrites them to the namespaced paths.
 - `docs` (or `readme`) should point to a packaged markdown/text file used by
   `brkraw hook docs`.
+
+Optional:
+
+- `pruner_specs`: you can ship pruner specs with a hook when you want to bundle
+  a “share/de-identify” pruning preset alongside the conversion pipeline.
 
 ---
 
@@ -80,10 +90,10 @@ listing.
 ## Recommended layout
 
 ```text
-brkraw-mrs/
+brkraw-<hook-package>/
   pyproject.toml
   src/
-    brkraw_mrs/
+    <hook_package>/
       __init__.py
       hook.py
       brkraw_hook.yaml
@@ -91,9 +101,9 @@ brkraw-mrs/
         info.yaml
         metadata.yaml
       rules/
-        mrs.yaml
+        <hook-entrypoint>.yaml
       transforms/
-        mrs_transforms.py
+        <hook-entrypoint>.py
 ```
 
 Ensure `brkraw_hook.yaml` and any documentation files are included as package
@@ -119,8 +129,15 @@ hooks:
     key: value
 ```
 
+The CLI also accepts a shorter form where the top-level mapping is the hook map:
+
+```yaml
+<hook-entrypoint>:
+  key: value
+```
+
 At conversion time, BrkRaw looks up args by the selected hook entrypoint name
-(for example `sordino`, `mrs`) and splits them by hook function signature:
+(for example `<hook-entrypoint>`) and splits them by hook function signature:
 
 - `get_dataobj` receives only kwargs it declares.
 - `get_affine` receives only kwargs it declares.

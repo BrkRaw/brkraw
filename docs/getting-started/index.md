@@ -1,20 +1,44 @@
 # Getting Started
 
-This section provides **task-oriented entry points** for using BrkRaw.
-Each page focuses on a common user workflow with minimal setup and
-practical examples.
-
-Before diving into specific workflows, make sure BrkRaw is installed
-and initialized.
+This section provides task-oriented entry points for using BrkRaw.
+Each page focuses on a common workflow with minimal setup and practical examples.
 
 ---
 
 ## Installation
 
-Install BrkRaw using pip:
+### Prerequisites
+
+BrkRaw supports Python 3.8 or higher. We recommend Python 3.10+ for better compatibility
+with current and future extension modules, including converter hooks.
+
+### Virtual Environment
+
+We recommend installing BrkRaw in a virtual environment to isolate dependencies and avoid conflicts.
+
+Common tools include:
+
+- **[Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)**: Popular for scientific computing.
+- **[uv](https://github.com/astral-sh/uv)**: A fast Python package and project manager.
+- **[pyenv](https://github.com/pyenv/pyenv)**: Simple Python version management.
+
+### Install via pip
+
+Install the latest stable release from PyPI:
 
 ```bash
-pip install brkraw
+python -m pip install brkraw
+```
+
+!!! tip "Why `python -m`?"
+    Using `python -m pip` ensures that the package is installed into the specific
+    Python environment you are currently using. Running `pip` directly can sometimes
+    install packages into a different Python version if your system `PATH` is not configured perfectly.
+
+To upgrade an existing installation:
+
+```bash
+python -m pip install --upgrade brkraw
 ```
 
 Verify the installation:
@@ -23,16 +47,12 @@ Verify the installation:
 brkraw --help
 ```
 
-This documentation assumes that BrkRaw is available on your PATH.
-
 ---
 
 ## Initial configuration
 
-BrkRaw uses a user-level configuration directory to manage output
-layout, logging, and installed extensions.
-
-Initialize the default configuration by running:
+BrkRaw uses a user-level configuration directory for output layout,
+logging, and extensions. Initialize the default configuration by running:
 
 ```bash
 brkraw init
@@ -41,49 +61,16 @@ brkraw init
 This creates a configuration directory (by default under `~/.brkraw`)
 and a base `config.yaml` file.
 
-Most users can start with the default configuration and adjust it
-later as needed. A guided overview of commonly modified settings is
-available in the **Configuration basics** section.
+Most users can start with the defaults and adjust settings later as needed.
 
 ---
 
-## Choose a workflow
+## Next step
 
-Select the entry point that best matches your use case:
+Choose the entry point that matches your use case:
 
-- **CLI quickstart**  
-  Inspect datasets and convert scans from the command line.
-
-- **Python API quickstart**  
-  Script conversions, automate workflows, and integrate BrkRaw into
-  analysis pipelines.
-
-- **Configuration basics**  
-  Learn which configuration options are commonly adjusted and why.
-
-- **Converter hooks**  
-  Extend BrkRaw with modality-specific converters
-  (e.g. NIfTI-MRS output).
-
-- **MRS converter (brkraw-mrs)**  
-  MRS-specific hooks and specs for NIfTI-MRS outputs.
-
-- **BIDS integration (early guidance)**  
-  Current reference path for BIDS-style workflows.
-
-- **Dataset viewer**  
-  Interactively inspect Paravision datasets using a lightweight viewer.
-
-- **Admin tools (brkraw-backup)**  
-  Optional admin-focused helpers for managing BrkRaw datasets and artifacts.
-
----
-
-## Notes
-
-- These pages focus on practical usage rather than exhaustive
-  reference material.
-- Advanced configuration options and full parameter definitions are
-  documented elsewhere in the Reference sections.
-- Some configuration options and extension interfaces may evolve in
-  future releases as BrkRaw develops.
+- [**Command Line Interface (CLI)**](cli.md)  
+- [**Python API**](api.md)
+- [**Graphical User Interface (GUI)**](gui.md)
+- [**BIDS integration**](bids.md)
+- [**User Configuration**](config.md)

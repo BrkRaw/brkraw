@@ -1,117 +1,100 @@
-# Convert scans to NIfTI
+# convert / convert-batch
 
-`brkraw convert` is the core command for converting Bruker Paravision scans
-into NIfTI files, with optional metadata sidecars and extensible conversion
-logic via hooks.
+Convert Bruker Paravision scans into NIfTI files, optionally writing JSON sidecars and applying hooks.
 
-This command is designed for interactive inspection, scriptable workflows,
-and batch processing in real research environments.
+---
 
-## Basic usage
+## brkraw convert
 
-Convert a single scan and reco:
+### Basic usage
+
+Convert a single scan/reco:
 
 ```bash
 brkraw convert /path/to/study --scan-id 3 --reco-id 1
 ```
 
-By default:
+If `path` is omitted, `BRKRAW_PATH` is used.
 
-- Output is written to the current directory
-- Files are compressed (.nii.gz)
-- Affines are computed in subject_ras space
-- Output filenames follow the configured layout rules
+---
 
-## Selecting scans and reconstructions
+## Scan and reco selection
 
 ### --scan-id
 
-Specify the scan ID to convert.
+Convert a single scan.
 
-```bash
-brkraw convert /path/to/study --scan-id 5
-```
-
-If omitted, all available scans are converted (batch behavior).
+If omitted, BrkRaw converts all available scans.
 
 ### --reco-id
 
-Specify the reconstruction ID.
+Convert a single reconstruction within the scan.
+
+If omitted, BrkRaw converts all available reconstructions for each scan.
+
+---
+
+## Output control
+
+### -o, --output
+
+Where to write outputs:
+
+- Directory: write files under that directory.
+- File path (`.nii` / `.nii.gz`): treated as a base name in the file's parent directory.
+  For multi-slicepack outputs, BrkRaw appends slicepack suffixes.
+
+Examples:
 
 ```bash
-brkraw convert /path/to/study --scan-id 5 --reco-id 2
+brkraw convert /path/to/study --scan-id 3 -o out/
+brkraw convert /path/to/study --scan-id 3 -o scan3.nii.gz
 ```
 
 Notes:
 
-- If omitted, all recos for the selected scans are converted
-- Some converter hooks may not use reco IDs explicitly
-
-## Output control
-
-### --output
-
-Control where converted files are written.
-
-Write to a directory:
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --output out/
-```
-
-Write to a specific file:
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --output scan3.nii.gz
-```
-
-Rules:
-
-- When converting multiple scans, --output must be a directory
-- When --output is a file, --prefix cannot be used
+- When `--scan-id` is omitted (convert all scans), `--output` must be a directory.
+- If `--output` is a file path, `--prefix` cannot be used.
+- Output directories are created automatically.
 
 ### --prefix
 
-Override the filename layout using a template.
+Override the base output name using a template.
+
+The template supports `{Key}` tags from layout info (and can include `/` to build subfolders).
 
 ```bash
 brkraw convert /path/to/study --scan-id 3 --prefix "{Protocol}_{ScanID}"
 ```
 
-Template fields are resolved from layout info and metadata specs.
+### Name de-duplication
 
-### Output name collisions
+BrkRaw avoids overwriting existing outputs.
 
-BrkRaw avoids overwriting outputs when output names collide.
+- If your layout or `--prefix` contains `{Counter}`, it will try `Counter=1..` until names are unique.
+- If you do not use `{Counter}`, BrkRaw appends `_<N>` (for example `_2`, `_3`, ...) when needed.
 
-- If your template uses `{Counter}`, it starts at `1` and increments until the output name is unique.
-- If your template does not use `{Counter}`, BrkRaw appends `_<N>` (for example `_2`, `_3`, ...) as needed.
+BrkRaw also sanitizes invalid characters in rendered names.
 
-### Compression
+### --no-compress
 
-By default, output is written as .nii.gz.
-
-Disable compression:
+Write `.nii` instead of `.nii.gz` (default: compressed).
 
 ```bash
 brkraw convert /path/to/study --scan-id 3 --no-compress
 ```
 
-## Metadata sidecars
+---
+
+## Sidecar metadata
 
 ### --sidecar
 
-Write a JSON sidecar file next to each NIfTI output.
+Write a JSON sidecar next to each NIfTI output.
 
 ```bash
 brkraw convert /path/to/study --scan-id 3 --sidecar
 ```
-
-Sidecar metadata is generated from:
-
-- Built-in info specs
-- Installed metadata specs
-- Optional context maps
 
 ### --no-convert
 
@@ -121,138 +104,46 @@ Skip NIfTI conversion and only write sidecar metadata (requires `--sidecar`).
 brkraw convert /path/to/study --scan-id 3 --sidecar --no-convert
 ```
 
-## Affine handling
+---
 
-### --space
+## Context maps
 
-Select the affine space used for conversion.
-Values are case-sensitive.
+### --context-map
 
-Valid values:
-
-- raw
-- scanner
-- subject_ras
-
-Example:
+Apply a context map YAML for selection and mapping.
 
 ```bash
-brkraw convert /path/to/study --scan-id 3 --space subject_ras
-```
-
-### --override-subject-type
-
-Override the subject type used when computing subject-view affines
-(space=subject_ras only).
-
-Valid values (case-sensitive):
-
-- Biped
-- Quadruped
-- Phantom
-- Other
-- OtherAnimal
-
-Example:
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --override-subject-type Quadruped
-```
-
-### --override-subject-pose
-
-Override the subject pose used when computing subject-view affines
-(space=subject_ras only).
-
-Valid values (case-sensitive):
-
-- Head_Supine
-- Head_Prone
-- Head_Left
-- Head_Right
-- Foot_Supine
-- Foot_Prone
-- Foot_Left
-- Foot_Right
-
-Example:
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --override-subject-pose Head_Supine
-```
-
-### Axis flip
-
-Flip the x-axis in the output affine:
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --flip-x
-```
-
-### --flatten-fg
-
-Flatten frame-group dimensions into a 4D time axis when data is 5D or higher.
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --flatten-fg
+brkraw convert /path/to/study --scan-id 3 --context-map map.yaml --sidecar
 ```
 
 Notes:
 
-- 4D or smaller data is unchanged.
-- Extra dimensions are collapsed into the 4th dimension in order.
+- Context map selectors may skip specific scan/reco pairs.
+- Context maps can influence layout metadata (layout template/entries and slicepack suffix) for that run.
 
-## Units and headers
+---
 
-### Spatial and temporal units
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --xyz-units mm --t-units sec
-```
-
-Values are validated strictly and are case-sensitive.
-
-### Header overrides
-
-Provide a YAML file to override NIfTI header fields:
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --header header_override.yaml
-```
-
-## Context maps and selection
-
-### --context-map
-
-Apply metadata remapping and conditional selection logic.
-
-```bash
-brkraw convert /path/to/study --context-map bids_map.yaml --sidecar
-```
-
-Context maps can:
-
-- Select or skip scans
-- Modify metadata fields
-- Override layout rules and slice-pack suffixes
-
-## Converter hooks
+## Hooks
 
 ### --hook-arg
 
-Pass arguments to installed converter hooks.
+Pass a single hook argument (repeatable):
 
 ```bash
-brkraw convert /path/to/study --scan-id 3 --hook-arg mrs:reference=water
+brkraw convert /path/to/study --scan-id 3 --hook-arg "<hook-name>:key=value"
 ```
 
 Format:
 
 ```text
-HOOK_NAME:KEY=VALUE
+HOOK:KEY=VALUE
 ```
 
-Values are parsed as bool, int, float, or string.
+Value coercion:
+
+- `true` / `false` are parsed as booleans.
+- integers and floats are parsed when possible.
+- otherwise values are treated as strings.
 
 ### --hook-args-yaml
 
@@ -266,51 +157,120 @@ Example YAML:
 
 ```yaml
 hooks:
-  mrs:
-    reference: water
-    peak_ppm: 3.02
+  <hook-name>:
+    key: value
 ```
 
-You can also set `BRKRAW_CONVERT_HOOK_ARGS_YAML` (comma-separated paths).
+Environment variables:
 
-## Batch conversion
+- `BRKRAW_CONVERT_HOOK_ARGS_YAML` (comma-separated paths)
+- `BRKRAW_HOOK_ARGS_YAML` (comma-separated paths)
 
-### brkraw convert-batch
+---
 
-Convert all datasets under a root directory.
+## Affines, units, and headers
+
+### --space
+
+Select affine space:
+
+- `raw`
+- `scanner`
+- `subject_ras` (default)
 
 ```bash
-brkraw convert-batch /path/to/datasets --output out/
+brkraw convert /path/to/study --scan-id 3 --space subject_ras
 ```
+
+### --override-subject-type / --override-subject-pose
+
+Override subject metadata used for subject-view affines (`space=subject_ras` only).
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --override-subject-type Quadruped
+brkraw convert /path/to/study --scan-id 3 --override-subject-pose Head_Supine
+```
+
+### --xyz-units / --t-units
+
+Set NIfTI header units (defaults: `mm`, `sec`).
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --xyz-units mm --t-units sec
+```
+
+### --header
+
+Provide a YAML file containing NIfTI header overrides.
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --header header.yaml
+```
+
+---
+
+## Multi-dimensional data
+
+### --flatten-fg
+
+Flatten frame-group dimensions to 4D when data is 5D or higher.
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --flatten-fg
+```
+
+### --cycle-index / --cycle-count
+
+Read only a subset of cycles from multi-cycle data (last axis).
+
+```bash
+brkraw convert /path/to/study --scan-id 3 --cycle-index 0 --cycle-count 10
+```
+
+If `--cycle-count` is set but `--cycle-index` is omitted, BrkRaw defaults `cycle-index` to `0`.
+
+---
+
+## brkraw convert-batch
+
+Convert all datasets under a root folder.
+
+```bash
+brkraw convert-batch /path/to/datasets -o out/
+```
+
+Dataset discovery:
+
+- subdirectories under the root folder
+- zip files directly under the root folder
 
 Notes:
 
-- Each subdirectory or zip file is treated as a dataset
-- Failures in one dataset do not stop the batch
+- `--output` must be a directory for `convert-batch`.
+- failures in one dataset do not stop the whole batch, but a full run with zero successes is treated as an error.
 
-## Environment defaults (advanced)
+---
 
-brkraw convert respects environment variables set via brkraw session set.
+## Environment defaults
 
-Example:
+Many flags can be provided through environment variables (commonly set via `brkraw session set`).
 
-```bash
-brkraw-set -p /path/to/study -s 3 -r 1
-brkraw convert
-```
+Common ones:
 
-See session.md for details.
-
-## Common pitfalls
-
-- All affine-related options are case-sensitive
-- --output must be a directory when converting multiple scans
-- Output names are deduped automatically; use `{Counter}` to control the numeric suffix position
-- Invalid subject overrides are rejected early
-- Missing metadata selectors may silently skip scans
-
-## Looking ahead
-
-BrkRaw focuses on robust conversion and extensibility.
-Project-specific organization logic (scan-aware or modality-aware BIDS layouts)
-is planned in a dedicated tool: brkraw-bids.
+- `BRKRAW_PATH`
+- `BRKRAW_SCAN_ID`
+- `BRKRAW_RECO_ID`
+- `BRKRAW_CONVERT_OUTPUT`
+- `BRKRAW_CONVERT_PREFIX`
+- `BRKRAW_CONVERT_SIDECAR`
+- `BRKRAW_CONVERT_CONTEXT_MAP`
+- `BRKRAW_CONVERT_SPACE`
+- `BRKRAW_CONVERT_COMPRESS`
+- `BRKRAW_CONVERT_FLATTEN_FG`
+- `BRKRAW_CONVERT_CYCLE_INDEX`
+- `BRKRAW_CONVERT_CYCLE_COUNT`
+- `BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE`
+- `BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE`
+- `BRKRAW_CONVERT_XYZ_UNITS`
+- `BRKRAW_CONVERT_T_UNITS`
+- `BRKRAW_CONVERT_HEADER`

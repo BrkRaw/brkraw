@@ -96,21 +96,21 @@ Example:
 
 ```yaml
 info_spec:
-  - name: "mrs-info"
-    description: "MRS scans use custom info spec"
+  - name: "<spec-name>-info"
+    description: "Use a custom info spec for a specific method"
     when:
       method:
         sources:
           - file: acqp
             key: ACQ_XXX
     if:
-      eq: ["$method", "MRS"]
-    use: "mrs"
+      eq: ["$method", "<METHOD>"]
+    use: "<spec-name>"
     version: "1.0.0"
 
 converter_hook:
-  - name: "mrs-reco"
-    description: "Custom MRS reconstruction"
+  - name: "<hook-name>-convert"
+    description: "Custom conversion hook for a specific method"
     when:
       method:
         sources:
@@ -118,9 +118,9 @@ converter_hook:
             key: ACQ_XXX
     if:
       any:
-        - eq: ["$method", "MRS"]
-        - in: ["$method", ["MRS2", "MRS3"]]
-    use: "mrs-reco"
+        - eq: ["$method", "<METHOD>"]
+        - in: ["$method", ["<METHOD2>", "<METHOD3>"]]
+    use: "<hook-name>"
 ```
 
 ---
@@ -132,7 +132,7 @@ Each rule entry supports the following fields.
 ### name (required)
 
 ```yaml
-name: "mrs-info"
+name: "<spec-name>-info"
 ```
 
 Identifier used for logging and debugging.
@@ -142,7 +142,7 @@ Identifier used for logging and debugging.
 ### description (optional)
 
 ```yaml
-description: "MRS scans use custom info spec"
+description: "Use a custom info spec for a specific method"
 ```
 
 Human-readable explanation.
@@ -173,7 +173,7 @@ If `when` is present, `if` is required.
 
 ```yaml
 if:
-  eq: ["$method", "MRS"]
+  eq: ["$method", "<METHOD>"]
 ```
 
 Defines the condition under which the rule matches.
@@ -205,14 +205,14 @@ if:
 ### use (required)
 
 ```yaml
-use: "mrs"
+use: "<spec-name>"
 ```
 
 Target selected when the rule matches.
 
 - For `info_spec` and `metadata_spec`, this may be:
-  - a spec name (recommended)
-  - a spec path under the config root
+    - a spec name (recommended)
+    - a spec path under the config root
 - For `converter_hook`, this must be a hook name registered under
   `brkraw.converter_hook`
 
@@ -292,22 +292,30 @@ Mismatches raise validation errors during rule installation.
 
 ```yaml
 metadata_spec:
-  - name: "epi-meta"
+  - name: "<spec-name>-meta"
     when:
       Method:
-        regex: "^EPI"
-    use: "epi_metadata"
+        sources:
+          - file: method
+            key: Method
+    if:
+      regex: ["$Method", "^EPI"]
+    use: "<spec-name>"
 ```
 
 ### Custom reconstruction routing
 
 ```yaml
 converter_hook:
-  - name: "fid-reco"
+  - name: "<hook-name>-convert"
     when:
       Method:
-        eq: "FID_SEQ"
-    use: "fid-reconstruction"
+        sources:
+          - file: method
+            key: Method
+    if:
+      eq: ["$Method", "FID_SEQ"]
+    use: "<hook-name>"
 ```
 
 ---

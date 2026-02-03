@@ -14,7 +14,7 @@ The API is organized around a small set of core tasks:
 This section documents the main API entry points and how they fit together.
 
 For lower-level access (scan objects, file access, data/affine retrieval), see
-`docs/api/data-access.md`.
+[Data access](data-access.md).
 
 ## Entry point
 
@@ -29,6 +29,32 @@ The returned object acts as a dataset loader and the primary handle for
 inspection and conversion.
 
 Loading a dataset is non-destructive and does not modify the source files.
+
+## Curated API Surface (`brkraw.api`)
+
+For scripts and notebooks, BrkRaw also provides a curated, lazily-imported API
+surface under `brkraw.api`. This is a convenient way to access “manager”
+modules (addons/hooks) and resolver modules without importing deep internal
+paths.
+
+Example:
+
+```python
+from brkraw.api import BrukerLoader
+from brkraw.api import addon_manager, hook_manager
+
+loader = BrukerLoader("/path/to/study")
+hooks = hook_manager.list_hooks()
+addons = addon_manager.list_installed()
+```
+
+Remapper/spec utilities (spec loading, context maps) are also exposed:
+
+```python
+from brkraw.api import addon as remapper
+
+context_map = remapper.load_context_map("map.yaml")
+```
 
 ## Recommended workflow
 

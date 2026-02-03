@@ -95,13 +95,12 @@ datasets:
 
 Acquisition logic should:
 
-- Support `local` (use checked-in archive + verify `sha256`) and `http` (download
-  + verify `sha256` + extract) at minimum.
+- Support `local` (use checked-in archive + verify `sha256`) and `http` (download + verify `sha256` + extract) at minimum.
 - Produce a normalized on-disk layout: a single `BRKRAW_TEST_DATA_ROOT`
   containing one or more dataset roots with `dataset.yaml`.
 - Cache by immutable identifiers:
-  - `local`: cache key includes archive path + `sha256`
-  - `http`: cache key includes URL + `sha256`
+    - `local`: cache key includes archive path + `sha256`
+    - `http`: cache key includes URL + `sha256`
 - Allow private sources via secrets (tokenized git URLs or authenticated
   downloads).
 
@@ -116,16 +115,16 @@ The dataset registry is a first-class component and needs implementation work
 in both the dataset repo and BrkRaw:
 
 - Registry format
-  - Define a stable YAML schema for entries (`dataset_id`, `priority`, `source`,
+    - Define a stable YAML schema for entries (`dataset_id`, `priority`, `source`,
     optional tags/metadata).
 - Hosted datasets
-  - Support entries that reference pruned archives stored in `brkraw-dataset`
+    - Support entries that reference pruned archives stored in `brkraw-dataset`
     (recommended `source.type: local`).
 - External datasets
-  - Support `source.type: http` with `sha256` and extraction rules.
-  - Support authenticated/private sources via CI secrets.
+    - Support `source.type: http` with `sha256` and extraction rules.
+    - Support authenticated/private sources via CI secrets.
 - Tooling
-  - Add a small helper to:
+    - Add a small helper to:
     - load and validate the registry
     - resolve the selected dataset set (`--small/--full`, tags)
     - materialize datasets into `BRKRAW_TEST_DATA_ROOT`
@@ -172,8 +171,8 @@ Required (must be present in the registry entry, and/or resolvable via a linked
 manifest):
 
 - Pinned source with immutable versioning:
-  - `git`: commit SHA (preferred) or immutable tag
-  - `http`: `sha256` of the downloaded archive
+    - `git`: commit SHA (preferred) or immutable tag
+    - `http`: `sha256` of the downloaded archive
 - License and attribution information (either embedded or via a stable link).
 - Access method documented (public vs authenticated via CI secrets).
 
@@ -190,11 +189,11 @@ validate it and so test runs can emit consistent per-dataset reports.
 There are two representations:
 
 - **Hosted (archive + sidecar in `brkraw-dataset`)**
-  - The manifest is stored next to the pruned archive as a sidecar (same basename).
+    - The manifest is stored next to the pruned archive as a sidecar (same basename).
 - **Materialized (directory under `BRKRAW_TEST_DATA_ROOT`)**
-  - Acquisition tooling should write/copy a canonical `dataset.yaml` into the
+    - Acquisition tooling should write/copy a canonical `dataset.yaml` into the
     extracted dataset directory so tests can discover datasets uniformly.
-  - For hosted archives, `dataset.yaml` is derived from the sidecar.
+    - For hosted archives, `dataset.yaml` is derived from the sidecar.
 
 Naming rule:
 
@@ -369,9 +368,9 @@ Each record should include at least:
 ### Phase 1: Infrastructure + discovery
 
 - Add `tests/integration/` with:
-  - dataset discovery helper
-  - pytest parametrization across studies
-  - artifact/log writer utilities
+    - dataset discovery helper
+    - pytest parametrization across studies
+    - artifact/log writer utilities
 - Add CI job skeleton (without enabling on PRs yet).
 
 Deliverable:
@@ -383,12 +382,12 @@ Deliverable:
 Per scan/reco, validate that the following do not raise exceptions:
 
 - `resolver.affine`:
-  - compute requested affine spaces
-  - log determinant/orthogonality checks and shape
+    - compute requested affine spaces
+    - log determinant/orthogonality checks and shape
 - `resolver.shape`:
-  - compute expected data shape and timing-related outputs
+    - compute expected data shape and timing-related outputs
 - `resolver.nifti`:
-  - build NIfTI objects with header validation
+    - build NIfTI objects with header validation
 
 Define stable expectations that do not require "golden" outputs, e.g.:
 
@@ -405,13 +404,13 @@ Deliverable:
 Validate high-level app behaviors against real datasets:
 
 - `apps.loader`:
-  - `get_scan`, `get_dataobj`, `get_affine`, `convert`, metadata access
+    - `get_scan`, `get_dataobj`, `get_affine`, `convert`, metadata access
 - `apps.addon`:
-  - load bundled/default addons
-  - validate example specs/rules/transforms resolve
+    - load bundled/default addons
+    - validate example specs/rules/transforms resolve
 - `apps.hook`:
-  - list/install/uninstall flows against a temporary config root
-  - ensure hook manifest parsing and file installation paths are correct
+    - list/install/uninstall flows against a temporary config root
+    - ensure hook manifest parsing and file installation paths are correct
 
 Deliverable:
 - Integration tests that exercise the public APIs without depending on CLI I/O.
@@ -452,8 +451,8 @@ Deliverable:
 ### Caching
 
 - cache fetched datasets keyed by immutable identifiers from the registry:
-  - hosted/local: archive path + `sha256`
-  - http: URL + `sha256`
+    - hosted/local: archive path + `sha256`
+    - http: URL + `sha256`
 - cache Python deps via pip and the venv wheel cache.
 
 ### Artifacts
@@ -485,8 +484,8 @@ brkraw test
 Goals:
 
 - Run the same integration suite locally against:
-  - a dataset root path, or
-  - a registry entry (fetch + cache + run)
+    - a dataset root path, or
+    - a registry entry (fetch + cache + run)
 - Support tier selection (`--small` / `--full`) consistent with CI semantics.
 - Support `--include-fid` opt-in for the expensive FID resolver suite.
 - Write the same `artifacts/` outputs as CI for easy sharing and debugging.

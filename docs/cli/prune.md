@@ -28,10 +28,16 @@ Use an installed pruner spec by name:
 brkraw prune /path/to/dataset --spec-name minimal_share
 ```
 
+Notes:
+
+- `--spec` accepts an absolute path, or a basename that is resolved relative to the current
+  working directory and the config root pruner spec directory (`pruner_specs/`).
+- `--spec-name` is a convenience form for selecting an installed pruner spec by basename.
+
 Write to a specific zip path:
 
 ```bash
-brkraw prune /path/to/dataset --spec prune_spec.yaml --output out.zip
+brkraw prune /path/to/dataset --spec prune_spec.yaml -o out.zip
 ```
 
 ---
@@ -208,6 +214,11 @@ If `--output` is not provided, BrkRaw tries to use `root_name` from the spec.
 If the spec has no root_name, you must provide `--output`.
 
 When a default output is generated, it is written to the current working directory.
+
+Default output name:
+
+- when the input is a directory: `./<root_name>.zip`
+- when the input is a file: `./<root_name><input_suffix>`
 
 ### Root folder in the zip
 

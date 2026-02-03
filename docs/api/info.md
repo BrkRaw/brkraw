@@ -19,11 +19,25 @@ Typical workflow:
 All inspection APIs operate on a loaded dataset.
 
 ```python
-import brkraw as brk
-loader = brk.load("/path/to/study")
+from brkraw.api import BrukerLoader
+
+loader = BrukerLoader("/path/to/study")
 ```
 
 The loader performs validation on load and does not modify the dataset.
+
+---
+
+## List available scans and reconstructions
+
+```python
+scan_ids = list(loader.avail)
+print("Scan IDs:", scan_ids)
+
+scan = loader.get_scan(scan_ids[0])
+reco_ids = list(scan.avail)
+print("Reco IDs for first scan:", reco_ids)
+```
 
 ---
 
@@ -82,12 +96,13 @@ loader.info(
 
 When enabled, reco entries are included under each scan.
 
+Note: `show_reco` defaults to `True` in the Python API. If you want the default
+CLI-like behavior (hide reco rows), pass `show_reco=False`.
+
 ### Return format
 
-- When `as_dict=True`, the result is a structured dictionary suitable
-  for scripting or serialization.
-- When `as_dict=False`, the API may return a formatted, human-readable
-  representation.
+- When `as_dict=True`, the result is a structured dictionary suitable for scripting.
+- When `as_dict=False`, BrkRaw prints a formatted table to stdout and returns `None`.
 
 The exact structure of the returned dictionary is stable within a
 major version.
@@ -120,7 +135,7 @@ print(params)
 params = loader.search_params(
     "VisuAcqEchoTime",
     scan_id=4,
-    param_file="visu_pars",
+    file="visu_pars",
 )
 ```
 

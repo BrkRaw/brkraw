@@ -22,8 +22,12 @@ The addon API supports installation, listing, removal, and reference resolution.
 ## Entry points
 
 ```python
-from brkraw.apps import addon
+from brkraw.api import addon_manager as addon
 ```
+
+Note: `brkraw.api.addon_manager` manages installed addon files under the config
+root. `brkraw.api.addon` refers to the spec/remapper module (spec loading,
+context maps, mapping).
 
 Public functions:
 
@@ -61,7 +65,7 @@ Many functions accept `root`:
 - pruner spec
 
 ```python
-from brkraw.apps import addon
+from brkraw.api import addon_manager as addon
 
 installed = addon.add("/path/to/file.yaml")
 for path in installed:
@@ -79,7 +83,7 @@ Behavior:
 Install a spec mapping:
 
 ```python
-from brkraw.apps import addon
+from brkraw.api import addon_manager as addon
 
 installed = addon.add_spec_data(
     spec_data,
@@ -131,7 +135,7 @@ installation fails with `FileNotFoundError`.
 Install brkraw bundled default specs, rules, and pruner specs:
 
 ```python
-from brkraw.apps import addon
+from brkraw.api import addon_manager as addon
 
 installed = addon.install_defaults()
 print(len(installed))
@@ -146,7 +150,7 @@ This is typically used when preparing a fresh configuration root.
 List installed specs, pruner specs, rules, and transforms:
 
 ```python
-from brkraw.apps import addon
+from brkraw.api import addon_manager as addon
 
 data = addon.list_installed()
 print(data.keys())
@@ -174,7 +178,7 @@ Notes:
 Remove an installed file by filename:
 
 ```python
-from brkraw.apps import addon
+from brkraw.api import addon_manager as addon
 
 removed = addon.remove("my_spec.yaml")
 for path in removed:
@@ -229,7 +233,7 @@ by logical names.
 Resolve a spec reference:
 
 ```python
-from brkraw.apps import addon
+from brkraw.api import addon_manager as addon
 
 spec_path = addon.resolve_spec_reference(
     "MySpecName",
@@ -266,7 +270,7 @@ Notes:
 Resolve a pruner spec by name (latest version by default):
 
 ```python
-from brkraw.apps import addon
+from brkraw.api import addon_manager as addon
 
 path = addon.resolve_pruner_spec_reference("minimal_share")
 print(path)

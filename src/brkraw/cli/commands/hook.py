@@ -274,13 +274,26 @@ def cmd_preset(args: argparse.Namespace) -> int:
         return 2
     preset = _infer_hook_preset(entry)
     payload = {"hooks": {args.target: preset}}
-    text = yaml.safe_dump(payload, sort_keys=False)
+    normalized = _normalize_yaml_payload(payload)
+    text = yaml.safe_dump(normalized, sort_keys=False)
     if args.output:
         Path(args.output).expanduser().write_text(text, encoding="utf-8")
         logger.info("Wrote preset: %s", args.output)
         return 0
     print(text, end="" if text.endswith("\n") else "\n")
     return 0
+
+
+def _normalize_yaml_payload(value: Any) -> Any:
+    if isinstance(value, Path):
+        return str(value)
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        return _normalize_yaml_payload(dataclasses.asdict(value))
+    if isinstance(value, dict):
+        return {key: _normalize_yaml_payload(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_normalize_yaml_payload(item) for item in value]
+    return value
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
