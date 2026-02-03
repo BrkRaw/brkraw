@@ -70,6 +70,11 @@ def main() -> int:
         default=0,
         help="Exit code to use when the badge is already up to date (default: 0).",
     )
+    parser.add_argument(
+        "--no-git",
+        action="store_true",
+        help="Only update the SVG file; do not run git add/commit/push.",
+    )
     args = parser.parse_args()
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -90,6 +95,9 @@ def main() -> int:
         OUTPUT_PATH.write_bytes(r.read())
 
     print(f"Saved:\n  {OUTPUT_PATH}")
+
+    if args.no_git:
+        return 0
 
     run(["git", "add", str(OUTPUT_PATH)])
 
