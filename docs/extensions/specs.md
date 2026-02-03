@@ -39,30 +39,38 @@ __meta__:
   category: "info_spec"
   transforms_source: "<spec-name>_transforms.py"
 
-Modality:
+Method:
   sources:
     - file: method
       key: Method
   transform: to_bids_modality
 
-TaskName:
+Protocol:
   sources:
-    - file: method
-      key: PVM_FMRI_Name
+    - file: acqp
+      key: ACQ_Protocol
+  transform: to_bids_protocol
 ```
 
-Before rule (default info spec):
+Specification:
+
+- Field `Method` is specified by reading `Method` from the `method` file,
+  processing it with `to_bids_modality`, and mapping the result to `Method`.
+- Field `Protocol` is specified by reading `ACQ_Protocol` from the `acqp` file,
+  processing it with `to_bids_protocol`, and mapping the result to `Protocol`.
+
+Example input parameters:
 
 ```text
-Protocol: EPI
-Method: EPI
+method:Method = Bruker:EPI
+acqp:ACQ_Protocol = 3_fMRI_protocol
 ```
 
-After rule selects `bids_bold_info`:
+Example output (after mapping + transforms):
 
 ```text
-Modality: bold
-TaskName: rest
+Method: bold
+Protocol: func
 ```
 
 ---
@@ -94,6 +102,15 @@ PhaseEncodingDirection:
   transform: to_bids_phase_dir
 ```
 
+Specification:
+
+- Field `RepetitionTime` is specified by reading `PVM_RepetitionTime` from the
+  `method` file, processing it with `ms_to_s`, and mapping the result to
+  `RepetitionTime`.
+- Field `PhaseEncodingDirection` is specified by reading `PVM_EPI_PhaseEncDir`
+  from the `method` file, processing it with `to_bids_phase_dir`, and mapping
+  the result to `PhaseEncodingDirection`.
+
 Resulting sidecar fragment:
 
 ```json
@@ -102,6 +119,11 @@ Resulting sidecar fragment:
   "PhaseEncodingDirection": "j-"
 }
 ```
+
+Note:
+
+- When this metadata spec is selected, its output keys become sidecar JSON keys
+  (after transforms are applied).
 
 ---
 
@@ -128,6 +150,12 @@ Subject.ID:
       key: SUBJECT_id
 ```
 
+Specification:
+
+- Field `Subject.ID` is specified by reading `SUBJECT_id` from the `subject`
+  file and mapping the value to a dotted output key (`Subject.ID`), which
+  produces a nested structure.
+
 ---
 
 ## **meta** block
@@ -143,6 +171,11 @@ __meta__:
   description: "Metadata mapping for a specific scan family"
   category: "info_spec"
 ```
+
+Specification:
+
+- `__meta__` specifies the identity and compatibility of the spec (for example,
+  rules can select by `name`/`version`, and selection can validate `category`).
 
 - `name`
     - lowercase snake_case
@@ -174,6 +207,13 @@ __meta__:
   doi: "10.1234/example"
   citation: "Doe et al., NeuroImage 2024"
 ```
+
+Specification:
+
+- If `include` is specified, referenced spec(s) are merged first, then the
+  current spec applies its overrides (unless `include_mode: strict`).
+- If `transforms_source` is specified, `transform:` function names can be
+  resolved when the spec is loaded from YAML.
 
 Supported optional fields:
 
@@ -212,6 +252,11 @@ Produces:
 {"Study": {"ID": "1"}}
 ```
 
+Specification:
+
+- Dotted output keys (e.g., `Study.ID`) specify nested keys in the resulting
+  mapping.
+
 ---
 
 ## Sources
@@ -224,6 +269,11 @@ FieldName:
     - file: method
       key: PVM_SPackArrNSlices
 ```
+
+Specification:
+
+- Field `FieldName` is specified by reading `PVM_SPackArrNSlices` from the
+  `method` file and mapping the value to `FieldName`.
 
 Each source entry supports:
 
@@ -256,6 +306,13 @@ out.joined:
   transform: join_fields
 ```
 
+Specification:
+
+- Field `out.joined` is specified by:
+    - input `a`: read `PVM_SPackArrNSlices` from the `method` file
+    - input `b`: constant `3`
+    - transform: call `join_fields(a=..., b=3)` and map the result to `out.joined`
+
 Rules:
 
 - exactly one of `sources`, `inputs`, `const`, or `ref` is required
@@ -275,6 +332,12 @@ FieldCopy:
   ref: "FieldName"
 ```
 
+Specification:
+
+- Field `FieldName` is specified as the constant value `1`.
+- Field `FieldCopy` is specified as a reference to the previously-resolved
+  output `FieldName`.
+
 ---
 
 ## Transforms
@@ -288,6 +351,11 @@ FieldName:
       key: ACQ_XXX
   transform: normalize_method
 ```
+
+Specification:
+
+- Field `FieldName` is specified by reading `ACQ_XXX` from the `acqp` file,
+  processing it with `normalize_method`, and mapping the result to `FieldName`.
 
 Behavior:
 
@@ -330,6 +398,12 @@ FieldName:
       key: PVM_SPackArrNSlices
 ```
 
+Specification:
+
+- Field `FieldName` is specified by a `sources` chain:
+    - first source: computed value via `join_fields(...)`
+    - fallback source: raw `method:PVM_SPackArrNSlices` value
+
 ---
 
 ## Defaults and requirements
@@ -340,6 +414,10 @@ Input entries (inside `inputs:`) may define:
 default: 1
 ```
 
+Specification:
+
+- If an input has no value, `default` specifies the fallback value.
+
 - `default`: fallback if no input value is found
 
 Input entries (inside `inputs:`) may also define:
@@ -347,6 +425,10 @@ Input entries (inside `inputs:`) may also define:
 ```yaml
 required: true
 ```
+
+Specification:
+
+- If an input has no value and `required: true`, mapping raises an error.
 
 - `required`: missing input raises an error (instead of returning `None`)
 
@@ -407,6 +489,11 @@ from brkraw.specs.remapper import load_spec, map_parameters
 spec, transforms = load_spec("spec.yaml", validate=True)
 result = map_parameters(scan, spec, transforms=transforms)
 ```
+
+Note:
+
+- `load_spec(...)` returns both the spec mapping and the transform registry
+  needed to evaluate `transform:` references.
 
 Validation checks:
 

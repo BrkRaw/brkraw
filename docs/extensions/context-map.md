@@ -10,6 +10,14 @@ addons.
 
 ---
 
+!!! warning "Experimental / lightly tested"
+    Context maps are currently an early-stage, conceptual model that was
+    introduced for `brkraw-bids` development and has not yet been extensively
+    tested across diverse datasets.
+    Expect sharp edges and potential breaking changes in syntax/behavior.
+    Validate outputs carefully before relying on context maps in production
+    pipelines.
+
 ## Purpose and scope
 
 Context maps are intended for:
@@ -28,6 +36,8 @@ Key properties:
 - applied after spec and transform evaluation
 - scoped to a single invocation or script
 - optional but powerful
+- designed to live alongside a raw dataset as a small “manifest” that captures
+  project-specific conversion and organization intent for reproducibility
 
 ---
 
@@ -84,6 +94,8 @@ Notes:
 - `__meta__` affects layout rendering only
 - it does not affect mapping rules
 - values here act as defaults and may be overridden elsewhere
+- you may define both `layout_entries` and `layout_template`; if both are
+  present, `layout_template` takes precedence (it overrides `layout_entries`)
 
 ---
 
@@ -240,26 +252,44 @@ Valid values:
 - `mapping`
 - `const`
 
+Notes (implementation):
+
+- `type` may be omitted when it can be inferred:
+    - `values:` implies `type: mapping`
+    - `value:` implies `type: const`
+
 ---
 
 ### mapping rules (type: mapping)
 
 ```yaml
-type: mapping
-values:
-  1: "sub-001"
-  2: "sub-002"
-default: "unknown"
-override: true
+Subject.ID:
+  type: mapping
+  values:
+    "JohnDoe's rat no1": "JD01"
+    "JohnDoe's rat no2": "JD02"
+  default: "unknown"
+  override: true
 ```
 
 Behavior:
 
-- input value is looked up in `values`
+- the current value of `Subject.ID` (from the selected spec output) is looked up
+  in `values`
+- if a match is found, the mapped value replaces `Subject.ID`
 - if no match is found:
-    - `default` is used if provided
+    - `default` is used if provided (e.g., `unknown`)
     - otherwise the original value is preserved
-- `override` controls whether existing values are replaced
+- `override` controls whether an existing non-null value may be replaced
+  (layout typically adds the BIDS entity prefix, e.g. `sub-{Subject.ID}`).
+
+Notes (implementation):
+
+- If the current value is a list/tuple, mapping is applied element-wise and the
+  container type is preserved.
+- If the current value does not match directly, BrkRaw also tries `str(value)`
+  as a lookup key (useful when the current value is numeric but YAML keys are
+  strings).
 
 ---
 
@@ -310,6 +340,18 @@ Supported operators include:
 - `regex`
 - `not`
 
+Notes (implementation):
+
+- `when` is evaluated as an AND across keys (all conditions must match).
+- Each condition may be:
+    - a scalar (exact match), or
+    - an operator mapping (all operators inside the mapping must match)
+- Reserved IDs are available in `when` (case-insensitive):
+    - `ScanID`, `scan_id`, `scanid`
+    - `RecoID`, `reco_id`, `recoid`
+- `in` accepts either a scalar or a list; if the actual value is a list/tuple,
+  it matches when any element is in the expected list.
+
 Rules are evaluated against the **original spec outputs**, not against values
 modified by earlier context map rules.
 
@@ -359,6 +401,12 @@ These keys become available for:
 - selector logic
 - metadata sidecars
 - output layout rendering
+
+Note:
+
+- Creating a new key with `type: mapping` typically requires either `default:`
+  or an explicit `values:` entry for `null`/`None`, because a missing key has no
+  input value to look up.
 
 ---
 

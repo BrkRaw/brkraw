@@ -38,8 +38,6 @@ def render_layout(
     if layout_entries is None and layout_template is None and context_map:
         meta = load_layout_meta(context_map)
         layout_entries = meta.get("layout_entries")
-        if layout_entries is None:
-            layout_entries = meta.get("layout_fields")
         layout_template = meta.get("layout_template")
     info = load_layout_info(
         loader,

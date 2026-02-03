@@ -226,8 +226,6 @@ def cmd_convert(args: argparse.Namespace) -> int:
         layout_meta = layout_core.load_layout_meta(args.context_map)
         if isinstance(layout_meta, dict):
             meta_entries = layout_meta.get("layout_entries")
-            if meta_entries is None:
-                meta_entries = layout_meta.get("layout_fields")
             if isinstance(meta_entries, list):
                 layout_entries = meta_entries
             meta_template = layout_meta.get("layout_template")

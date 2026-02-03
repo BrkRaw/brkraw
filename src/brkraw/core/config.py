@@ -191,10 +191,8 @@ def resolve_config(root: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
     defaults = default_config()
     overrides = _normalize_config(load(root=root) or {})
     overrides.pop("nifti_filename_template", None)
-    overrides.pop("output_format", None)
     overrides["config_version"] = CONFIG_VERSION
     defaults.pop("nifti_filename_template", None)
-    defaults.pop("output_format", None)
     return _deep_merge(defaults, overrides)
 
 
@@ -202,7 +200,7 @@ def resolve_editor_binary(root: Optional[Union[str, Path]] = None) -> Optional[s
     config = resolve_config(root=root)
     editor = config.get("editor")
     if not isinstance(editor, str) or not editor.strip():
-        editor = config.get("editor_binary")
+        editor = None
     if isinstance(editor, str) and editor.strip():
         return editor.strip()
     env_editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
@@ -298,7 +296,7 @@ def output_width(root: Optional[Union[str, Path]] = None, default: int = 120) ->
 def float_decimals(root: Optional[Union[str, Path]] = None, default: int = 6) -> int:
     config = resolve_config(root=root)
     output_cfg = config.get("output", {})
-    decimals = output_cfg.get("float_decimals", config.get("float_decimals", default))
+    decimals = output_cfg.get("float_decimals", default)
     try:
         return int(decimals)
     except (TypeError, ValueError):
@@ -327,10 +325,6 @@ def layout_entries(
     config = resolve_config(root=root)
     output_cfg = config.get("output", {})
     fields = output_cfg.get("layout_entries")
-    if fields is None:
-        fields = output_cfg.get("layout_fields")
-    if fields is None:
-        fields = output_cfg.get("format_fields")
     if isinstance(fields, list):
         return fields
     if default is None:
@@ -351,20 +345,6 @@ def _normalize_config(data: Dict[str, Any]) -> Dict[str, Any]:
     config = dict(data)
     logging_cfg = dict(config.get("logging") or {})
     output_cfg = dict(config.get("output") or {})
-
-    config.pop("output_format", None)
-    if "log_level" in config and "level" not in logging_cfg:
-        logging_cfg["level"] = config.pop("log_level")
-    if "output_width" in config and "print_width" not in logging_cfg:
-        logging_cfg["print_width"] = config.pop("output_width")
-    config.pop("output_format_fields", None)
-    config.pop("output_format_spec", None)
-    if "layout_fields" in output_cfg and "layout_entries" not in output_cfg:
-        output_cfg["layout_entries"] = output_cfg["layout_fields"]
-    if "float_decimals" in config and "float_decimals" not in output_cfg:
-        output_cfg["float_decimals"] = config.pop("float_decimals")
-    if "editor_binary" in config and "editor" not in config:
-        config["editor"] = config.pop("editor_binary")
 
     if logging_cfg:
         config["logging"] = logging_cfg
