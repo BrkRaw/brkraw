@@ -43,6 +43,20 @@ Notes:
   a `context_map` YAML at runtime.
 - Extensions are installed as addons (rules/specs/transforms files) and plugins
   (hook packages and CLI plugins as Python packages).
+- For concepts and file formats (rules/specs/context maps/layout), see the
+  [Extensions](../extensions/extensibility.md) section.
+
+See also:
+
+- [init](init.md)
+- [session](session.md)
+- [info](info.md)
+- [params](params.md)
+- [convert](convert.md)
+- [prune](prune.md)
+- [config](config.md)
+- [addon](addon.md)
+- [hook](hook.md)
 
 Roadmap:
 

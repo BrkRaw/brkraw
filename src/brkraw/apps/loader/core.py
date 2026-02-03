@@ -565,7 +565,6 @@ class BrukerLoader:
 
             if scope == 'scan':
                 if not as_dict:
-                    config_core.configure_logging(root=base, stream=sys.stdout)
                     text = format_info_tables(
                         {"Scan(s)": scan_info},
                         width=width,
@@ -574,7 +573,7 @@ class BrukerLoader:
                         scan_transpose=scan_transpose,
                         float_decimals=float_decimals,
                     )
-                    logger.info("%s", text)
+                    print(text)
                     return None
                 return scan_info
         
@@ -586,19 +585,17 @@ class BrukerLoader:
         
         if scope == 'study':
             if not as_dict:
-                config_core.configure_logging(root=base, stream=sys.stdout)
                 text = format_info_tables(
                     study_info,
                     width=width,
                     float_decimals=float_decimals,
                 )
-                logger.info("%s", text)
+                print(text)
                 return None
             return study_info
         
         study_info['Scan(s)'] = scan_info
         if not as_dict:
-            config_core.configure_logging(root=base, stream=sys.stdout)
             text = format_info_tables(
                 study_info,
                 width=width,
@@ -607,7 +604,7 @@ class BrukerLoader:
                 scan_transpose=scan_transpose,
                 float_decimals=float_decimals,
             )
-            logger.info("%s", text)
+            print(text)
             return None
         return study_info
 

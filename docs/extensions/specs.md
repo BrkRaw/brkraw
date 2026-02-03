@@ -37,6 +37,7 @@ __meta__:
   name: "bids_bold_info"
   version: "1.0.0"
   category: "info_spec"
+  transforms_source: "<spec-name>_transforms.py"
 
 Modality:
   sources:
@@ -78,6 +79,7 @@ __meta__:
   name: "bids_bold_metadata"
   version: "1.0.0"
   category: "metadata_spec"
+  transforms_source: "<spec-name>_transforms.py"
 
 RepetitionTime:
   sources:
@@ -114,11 +116,11 @@ Example:
 
 ```yaml
 __meta__:
-  name: "mrs"
+  name: "<spec-name>"
   version: "1.0.0"
-  description: "Metadata mapping for PRESS/STEAM scans"
+  description: "Metadata mapping for a specific acquisition family"
   category: "info_spec"
-  transforms_source: "mrs_transforms.py"
+  transforms_source: "<spec-name>_transforms.py"
 
 Subject.ID:
   sources:
@@ -136,26 +138,26 @@ Every spec **must** define `__meta__`.
 
 ```yaml
 __meta__:
-  name: "mrs"
+  name: "<spec-name>"
   version: "1.0.0"
-  description: "Metadata mapping for PRESS/STEAM scans"
+  description: "Metadata mapping for a specific scan family"
   category: "info_spec"
 ```
 
 - `name`
-  - lowercase snake_case
-  - up to four tokens
-  - pattern: `^[a-z][a-z0-9]*(?:_[a-z0-9]+){0,3}$`
+    - lowercase snake_case
+    - up to four tokens
+    - pattern: `^[a-z][a-z0-9]*(?:_[a-z0-9]+){0,3}$`
 - `version`
-  - free-form string
-  - compared lexically unless pinned by rules
+    - free-form string
+    - compared lexically unless pinned by rules
 - `description`
-  - human-readable summary
+    - human-readable summary
 - `category`
-  - required when selected by rules
-  - must be one of:
-    - `info_spec`
-    - `metadata_spec`
+    - required when selected by rules
+    - must be one of:
+        - `info_spec`
+        - `metadata_spec`
 
 ---
 
@@ -176,15 +178,15 @@ __meta__:
 Supported optional fields:
 
 - `transforms_source`
-  - string or list of strings
-  - relative to the spec file unless absolute
-  - later files override earlier ones
+    - string or list of strings
+    - relative to the spec file unless absolute
+    - later files override earlier ones
 - `include`
-  - string or list of spec paths
-  - merged before the current spec
+    - string or list of spec paths
+    - merged before the current spec
 - `include_mode`
-  - `override` (default): current spec wins
-  - `strict`: conflict raises an error
+    - `override` (default): current spec wins
+    - `strict`: conflict raises an error
 - `authors`, `developers`
 - `doi`
 - `citation`
@@ -225,12 +227,12 @@ FieldName:
 
 Each source entry supports:
 
-- `file`: one of
-  - `method`
-  - `acqp`
-  - `visu_pars`
-  - `reco`
-  - `subject`
+- `file`: one of:
+    - `method`
+    - `acqp`
+    - `visu_pars`
+    - `reco`
+    - `subject`
 - `key`: parameter name inside that file
 - `reco_id`: optional, for `visu_pars` or `reco`
 
@@ -258,10 +260,10 @@ Rules:
 
 - exactly one of `sources`, `inputs`, `const`, or `ref` is required
 - `inputs` may reference:
-  - `sources`
-  - `const`
-  - `ref` (previously resolved output)
-  - `$scan_id`, `$reco_id`
+    - `sources`
+    - `const`
+    - `ref` (previously resolved output)
+    - `$scan_id`, `$reco_id`
 
 You can also define constant or reference rules directly at the top level:
 
@@ -292,22 +294,64 @@ Behavior:
 - a single transform receives the resolved value
 - a list applies transforms sequentially
 - with `inputs`, the first transform receives keyword arguments
+- an empty transform list is invalid
 
-Transforms are resolved from `__meta__.transforms_source`.
+Transforms must be available in the transform registry:
+
+- for file-based specs, this registry is loaded from `__meta__.transforms_source`
+- for programmatic use, pass `transforms={...}` into `map_parameters(...)`
+
+!!! important "Transforms Require transforms_source"
+    If you use `transform:` anywhere in a spec file, you must ensure BrkRaw can
+    load those functions.
+    - When loading from YAML with `load_spec(...)`, set `__meta__.transforms_source`
+      so `load_spec(...)` returns a non-empty `transforms` registry.
+    - When building specs programmatically, pass `transforms={...}` to `map_parameters(...)`.
+    If you reference transforms but provide no registry, mapping will fail at
+    runtime (missing transform function).
+
+### Inline inputs inside sources (advanced)
+
+`sources:` items may include an inline `inputs:` block (optionally with a `transform:`).
+This is useful when you want a computed fallback in a `sources` chain.
+
+```yaml
+FieldName:
+  sources:
+    - inputs:
+        a:
+          sources:
+            - file: method
+              key: PVM_SPackArrNSlices
+        b:
+          const: 3
+      transform: join_fields
+    - file: method
+      key: PVM_SPackArrNSlices
+```
 
 ---
 
 ## Defaults and requirements
 
-Source and input entries may define:
+Input entries (inside `inputs:`) may define:
 
 ```yaml
 default: 1
+```
+
+- `default`: fallback if no input value is found
+
+Input entries (inside `inputs:`) may also define:
+
+```yaml
 required: true
 ```
 
-- `default`: fallback if no value is found
-- `required`: missing value raises an error
+- `required`: missing input raises an error (instead of returning `None`)
+
+Output rules do not have a `required` flag; use `sources` ordering or an inline
+`inputs` source entry for fallbacks.
 
 ---
 
@@ -348,24 +392,26 @@ Context maps:
 - may override or extend spec outputs
 - may introduce selectors for conversion
 
-See `reference/context-map.md` for mapping rules and schema.
+See [Context map syntax](context-map.md) for mapping rules and schema.
 
 ---
 
 ## Validation
 
-To validate a spec:
+To validate a spec file (including transform sources), prefer loading it through
+the spec loader:
 
 ```python
-from brkraw.specs.remapper import map_parameters
+from brkraw.specs.remapper import load_spec, map_parameters
 
-result = map_parameters(scan, spec, validate=True)
+spec, transforms = load_spec("spec.yaml", validate=True)
+result = map_parameters(scan, spec, transforms=transforms)
 ```
 
 Validation checks:
 
 - schema compliance
-- transform resolution
+- transform source paths (when validating a spec file)
 - source correctness
 
 ---

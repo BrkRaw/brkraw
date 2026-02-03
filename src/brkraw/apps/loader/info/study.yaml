@@ -5,7 +5,7 @@ study:
     description: "Study-level info mapping for Bruker datasets."
     category: "info_spec"
     transforms_source: "transform.py"
-  Study.Opperator:
+  Study.Operator:
     sources:
       - file: subject
         key: SUBJECT_referral
@@ -91,7 +91,7 @@ scan:
     description: "Scan-level fallback info mapping for Bruker datasets."
     category: "info_spec"
     transforms_source: "transform.py"
-  Study.Opperator:
+  Study.Operator:
     sources:
       - file: visu_pars
         key: VisuStudyReferringPhysician

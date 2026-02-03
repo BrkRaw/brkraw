@@ -94,13 +94,15 @@ Each entry supports:
     - dotted keys are supported
 - `entry`
     - path label (for example `sub`, `ses`, `run`)
-    - omitted entries are skipped
+    - when omitted and `hide: false`, a default entry is derived from `key`
 - `sep`
-    - separator appended after the entry
-    - usually `/` or `_`
+    - separator inserted between fields (default `_`)
+    - use `/` to create nested directories
 - `hide`
-    - if true, the key is not rendered
-    - still available for template or downstream logic
+    - if true, only the value is appended (the entry label is omitted)
+    - when `entry` is omitted and `hide: true`, the value is not reusable via `use_entry`
+- `use_entry`
+    - reuse a previously defined `entry` value (for formatting or truncation)
 
 ---
 
@@ -136,7 +138,7 @@ Example (missing values are skipped; common when a spec does not emit `Modality`
 Result:
 
 ```text
-study-001/sub-003/ses-baseline/
+study-001/sub-003/ses-baseline
 ```
 
 ---
@@ -155,7 +157,7 @@ __meta__:
 Rules:
 
 - `{Key}` placeholders are replaced with metadata values
-- missing keys raise an error unless a default exists upstream
+- missing keys render as empty strings
 - template overrides `layout_entries` entirely
 
 Use templates when:
@@ -235,11 +237,12 @@ Exact filename patterns are controlled by:
 
 Layout evaluation fails if:
 
-- a required key is missing
-- a template placeholder cannot be resolved
-- metadata contains invalid path characters
+- `value_pattern` is an invalid regex
+- an override spec resolves to a non-mapping
+- required files cannot be read
 
-Errors are raised before any files are written.
+When conversion runs, output directories implied by `/` separators are created
+before writing files.
 
 ---
 

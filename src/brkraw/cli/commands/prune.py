@@ -97,7 +97,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "--output",
         dest="output",
         type=str,
-        help="Output zip path (default: <input>_pruned.*).",
+        help="Output zip path (default: ./<root_name>.zip when omitted).",
     )
     prune_parser.add_argument(
         "--no-validate",

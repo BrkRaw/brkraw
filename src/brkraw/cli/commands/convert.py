@@ -12,7 +12,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Mapping, Optional, Dict, List, Tuple, cast, get_args
+from typing import Any, Mapping, Optional, Dict, List, Tuple, Sequence, cast, get_args
 
 import numpy as np
 from brkraw.cli.utils import load
@@ -387,6 +387,8 @@ def cmd_convert(args: argparse.Namespace) -> int:
             for path in output_paths:
                 reserved_paths.add(path)
 
+            _ensure_output_dirs(output_paths)
+
             sidecar_meta = None
             if args.sidecar:
                 sidecar_meta = loader.get_metadata(
@@ -397,12 +399,10 @@ def cmd_convert(args: argparse.Namespace) -> int:
 
             if args.no_convert:
                 for path in output_paths:
-                    path.parent.mkdir(parents=True, exist_ok=True)
                     _write_sidecar(path, sidecar_meta)
                     total_written += 1
             else:
                 for path, obj in zip(output_paths, nii_list):
-                    path.parent.mkdir(parents=True, exist_ok=True)
                     obj.to_filename(str(path))
                     logger.info("Wrote NIfTI: %s", path)
                     total_written += 1
@@ -711,6 +711,15 @@ def _parse_hook_args(values: List[str]) -> Dict[str, Dict[str, Any]]:
         parsed.setdefault(hook_name, {})[key] = coerced_value
     logger.debug("Parsed hook args: %s", parsed)
     return parsed
+
+
+def _ensure_output_dirs(paths: Sequence[Path]) -> None:
+    for path in paths:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.error("Failed to create output directory %s: %s", path.parent, exc)
+            raise
 
 
 def _uses_counter_tag(

@@ -17,11 +17,23 @@ RULE_KEYS = {"info_spec", "metadata_spec", "converter_hook"}
 _SPEC_EXTS = (".yaml", ".yml")
 
 
-def warn_dependencies(target: Path, *, kind: str, root: Optional[Union[str, Path]]) -> bool:
+def warn_dependencies(
+    target: Path,
+    *,
+    kind: str,
+    root: Optional[Union[str, Path]],
+    ignore_rules_dir: Optional[Path] = None,
+    ignore_specs_dir: Optional[Path] = None,
+) -> bool:
     paths = config_core.paths(root=root)
     warned = False
     if kind == "spec":
-        used_by_rules = rules_using_spec(target.name, paths.rules_dir)
+        used_by_rules = rules_using_spec(
+            target,
+            paths.rules_dir,
+            root=paths.root,
+            ignore_dir=ignore_rules_dir,
+        )
         if used_by_rules:
             logger.warning(
                 "Spec %s is referenced by rules: %s",
@@ -29,7 +41,11 @@ def warn_dependencies(target: Path, *, kind: str, root: Optional[Union[str, Path
                 ", ".join(sorted(used_by_rules)),
             )
             warned = True
-        included_by = specs_including_spec(target.name, paths.specs_dir)
+        included_by = specs_including_spec(
+            target,
+            paths.specs_dir,
+            ignore_dir=ignore_specs_dir,
+        )
         if included_by:
             logger.warning(
                 "Spec %s is included by: %s",
@@ -54,12 +70,34 @@ def warn_dependencies(target: Path, *, kind: str, root: Optional[Union[str, Path
     return warned
 
 
-def rules_using_spec(spec_name: str, rules_dir: Path) -> Set[str]:
+def _is_under(path: Path, base: Optional[Path]) -> bool:
+    if base is None:
+        return False
+    try:
+        path.relative_to(base)
+    except ValueError:
+        return False
+    return True
+
+
+def rules_using_spec(
+    target: Union[str, Path],
+    rules_dir: Path,
+    *,
+    root: Optional[Union[str, Path]] = None,
+    ignore_dir: Optional[Path] = None,
+) -> Set[str]:
     used_by: Set[str] = set()
     if not rules_dir.exists():
         return used_by
+    if isinstance(target, Path):
+        target_path = target.resolve()
+    else:
+        target_path = None
     files = list(rules_dir.rglob("*.yaml")) + list(rules_dir.rglob("*.yml"))
     for path in files:
+        if _is_under(path, ignore_dir):
+            continue
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             continue
@@ -70,17 +108,46 @@ def rules_using_spec(spec_name: str, rules_dir: Path) -> Set[str]:
                 if not isinstance(item, dict):
                     continue
                 use = item.get("use")
-                if isinstance(use, str) and Path(use).name == spec_name:
+                if not isinstance(use, str):
+                    continue
+                if target_path is None:
+                    if Path(use).name == str(target):
+                        used_by.add(path.name)
+                    continue
+                if root is None:
+                    continue
+                version = item.get("version") if isinstance(item.get("version"), str) else None
+                try:
+                    resolved = resolve_spec_reference(
+                        use,
+                        category=key,
+                        version=version,
+                        root=root,
+                    )
+                except Exception:
+                    continue
+                if resolved.resolve() == target_path:
                     used_by.add(path.name)
     return used_by
 
 
-def specs_including_spec(spec_name: str, specs_dir: Path) -> Set[str]:
+def specs_including_spec(
+    target: Union[str, Path],
+    specs_dir: Path,
+    *,
+    ignore_dir: Optional[Path] = None,
+) -> Set[str]:
     included_by: Set[str] = set()
     if not specs_dir.exists():
         return included_by
+    if isinstance(target, Path):
+        target_path = target.resolve()
+    else:
+        target_path = None
     files = list(specs_dir.rglob("*.yaml")) + list(specs_dir.rglob("*.yml"))
     for path in files:
+        if _is_under(path, ignore_dir):
+            continue
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             continue
@@ -92,8 +159,17 @@ def specs_including_spec(spec_name: str, specs_dir: Path) -> Set[str]:
                 include_list = [include]
             elif isinstance(include, list) and all(isinstance(item, str) for item in include):
                 include_list = include
-        if any(Path(item).name == spec_name for item in include_list):
-            included_by.add(path.name)
+        for item in include_list:
+            inc_path = Path(item)
+            if not inc_path.is_absolute():
+                inc_path = (path.parent / inc_path).resolve()
+            if target_path is None:
+                if inc_path.name == str(target):
+                    included_by.add(path.name)
+                    break
+            elif inc_path == target_path:
+                included_by.add(path.name)
+                break
     return included_by
 
 

@@ -257,8 +257,8 @@ Behavior:
 
 - input value is looked up in `values`
 - if no match is found:
-  - `default` is used if provided
-  - otherwise the original value is preserved
+    - `default` is used if provided
+    - otherwise the original value is preserved
 - `override` controls whether existing values are replaced
 
 ---
@@ -339,8 +339,8 @@ Evaluation rules:
 - rules are evaluated top to bottom
 - the first matching rule is applied
 - if no rule matches:
-  - `default` is used if present
-  - otherwise the original value is preserved
+    - `default` is used if present
+    - otherwise the original value is preserved
 
 ---
 

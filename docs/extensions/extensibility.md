@@ -112,7 +112,7 @@ Addons are YAML and Python files installed into the user's brkraw config root:
 Addons are managed by:
 
 - CLI: `brkraw addon`
-- API: `brkraw.apps.addon`
+- API: `brkraw.api.addon_manager`
 
 Addons are the preferred way to customize mapping behavior without shipping
 a Python package.
@@ -127,7 +127,7 @@ Hook packages are Python distributions that:
 Hook packages are managed by:
 
 - CLI: `brkraw hook`
-- API: `brkraw.apps.hook`
+- API: `brkraw.api.hook_manager`
 
 Hook packages are the preferred way to distribute sequence-specific conversion
 pipelines.
@@ -154,7 +154,7 @@ As a rule of thumb:
 - Project-specific behavior should live in addons and plugins.
 
 For contributor-facing guidance (how to decide and when to propose core
-changes), see `docs/dev/core-vs-addon.md`.
+changes), see [Core vs addon development](../dev/core-vs-addon.md).
 
 ---
 

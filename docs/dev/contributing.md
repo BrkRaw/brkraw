@@ -52,7 +52,7 @@ repository.
 - Entrypoint group: `brkraw.cli`
 - Intended for custom workflows or project-specific helpers
 
-See `reference/addons-and-plugins.md` for an overview of the extension model.
+See `extensions/addons-and-plugins.md` for an overview of the extension model.
 
 ---
 
@@ -79,8 +79,8 @@ different metadata schemas per sequence, without editing core code.
 
 Recommended references:
 
-- `reference/rules.md`
-- `reference/specs.md`
+- `extensions/rules.md`
+- `extensions/specs.md`
 
 ---
 
@@ -110,7 +110,7 @@ of the following mechanisms:
 Defaults may be defined in `config.yaml` or in `context_map.__meta__`, and can be
 overridden at runtime via the API or CLI.
 
-See `reference/layout.md` for details.
+See `extensions/layout.md` for details.
 
 ---
 

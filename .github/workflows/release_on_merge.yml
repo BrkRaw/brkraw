@@ -3,6 +3,19 @@ name: Release On Merge
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create and push (e.g., v0.4.2)"
+        required: true
+      run_release:
+        description: "Trigger release workflow after tagging"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 permissions:
   contents: write
@@ -29,12 +42,6 @@ jobs:
           # Default outputs
           echo "changed=false" >> "$GITHUB_OUTPUT"
 
-          # Only proceed for merge commits ("Merge pull request ...")
-          if [[ "${{ github.event.head_commit.message }}" != Merge\ pull\ request* ]]; then
-            echo "Not a merge commit. Skipping." 
-            exit 0
-          fi
-
           # Find the PR associated with this merge commit and ensure it has the 'release' label.
           api="https://api.github.com/repos/${REPO}/commits/${SHA}/pulls"
           pr_json=$(curl -fsSL \
@@ -59,7 +66,8 @@ jobs:
           )
 
           if [[ -z "${pr_number}" ]]; then
-            echo "No PR associated with ${SHA}. Skipping." 
+            echo "No PR associated with ${SHA}. Skipping."
+            echo "This can happen for direct pushes, API failures, or insufficient token scopes."
             exit 0
           fi
 
@@ -79,7 +87,8 @@ jobs:
           )
 
           if [[ "${has_release}" != "true" ]]; then
-            echo "PR #${pr_number} does not have 'release' label. Skipping." 
+            echo "PR #${pr_number} does not have 'release' label. Skipping."
+            echo "If this was a squash/rebase merge, ensure the PR is labeled before merging."
             exit 0
           fi
 
@@ -107,10 +116,18 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
           echo "value=$version" >> "$GITHUB_OUTPUT"
         shell: bash
-      - name: Create and push tag
-        if: ${{ steps.version.outputs.changed == 'true' }}
+      - name: Manual tag inputs
+        id: manual
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          tag="${{ steps.version.outputs.value }}"
+          set -euo pipefail
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "value=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          echo "run_release=${{ inputs.run_release }}" >> "$GITHUB_OUTPUT"
+      - name: Create and push tag
+        if: ${{ steps.version.outputs.changed == 'true' || steps.manual.outputs.changed == 'true' }}
+        run: |
+          tag="${{ steps.manual.outputs.value || steps.version.outputs.value }}"
           if git rev-parse "$tag" >/dev/null 2>&1; then
             echo "Tag $tag already exists. Skipping."
             exit 0
@@ -118,9 +135,9 @@ jobs:
           git tag "$tag" "${{ github.sha }}"
           git push origin "$tag"
       - name: Trigger release workflow
-        if: ${{ steps.version.outputs.changed == 'true' }}
+        if: ${{ (steps.version.outputs.changed == 'true') || (steps.manual.outputs.changed == 'true' && steps.manual.outputs.run_release == 'true') }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="${{ steps.version.outputs.value }}"
+          tag="${{ steps.manual.outputs.value || steps.version.outputs.value }}"
           gh workflow run release.yml -f tag="$tag"

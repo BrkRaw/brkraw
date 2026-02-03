@@ -150,12 +150,18 @@ def uninstall_hook(
         "transforms": [],
     }
     root_path = config_core.resolve_root(root)
+    namespace = entry.get("namespace") if isinstance(entry, dict) else None
     for kind in ("specs", "pruner_specs", "rules", "transforms"):
         for relpath in entry.get(kind, []) if isinstance(entry, dict) else []:
             target_path = root_path / relpath
             if not target_path.exists():
                 continue
-            if _has_dependencies(target_path, kind, root=root_path) and not force:
+            if _has_dependencies(
+                target_path,
+                kind,
+                root=root_path,
+                namespace=namespace,
+            ) and not force:
                 raise RuntimeError("Dependencies found; use --force to remove.")
             target_path.unlink()
             removed[kind].append(relpath)
@@ -587,9 +593,22 @@ def _has_dependencies(
     kind: str,
     *,
     root: Optional[Union[str, Path]],
+    namespace: Optional[str] = None,
 ) -> bool:
     try:
-        return addon_deps.warn_dependencies(target, kind=_kind_to_remove(kind), root=root)
+        ignore_rules_dir = None
+        ignore_specs_dir = None
+        if namespace:
+            paths = config_core.paths(root=root)
+            ignore_rules_dir = paths.rules_dir / namespace
+            ignore_specs_dir = paths.specs_dir / namespace
+        return addon_deps.warn_dependencies(
+            target,
+            kind=_kind_to_remove(kind),
+            root=root,
+            ignore_rules_dir=ignore_rules_dir,
+            ignore_specs_dir=ignore_specs_dir,
+        )
     except Exception:
         return False
 

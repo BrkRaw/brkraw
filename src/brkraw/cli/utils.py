@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import itertools
 import logging
+import sys
 import threading
 import time
 from contextlib import contextmanager
@@ -26,7 +27,7 @@ def spinner(prefix: str = "Loading") -> Iterator[None]:
     Yields:
         None.
     """
-    if logger.isEnabledFor(logging.DEBUG):
+    if logger.isEnabledFor(logging.DEBUG) or not sys.stdout.isatty():
         yield
         return
 
@@ -35,7 +36,11 @@ def spinner(prefix: str = "Loading") -> Iterator[None]:
 
     def run() -> None:
         while not stop_event.is_set():
-            print(f"\r{prefix} {next(seq)}", end="", flush=True)
+            try:
+                print(f"\r{prefix} {next(seq)}", end="", flush=True)
+            except BrokenPipeError:
+                stop_event.set()
+                break
             time.sleep(0.08)
 
     thread = threading.Thread(target=run, daemon=True)
@@ -45,7 +50,10 @@ def spinner(prefix: str = "Loading") -> Iterator[None]:
     finally:
         stop_event.set()
         thread.join()
-        print("\r" + " " * (len(prefix) + 2) + "\r", end="", flush=True)
+        try:
+            print("\r" + " " * (len(prefix) + 2) + "\r", end="", flush=True)
+        except BrokenPipeError:
+            pass
 
 
 def load(path, *, prefix: str = "Loading") -> BrukerLoader:

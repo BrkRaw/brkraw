@@ -7,6 +7,10 @@ CLI plugins are Python packages that add new `brkraw` subcommands via entry
 points. They are the recommended approach for new workflows and tools that
 should live outside the core repository.
 
+CLI plugins are registered via the `brkraw.cli` entry point group. Each entry
+point should be a `register(subparsers)` function that adds one or more
+subcommands.
+
 ## When to use a CLI plugin
 
 - Add a new top-level command (for example `brkraw viewer`).
@@ -20,4 +24,4 @@ should live outside the core repository.
 
 ## Developer guide
 
-For authoring and packaging, see `docs/dev/cli-extensions.md`.
+For authoring and packaging, see [Building CLI plugins](../dev/cli-extensions.md).

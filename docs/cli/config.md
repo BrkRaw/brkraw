@@ -60,6 +60,7 @@ brkraw config path config
 brkraw config path rules
 brkraw config path specs
 brkraw config path transforms
+brkraw config path cache
 ```
 
 ---

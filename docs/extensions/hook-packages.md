@@ -15,4 +15,4 @@ logic that should not live in the core project.
 
 ## Developer guide
 
-For authoring, packaging, and manifests, see `docs/dev/hook-packages.md`.
+For authoring, packaging, and manifests, see [Building hook packages](../dev/hook-packages.md).

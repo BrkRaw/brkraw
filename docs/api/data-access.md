@@ -11,9 +11,9 @@ directory/zip/PvDatasets container and returns in-memory objects.
 ## Get a scan (and list what’s available)
 
 ```python
-import brkraw as brk
+from brkraw.api import BrukerLoader
 
-loader = brk.load("/path/to/study")
+loader = BrukerLoader("/path/to/study")
 print(sorted(loader.avail.keys()))   # scan ids
 
 scan = loader.get_scan(3)
@@ -50,6 +50,12 @@ nii = loader.convert(scan_id=3, reco_id=1)
 aff = loader.get_affine(scan_id=3, reco_id=1, space="subject_ras")
 data = loader.get_dataobj(scan_id=3, reco_id=1)
 ```
+
+Note on hooks:
+
+- Converter hooks are applied by the loader when you call loader-level APIs (for example
+  `loader.convert` / `loader.get_dataobj` / `loader.get_affine`).
+- Scan objects are most useful for low-level inspection and for implementing new hooks.
 
 ---
 

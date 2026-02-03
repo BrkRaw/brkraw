@@ -11,9 +11,9 @@
     {
       "label": "Standard: Setup venv + deps",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" -m venv .venv && .venv/bin/python -m pip install -U pip && .venv/bin/python -m pip install -e \".[dev]\"",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" -m venv .venv && \"${workspaceFolder}/.venv/bin/python\" -m pip install -U pip && \"${workspaceFolder}/.venv/bin/python\" -m pip install -e \".[dev]\"",
       "windows": {
-        "command": "\"${command:python.interpreterPath}\" -m venv .venv; .venv\\Scripts\\python -m pip install -U pip; .venv\\Scripts\\python -m pip install -e \".[dev]\"",
+        "command": "\"${workspaceFolder}\\.venv\\Scripts\\python\" -m venv .venv; \"${workspaceFolder}\\.venv\\Scripts\\python\" -m pip install -U pip; \"${workspaceFolder}\\.venv\\Scripts\\python\" -m pip install -e \".[dev]\"",
         "options": {
           "shell": {
             "executable": "pwsh"
@@ -26,30 +26,30 @@
     {
       "label": "Standard: Release Prep PR (2-step)",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" scripts/release_pr.py --version ${input:releaseVersion} --base upstream/main --remote-upstream upstream --remote-origin origin",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" scripts/release_pr.py --version ${input:releaseVersion} --base upstream/main --remote-upstream upstream --remote-origin origin",
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "DryRun: Release Prep PR (2-step)",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" scripts/release_pr.py --dry-run --version ${input:releaseVersion} --base upstream/main --remote-upstream upstream --remote-origin origin",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" scripts/release_pr.py --dry-run --version ${input:releaseVersion} --base upstream/main --remote-upstream upstream --remote-origin origin",
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "Standard: MkDocs Serve",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" -m mkdocs serve",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" -m mkdocs serve",
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "Optional: Release Prep (bump + notes)",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md && \"${command:python.interpreterPath}\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md && \"${workspaceFolder}/.venv/bin/python\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream",
       "windows": {
-        "command": "pwsh -NoProfile -Command \"& \\\"${command:python.interpreterPath}\\\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \\\"${command:python.interpreterPath}\\\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream\""
+        "command": "pwsh -NoProfile -Command \"& \\\"${workspaceFolder}\\.venv\\Scripts\\python\\\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & \\\"${workspaceFolder}\\.venv\\Scripts\\python\\\" scripts/release_prep.py --version ${input:releaseVersion} --fetch-tags --remote upstream\""
       },
       "group": "build",
       "problemMatcher": []
@@ -57,28 +57,28 @@
     {
       "label": "Optional: Release Notes Only",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" scripts/release_notes.py --fetch-tags --remote upstream",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" scripts/release_notes.py --fetch-tags --remote upstream",
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "Optional: Release Tag + Push (upstream)",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" scripts/tag_and_push.py",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" scripts/tag_and_push.py",
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "Optional: Docs Update Contributors (git)",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source git --output docs/dev/contributors.md",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" scripts/update_contributors.py --source git --output docs/dev/contributors.md",
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "Optional: Docs Update Contributors (GitHub API)",
       "type": "shell",
-      "command": "\"${command:python.interpreterPath}\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md",
+      "command": "\"${workspaceFolder}/.venv/bin/python\" scripts/update_contributors.py --source github --repo brkraw/brkraw --output docs/dev/contributors.md",
       "group": "build",
       "problemMatcher": []
     }

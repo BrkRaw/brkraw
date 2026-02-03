@@ -1,5 +1,5 @@
-site_name: Preclinical MRI dataset toolkit
-site_description: Bruker Paravision dataset loader and NIfTI converter
+site_name: A Modular Toolkit for Bruker MRI raw-data handling.
+site_description: A modular toolkit for Bruker MRI raw-data handling.
 site_url: https://brkraw.github.io/
 repo_url: https://github.com/BrkRaw/brkraw
 repo_name: BrkRaw/brkraw
@@ -33,6 +33,7 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.superfences
+  - md_in_html
 
 extra_css:
   - stylesheets/extra.css
@@ -42,19 +43,18 @@ nav:
 
   - Getting Started:
       - Overview: getting-started/index.md
-      - CLI quickstart: getting-started/cli.md
-      - Python API quickstart: getting-started/api.md
-      - Configuration basics: getting-started/configuration.md
-      - Converter hooks: getting-started/hooks.md
-      - MRS converter (brkraw-mrs): getting-started/mrs.md
-      - BIDS integration (early guidance): getting-started/bids.md
-      - Admin tools (brkraw-backup): getting-started/backup.md
-      - Dataset viewer: getting-started/viewer.md
+      - Command Line Interface: getting-started/cli.md
+      - Python API: getting-started/api.md
+      - Graphical User Interface: getting-started/gui.md
+      - BIDS integration: getting-started/bids.md
+      - User Configuration: getting-started/config.md
 
   - CLI Reference:
       - overview: cli/index.md
+      - init: cli/init.md
       - session: cli/session.md
       - info: cli/info.md
+      - params: cli/params.md
       - convert: cli/convert.md
       - prune: cli/prune.md
       - cache: cli/cache.md
@@ -72,15 +72,15 @@ nav:
       - addon: api/addon.md
       - hook: api/hook.md
 
-  - Reference:
-      - Extensibility model: reference/extensibility.md
-      - Addons and plugins: reference/addons-and-plugins.md
-      - CLI plugins (overview): reference/cli-extensions.md
-      - Rule syntax: reference/rules.md
-      - Spec syntax: reference/specs.md
-      - Context map syntax: reference/context-map.md
-      - Output layout and naming: reference/layout.md
-      - Hook packages (overview): reference/hook-packages.md
+  - Extensions:
+      - Overview: extensions/extensibility.md
+      - Addons and plugins: extensions/addons-and-plugins.md
+      - CLI plugins (overview): extensions/cli-extensions.md
+      - Rules: extensions/rules.md
+      - Specs: extensions/specs.md
+      - Context maps: extensions/context-map.md
+      - Layout and naming: extensions/layout.md
+      - Hook packages (overview): extensions/hook-packages.md
 
   - Developer Guide:
       - Contributing: dev/contributing.md

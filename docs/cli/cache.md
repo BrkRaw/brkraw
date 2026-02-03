@@ -10,6 +10,8 @@ Use this command to:
 - check the current cache location and size,
 - clear cached files to free up disk space.
 
+You can override the config root (and therefore the cache location) with `--root`.
+
 ---
 
 ## Subcommands
@@ -50,4 +52,5 @@ To skip confirmation:
 
 ```bash
 brkraw cache clear --yes
+brkraw cache clear -y
 ```

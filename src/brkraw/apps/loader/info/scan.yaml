@@ -56,6 +56,10 @@ FOV (mm):
     - file: method
       key: PVM_Fov
   transform: convert_to_list
+Num Slices:
+  sources:
+    - file: acqp
+      key: NSLICES
 NumSlicePack:
   sources:
     - file: method

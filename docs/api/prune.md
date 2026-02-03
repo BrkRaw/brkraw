@@ -23,17 +23,13 @@ with respect to the input dataset and writes only the destination zip.
 ## Entry points
 
 ```python
-from brkraw.specs.pruner.logic import (
-    prune_dataset_to_zip,
-    prune_dataset_to_zip_from_spec,
-    load_prune_spec,
-)
+from brkraw.api import pruner
 ```
 
-- Use `prune_dataset_to_zip()` when you want to specify rules directly.
-- Use `prune_dataset_to_zip_from_spec()` when you already have a prune spec
+- Use `pruner.prune_dataset_to_zip()` when you want to specify rules directly.
+- Use `pruner.prune_dataset_to_zip_from_spec()` when you already have a prune spec
   (mapping or YAML file).
-- Use `load_prune_spec()` to load and validate a prune spec from YAML.
+- Use `pruner.load_prune_spec()` to load and validate a prune spec from YAML.
 
 ---
 
@@ -42,9 +38,9 @@ from brkraw.specs.pruner.logic import (
 ### Prune using explicit rules
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip(
+out = pruner.prune_dataset_to_zip(
     source="/path/to/dataset",
     dest="out.zip",
     files=["method", "acqp", "reco", "visu_pars", "subject"],
@@ -56,9 +52,9 @@ print(out)
 ### Prune using a spec file
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip_from_spec
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip_from_spec(
+out = pruner.prune_dataset_to_zip_from_spec(
     "/path/to/prune_spec.yaml",
     source="/path/to/dataset",
     dest="out.zip",
@@ -118,9 +114,9 @@ Each rule is a mapping:
 Example: keep only scans 3 and 5 (level 1 is typically the scan folder level)
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip(
+out = pruner.prune_dataset_to_zip(
     source="/path/to/dataset",
     dest="out.zip",
     files=["method", "acqp", "visu_pars"],
@@ -134,7 +130,9 @@ out = prune_dataset_to_zip(
 Example: keep only reco folders 1 and 2 (level 3 is often the pdata level)
 
 ```python
-out = prune_dataset_to_zip(
+from brkraw.api import pruner
+
+out = pruner.prune_dataset_to_zip(
     source="/path/to/dataset",
     dest="out.zip",
     files=["method", "acqp", "visu_pars"],
@@ -187,9 +185,9 @@ Important:
 Example:
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip(
+out = pruner.prune_dataset_to_zip(
     source="/path/to/dataset",
     dest="out.zip",
     files=["subject", "method", "acqp"],
@@ -211,9 +209,9 @@ You can remove them from included JCAMP-like files.
 Enable at call time:
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip(
+out = pruner.prune_dataset_to_zip(
     source="/path/to/dataset",
     dest="out.zip",
     files=["method", "acqp", "visu_pars"],
@@ -249,9 +247,9 @@ By default, pruning writes archive paths with a top-level root directory.
 Disable the root folder:
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip(
+out = pruner.prune_dataset_to_zip(
     source="/path/to/dataset",
     dest="out.zip",
     files=["method", "acqp", "visu_pars"],
@@ -268,9 +266,9 @@ When pruning from a spec, you can substitute `$KEY` placeholders using
 `template_vars`.
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip_from_spec
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip_from_spec(
+out = pruner.prune_dataset_to_zip_from_spec(
     "prune.yaml",
     source="/path/to/dataset",
     dest="out.zip",
@@ -298,9 +296,9 @@ By default, specs are validated against the schema.
 Disable validation:
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip_from_spec
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip_from_spec(
+out = pruner.prune_dataset_to_zip_from_spec(
     "prune.yaml",
     source="/path/to/dataset",
     dest="out.zip",
@@ -311,9 +309,9 @@ out = prune_dataset_to_zip_from_spec(
 You can also load and validate explicitly:
 
 ```python
-from brkraw.specs.pruner.logic import load_prune_spec
+from brkraw.api import pruner
 
-spec = load_prune_spec("prune.yaml", validate=True)
+spec = pruner.load_prune_spec("prune.yaml", validate=True)
 ```
 
 ---
@@ -331,9 +329,9 @@ spec values at runtime:
 Example:
 
 ```python
-from brkraw.specs.pruner.logic import prune_dataset_to_zip_from_spec
+from brkraw.api import pruner
 
-out = prune_dataset_to_zip_from_spec(
+out = pruner.prune_dataset_to_zip_from_spec(
     "prune.yaml",
     source="/path/to/dataset",
     dest="out.zip",

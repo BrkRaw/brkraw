@@ -119,6 +119,14 @@ FID-based reconstruction or sequence-specific workflows.
 Hook packages may also install namespaced addons (specs, rules, transforms,
 pruner specs) using a manifest file.
 
+Hook assets are installed into the config root via:
+
+- CLI: `brkraw hook install <hook-name>`
+- API: `brkraw.api.hook_manager.install_hook(...)`
+
+Installed hook assets are tracked in a registry file under the config root
+(for example `~/.brkraw/hooks.yaml`) so they can be uninstalled cleanly.
+
 For implementation details and a maintained template, see
 [brkraw-hook](https://github.com/brkraw/brkraw-hook).
 
@@ -130,6 +138,9 @@ CLI plugins are Python packages that add new subcommands to the `brkraw` CLI.
 
 They are registered via the `brkraw.cli` entry point group and allow new
 workflows to be distributed independently of the core project.
+
+Each CLI plugin entrypoint is expected to be a `register(subparsers)` function
+that adds one or more subcommands.
 
 CLI plugins are appropriate for:
 
@@ -178,3 +189,5 @@ comprehensive solutions.
 - [Context map syntax](context-map.md)
 - [Addon API reference](../api/addon.md)
 - [Hook API reference](../api/hook.md)
+- [CLI addon command](../cli/addon.md)
+- [CLI hook command](../cli/hook.md)

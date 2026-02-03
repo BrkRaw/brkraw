@@ -1,316 +1,218 @@
-# Convert scans to NIfTI (Python API)
+# Convert (Python API)
 
-The brkraw Python API provides explicit functions for converting Bruker
-Paravision scans into NIfTI files, with optional metadata sidecars and
-extensible conversion logic via hooks.
+Convert Bruker Paravision scans into NIfTI objects, with optional hook arguments.
 
-This API is suitable for interactive use, scripting, and batch processing
-in research pipelines.
+---
+
+## Equivalent CLI commands
+
+- `brkraw convert`
+- `brkraw convert-batch`
+
+In the CLI, output naming, selection, and sidecars are handled for you.
+In the Python API, conversion returns in-memory objects and you decide how to
+name and write outputs.
 
 ---
 
 ## Entry point
 
-All conversions are performed through a dataset loader.
+```python
+from brkraw.api import BrukerLoader
+
+loader = BrukerLoader("/path/to/study")
+```
+
+To disable hook application entirely for this loader:
 
 ```python
-import brkraw as brk
-loader = brk.load("/path/to/study")
+loader = BrukerLoader("/path/to/study", disable_hook=True)
 ```
 
 ---
 
-## Basic usage (CLI: `brkraw convert`)
-
-Convert a single scan and reconstruction:
+## Convert a scan
 
 ```python
-nii = loader.convert(
-    scan_id=3,
-    reco_id=1,
-)
+nii = loader.convert(3, reco_id=1)
 ```
 
-The returned object supports `to_filename()` and represents the converted image in memory.
+Return shape:
+
+- `None` when required metadata is unavailable or conversion fails.
+- A single `nibabel.Nifti1Image` when there is one slice pack.
+- A tuple of `nibabel.Nifti1Image` when there are multiple slice packs.
+
 Writing to disk is explicit:
 
 ```python
-nii.to_filename("scan3.nii.gz")
-```
+if nii is None:
+    raise RuntimeError("Conversion returned no output.")
 
-By default:
-
-- Output is generated in memory
-- Files are compressed when written (.nii.gz)
-- Affines are computed in subject_ras space
-- Metadata follows configured layout and specs
-
----
-
-## Selecting scans and reconstructions
-
-### scan_id
-
-Specify the scan ID to convert.
-
-```python
-loader.convert(scan_id=5, reco_id=1)
-```
-
-If `scan_id` is omitted, the call is rejected.
-Batch behavior must be implemented explicitly.
-
-### reco_id
-
-Specify the reconstruction ID.
-
-```python
-loader.convert(scan_id=5, reco_id=2)
+if isinstance(nii, tuple):
+    for i, img in enumerate(nii, start=1):
+        img.to_filename(f"scan3_part{i}.nii.gz")
+else:
+    nii.to_filename("scan3.nii.gz")
 ```
 
 Notes:
 
-- Default is 1
-- If omitted and multiple recos exist, all recos are converted and returned
-  as a list
-- Some converter hooks may not use reco IDs explicitly
+- `reco_id` is optional. If omitted, BrkRaw uses the first available reconstruction for that scan.
+- The Python API does not implement a “convert all scans” mode; batch behavior is explicit in your loop.
 
 ---
 
-## Batch conversion pattern (CLI: `brkraw convert-batch`)
+## Multi-dimensional data options
 
-The Python API does not provide a separate batch command.
-Batch behavior is implemented explicitly by iterating over datasets
-or scans.
+### flatten_fg
 
-Example: convert all scans in a study.
+Flatten frame-group dimensions to 4D when data is 5D or higher:
 
 ```python
-for scan_id in loader.avail.keys():
-    nii = loader.convert(
-        scan_id=scan_id,
-        reco_id=1,
-    )
-    if nii is not None:
-        out = f"scan{scan_id}.nii.gz"
-        nii.to_filename(out)
+nii = loader.convert(3, reco_id=1, flatten_fg=True)
 ```
 
-Example: convert multiple datasets.
+### cycle_index / cycle_count
+
+Read only a subset of cycles (last axis) when the scan has multi-cycle data:
+
+```python
+nii = loader.convert(3, reco_id=1, cycle_index=0, cycle_count=10)
+```
+
+---
+
+## Batch patterns
+
+Convert all scans in one dataset:
+
+```python
+for scan_id in loader.avail:
+    nii = loader.convert(scan_id, reco_id=1)
+    if nii is None:
+        continue
+    if isinstance(nii, tuple):
+        for i, img in enumerate(nii, start=1):
+            img.to_filename(f"scan{scan_id}_part{i}.nii.gz")
+    else:
+        nii.to_filename(f"scan{scan_id}.nii.gz")
+```
+
+Convert multiple datasets:
 
 ```python
 from pathlib import Path
-import brkraw as brk
+from brkraw.api import BrukerLoader
 
 root = Path("/path/to/datasets")
-
 for dataset in root.iterdir():
-    loader = brk.load(dataset)
-    for scan_id in loader.avail.keys():
-        nii = loader.convert(
-            scan_id=scan_id,
-            reco_id=1,
-        )
-```
-
-Failures are raised as exceptions and should be handled by the caller.
-
----
-
-## Output control
-
-### Writing outputs
-
-The API does not implicitly write files.
-All outputs must be written explicitly by the caller.
-
-```python
-nii.to_filename("out/scan3.nii.gz")
-```
-
-This design avoids accidental overwrites and enables flexible workflows.
-
-### Filename layout
-
-Layout templates may be rendered using the layout API.
-
-```python
-from brkraw.core import layout as layout_core
-
-path = layout_core.render_layout(
-    loader,
-    scan_id=3,
-    layout_template="{Protocol}_{ScanID}",
-    context_map="map.yaml",
-)
-
-nii.to_filename(path + ".nii.gz")
+    if not dataset.is_dir():
+        continue
+    try:
+        loader = BrukerLoader(dataset)
+    except ValueError:
+        continue
+    for scan_id in loader.avail:
+        _ = loader.convert(scan_id, reco_id=1)
 ```
 
 ---
 
-## Metadata sidecars (CLI: `--sidecar`)
+## Affines, units, and headers
 
-Generate metadata dictionaries for JSON sidecar files.
+### space
 
 ```python
-meta = loader.get_metadata(
-    scan_id=3,
-    reco_id=1,
-    context_map="map.yaml",
-)
+nii = loader.convert(3, reco_id=1, space="subject_ras")
 ```
 
-Sidecar metadata is generated from:
+Valid values:
 
-- Built-in info specs
-- Installed metadata specs
-- Optional context maps
+- `"raw"`
+- `"scanner"`
+- `"subject_ras"`
 
-Writing JSON files is the responsibility of the caller.
-
----
-
-## Affine handling
-
-### Affine space
-
-Select the affine space used for conversion.
+### override_subject_type / override_subject_pose
 
 ```python
-loader.convert(
-    scan_id=3,
-    reco_id=1,
-    space="subject_ras",
-)
-```
-
-Valid values are case-sensitive:
-
-- raw
-- scanner
-- subject_ras
-
-### Subject overrides
-
-Override subject type or pose when computing subject-view affines
-(`space="subject_ras"` only).
-
-```python
-loader.convert(
-    scan_id=3,
+nii = loader.convert(
+    3,
     reco_id=1,
     override_subject_type="Quadruped",
     override_subject_pose="Head_Supine",
 )
 ```
 
-Invalid overrides raise an exception.
-
-### Axis flips
-
-Flip axes in the output affine.
+### xyz_units / t_units
 
 ```python
-loader.convert(
-    scan_id=3,
-    reco_id=1,
-)
+nii = loader.convert(3, reco_id=1, xyz_units="mm", t_units="sec")
 ```
 
-### Flatten frame-group dimensions
+### override_header (from YAML)
 
-Flatten frame-group dimensions into a 4D time axis when data is 5D or higher.
+`loader.convert()` expects `override_header` as an in-memory mapping. To load
+from a YAML file:
 
 ```python
-loader.convert(
-    scan_id=3,
-    reco_id=1,
-    flatten_fg=True,
-)
+from brkraw.api import nifti_resolver
+
+override_header = nifti_resolver.load_header_overrides("header.yaml")
+nii = loader.convert(3, reco_id=1, override_header=override_header)
 ```
 
-Notes:
+### Affine post-transforms (advanced)
 
-- 4D or smaller data is unchanged.
-- Extra dimensions are collapsed into the 4th dimension in order.
-
----
-
-## Units and headers
-
-### Spatial and temporal units
+You can post-transform affines using flip/rotate options when calling `get_affine()`.
+These kwargs are also accepted by `convert()` (they are applied during affine resolution).
 
 ```python
-loader.convert(
-    scan_id=3,
-    reco_id=1,
-    xyz_units="mm",
-    t_units="sec",
-)
-```
-
-Values are validated strictly and are case-sensitive.
-
-### Header overrides
-
-Override NIfTI header fields using a YAML file.
-
-```python
-loader.convert(
-    scan_id=3,
-    reco_id=1,
-    header="header_override.yaml",
-)
+aff = loader.get_affine(3, reco_id=1, flip_x=True)
+aff = loader.get_affine(3, reco_id=1, rad_z=0.1)
 ```
 
 ---
 
-## Context maps and selection
+## Hooks
 
-Apply metadata remapping and conditional selection logic.
-
-```python
-loader.convert(
-    scan_id=3,
-    reco_id=1,
-    context_map="map.yaml",
-    sidecar=True,
-)
-```
-
-Context maps can:
-
-- Select or skip scans
-- Modify metadata fields
-- Override layout rules and suffixes
-
----
-
-## Converter hooks
-
-Pass arguments to installed converter hooks.
+Pass hook arguments by hook name:
 
 ```python
-loader.convert(
-    scan_id=3,
+nii = loader.convert(
+    3,
     reco_id=1,
-    hook_args={
-        "mrs": {
-            "reference": "water",
+    hook_args_by_name={
+        "<hook-name>": {
+            "key": "value",
         }
     },
 )
 ```
 
-Values are parsed as bool, int, float, or string.
+Notes:
+
+- Hook installation/registration is typically done via the CLI (`brkraw hook install ...`).
+- Hook arguments are applied only when a converter hook is resolved for the scan (based on installed hooks and rules).
+- For hook-aware execution, call the **loader** methods (`loader.convert`, `loader.get_dataobj`, `loader.get_affine`).
+  Accessing scan objects is primarily for building and testing new hooks.
 
 ---
 
-## Design notes
+## Output naming and sidecars
 
-- Conversion APIs are explicit and non-destructive
-- No implicit defaults or environment variables are used
-- Batch behavior is implemented by the caller
-- All affine and override options are case-sensitive
-- Errors are raised early and must be handled explicitly
+In the CLI, output naming and sidecar writing are integrated into conversion.
+In the Python API:
+
+- output paths are built separately (see [layout](layout.md))
+- sidecar metadata is generated separately (see [info](info.md) and [layout](layout.md))
+
+Example: generate a sidecar payload (you write JSON yourself):
+
+```python
+from pathlib import Path
+import json
+
+meta = loader.get_metadata(3, reco_id=1)
+Path("scan3.json").write_text(json.dumps(meta or {}, indent=2), encoding="utf-8")
+```

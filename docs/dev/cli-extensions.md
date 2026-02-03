@@ -3,8 +3,8 @@
 CLI plugins are Python packages that add new subcommands to the `brkraw` CLI.
 
 This page covers authoring and packaging. For user-facing behavior and
-terminology, see [Extensibility model](../reference/extensibility.md) and
-[Addons and plugins](../reference/addons-and-plugins.md).
+terminology, see [Extensibility model](../extensions/extensibility.md) and
+[Addons and plugins](../extensions/addons-and-plugins.md).
 
 ---
 
@@ -27,14 +27,39 @@ Example `pyproject.toml` entry:
 
 ```toml
 [project.entry-points."brkraw.cli"]
-viewer = "brkraw_viewer.cli:get_command"
+viewer = "brkraw_viewer.cli:register"
 ```
 
 - The entrypoint name becomes the subcommand (`brkraw viewer`).
-- The callable must return an `argparse` command definition compatible with
-  BrkRaw's CLI dispatcher.
+- The entrypoint must be a callable that accepts the main CLI `subparsers` and
+  registers one or more commands (i.e., `register(subparsers)`).
+
+Minimal example:
+
+```python
+import argparse
+
+def cmd_viewer(_: argparse.Namespace) -> int:
+    print("hello from viewer")
+    return 0
+
+def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
+    parser = subparsers.add_parser("viewer", help="Open the GUI viewer.")
+    parser.set_defaults(func=cmd_viewer)
+```
 
 ---
+
+## Runtime behavior and best practices
+
+BrkRaw discovers CLI plugins at startup by iterating entrypoints in the
+`brkraw.cli` group.
+
+Notes:
+
+- If a plugin fails to import/load, BrkRaw prints a warning and continues without it.
+- Keep imports inside your `register(...)` or command handlers lightweight, to avoid
+  slowing down `brkraw --help` and other CLI operations.
 
 ## Interaction with hooks
 
