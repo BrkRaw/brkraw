@@ -304,11 +304,9 @@ Transforms must be available in the transform registry:
 !!! important "Transforms Require transforms_source"
     If you use `transform:` anywhere in a spec file, you must ensure BrkRaw can
     load those functions.
-
     - When loading from YAML with `load_spec(...)`, set `__meta__.transforms_source`
       so `load_spec(...)` returns a non-empty `transforms` registry.
     - When building specs programmatically, pass `transforms={...}` to `map_parameters(...)`.
-
     If you reference transforms but provide no registry, mapping will fail at
     runtime (missing transform function).
 
