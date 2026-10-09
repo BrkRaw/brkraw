@@ -236,6 +236,58 @@ def test_read_function_that_names_an_output_option_still_gets_it(tmp_path):
                     "convert": "micron", "convert_t_units": "msec"}
 
 
+def test_get_affine_that_names_an_output_option_still_gets_it(tmp_path):
+    # wi-0110-choi-1 note: the same rule for get_affine
+    seen: Dict[str, Any] = {}
+
+    def get_affine(scan, reco_id=None, *, space="subject_ras", override_subject_type=None,
+                   override_subject_pose=None, decimals=None, t_units=None, **kwargs):
+        seen["get_affine"] = t_units
+        seen["get_affine_xyz_units"] = kwargs.get("xyz_units")
+        return helper.get_affine(scan, reco_id, space=space, decimals=decimals)
+
+    def convert(scan, dataobj, affine, **kwargs):
+        seen["convert"] = (kwargs.get("xyz_units"), kwargs.get("t_units"))
+        return None
+
+    loader = brkraw.load(str(_study(tmp_path)))
+    _bind(loader, 5, {"get_affine": get_affine, "convert": convert})
+    loader.convert(5, reco_id=1, xyz_units="micron", t_units="msec")
+    assert seen == {"get_affine": "msec", "get_affine_xyz_units": None,
+                    "convert": ("micron", "msec")}
+
+
+def _header_probe(tmp_path, **convert_kwargs):
+    got: Dict[str, Any] = {}
+
+    def get_dataobj(scan, reco_id=None, **kwargs):
+        got["get_dataobj"] = dict(kwargs)
+        return helper.get_dataobj(scan, reco_id)
+
+    def convert(scan, dataobj, affine, **kwargs):
+        got["convert"] = kwargs.get("override_header")
+        return None
+
+    loader = brkraw.load(str(_study(tmp_path)))
+    _bind(loader, 5, {"get_dataobj": get_dataobj, "convert": convert})
+    loader.convert(5, reco_id=1, **convert_kwargs)
+    return got
+
+
+def test_override_header_from_hook_args_reaches_convert(tmp_path):
+    # wi-0110-choi-1 note: a header given only as a hook arg goes to convert, not the reader
+    got = _header_probe(tmp_path, hook_args_by_name={"fakehook": {"override_header": {"cal_max": 5.0}}})
+    assert got["convert"] == {"cal_max": 5.0}
+    assert "override_header" not in got["get_dataobj"]
+
+
+def test_explicit_override_header_wins_over_hook_args(tmp_path):
+    # wi-0110-choi-1 note: both given, the explicit argument (CLI --header) wins
+    got = _header_probe(tmp_path, override_header=HEADER,
+                        hook_args_by_name={"fakehook": {"override_header": {"cal_max": 5.0}}})
+    assert got["convert"] == HEADER
+
+
 # ---------------------------------------------------------------------------
 # no hook: unchanged
 # ---------------------------------------------------------------------------
