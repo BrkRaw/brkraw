@@ -1258,7 +1258,7 @@ def convert(
     merged_kwargs: Dict[str, Any] = dict(hook_kwargs) if hook_kwargs else {}
     merged_kwargs.update(kwargs)
 
-    data_kwargs = _filter_hook_kwargs(self.get_dataobj, merged_kwargs)
+    data_kwargs = _filter_read_kwargs(self.get_dataobj, merged_kwargs)
     # flip_* are affine-only options; never pass them to get_dataobj.
     for key in ("flip_x", "flip_y", "flip_z"):
         data_kwargs.pop(key, None)
@@ -1280,7 +1280,7 @@ def convert(
         )
         dataobjs = self.get_dataobj(resolved_reco_id)
 
-    affine_kwargs = _filter_hook_kwargs(self.get_affine, merged_kwargs)
+    affine_kwargs = _filter_read_kwargs(self.get_affine, merged_kwargs)
     convert_kwargs = {
         key: value
         for key, value in convert_kwargs.items()
@@ -1358,8 +1358,15 @@ def convert(
             for key in ("axis", "frames", "cycle_index", "cycle_count")
             if merged_kwargs.get(key) is not None
         }
+        # the NIfTI output options always go to the hook's convert when it takes them
+        # or **kwargs, even when get_dataobj/get_affine named them (WI-0110)
+        output = {key: merged_kwargs[key] for key in ("xyz_units", "t_units") if key in merged_kwargs}
+        header = override_header if override_header is not None else merged_kwargs.get("override_header")
+        if header is not None:
+            output["override_header"] = header
         hook_call_kwargs = _filter_hook_kwargs(
-            converter_func, {**convert_kwargs, **selection, "reco_id": resolved_reco_id}
+            converter_func,
+            {**convert_kwargs, **output, **selection, "reco_id": resolved_reco_id},
         )
         logger.debug(
             "Calling converter hook for scan %s reco %s with args %s",
@@ -1474,6 +1481,34 @@ def _filter_hook_kwargs(func: Any, hook_kwargs: Mapping[str, Any]) -> Dict[str, 
             getattr(func, "__name__", "<callable>"),
             ", ".join(sorted(dropped)),
         )
+    return filtered
+
+
+# NIfTI output options: they describe the written file, not how the data or the
+# affine are read (WI-0110, D-0180).
+OUTPUT_KWARGS = ("xyz_units", "t_units", "override_header")
+
+
+def _filter_read_kwargs(func: Any, kwargs: Mapping[str, Any]) -> Dict[str, Any]:
+    """Kwargs for ``get_dataobj``/``get_affine``.
+
+    Like :func:`_filter_hook_kwargs`, but the NIfTI output options are passed
+    only when ``func`` names them as parameters, never through ``**kwargs``:
+    a hook that takes ``**kwargs`` for its own options would otherwise take
+    them away from ``convert``.
+    """
+    filtered = _filter_hook_kwargs(func, kwargs)
+    try:
+        named = {
+            param.name
+            for param in inspect.signature(func).parameters.values()
+            if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        }
+    except (TypeError, ValueError):
+        named = set()
+    for key in OUTPUT_KWARGS:
+        if key in filtered and key not in named:
+            del filtered[key]
     return filtered
 
 
