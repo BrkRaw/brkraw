@@ -23,7 +23,7 @@ brkraw prune /path/to/study --anonymize -o share.zip # a copy for sharing
   reconstruction.
 
 !!! note "Version 0.6"
-    This documentation describes brkraw 0.6 (current pre-release: 0.6.1rc1).
+    This documentation describes brkraw 0.6 (current pre-release: 0.6.1rc2).
     Moving from 0.5.x? See
     [Migrating to 0.6](getting-started/migrating.md).
 

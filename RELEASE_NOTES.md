@@ -1,15 +1,21 @@
-# Release v0.6.1rc1
+# Release v0.6.1rc2
 
-Date: 2026-10-01
+Date: 2026-10-12
 Changes since 0.5.7
 
-This is the first release candidate of 0.6.1. It is a pre-release, tagged on
-the development fork for testing with real data; it is not published to PyPI
-or TestPyPI yet. There is no 0.6.0 release: 0.6.1rc1 is 0.6.0rc2 plus the
-section "Changes since 0.6.0rc2 (0.6.1, for fork testers)" below (frames read
-from `2dseq` without reading the whole file, a fix for `cycle_index`, a cache
-size warning, and faster file opening). Everything else in this note is the
-0.6.0 content, which reaches users for the first time in this release.
+This is the second release candidate of 0.6.1 and the first 0.6 release
+published from BrkRaw/brkraw. It is a pre-release: a GitHub pre-release and a
+package on TestPyPI, not on PyPI. 0.6.1rc1 was tagged only on the development
+fork, where it was used with real data. There is no 0.6.0 release.
+
+- "Changes since 0.6.1rc1" below is new in this candidate: NIfTI output
+  options now reach a converter hook's `convert`, and the checks on real data
+  moved out of the test suite.
+- "Changes since 0.6.0rc2 (0.6.1, for fork testers)" is what 0.6.1 adds to
+  0.6.0: frames read from `2dseq` without reading the whole file, a fix for
+  `cycle_index`, a cache size warning, and faster file opening.
+- Everything else in this note is the 0.6.0 content, which reaches users for
+  the first time in this release.
 
 The main goal of 0.6.0 is context mapping for BIDS-style output. 0.6.0 also
 rebuilds the subject orientation of all 16 poses and fixes per-frame intensity
@@ -118,6 +124,25 @@ Foot_Left, Foot_Right). Scanner space: 4 poses (Foot_Left, Foot_Right for Biped
 and Quadruped). With a pose or subject-type override: 12 poses. Convert again
 before comparing or combining with 0.5.7 outputs.
 
+## Changes since 0.6.1rc1
+
+- **NIfTI output options reach a converter hook.** `xyz_units`, `t_units`
+  (`brkraw convert --xyz-units/--t-units`) and `override_header` (`--header`)
+  now go to a hook's `convert` when it takes a parameter of that name or
+  `**kwargs`, so a hook that builds its own NIfTI header can apply them. Up to
+  0.6.1rc1 they went to `get_dataobj`/`get_affine` when those took `**kwargs`
+  (so a hook that replaces only `convert` never got them), and
+  `override_header` never reached a hook. `get_dataobj` and `get_affine` now
+  get them only when they name them as parameters. An `override_header` passed
+  to `convert` directly wins over one given as a hook argument. Conversion
+  without a hook is unchanged. See "NIfTI output options in `convert`" in
+  [Building converter hook packages](docs/dev/hook-packages.md).
+- **Tests use synthetic data only.** The checks on approved anonymized
+  studies (`BRKRAW_AGENT_FIXTURES`) moved from `tests/` to
+  `scripts/validate/check_agent_fixtures.py`, which is run by hand before a
+  release; CI and a plain `pytest` do not collect it. See
+  [Contributing](docs/dev/contributing.md).
+
 ## Changes since 0.6.0rc2 (0.6.1, for fork testers)
 
 - **`2dseq` is read by the frames you ask for.** `get_dataobj(..., axis=,
@@ -210,10 +235,10 @@ before comparing or combining with 0.5.7 outputs.
 - Development environment managed with uv (`uv.lock`, Python 3.12);
   packaging and `requires-python` unchanged.
 - Tests: config isolation for every test, a synthetic PvDataset builder,
-  optional tests on approved anonymized studies kept outside the repository
-  (`BRKRAW_AGENT_FIXTURES`), the documentation's BIDS example checked by the
-  test suite; a documentation build check (`mkdocs build --strict`) in CI;
-  MkDocs pinned below 2 in the workflows.
+  manual checks on approved anonymized studies kept outside the repository
+  (`BRKRAW_AGENT_FIXTURES`, `scripts/validate/`), the documentation's BIDS
+  example checked by the test suite; a documentation build check
+  (`mkdocs build --strict`) in CI; MkDocs pinned below 2 in the workflows.
 - `unixtime_to_datetime` and study info tolerate missing dates (anonymized
   data loads).
 - `brkraw.api.layout` is public; `brkraw config path` knows `pruner_specs` and
