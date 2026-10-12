@@ -7,10 +7,11 @@ from __future__ import annotations
 
 from typing import List
 
-from .dependencies import resolve_pruner_spec_reference, resolve_spec_reference
+from .dependencies import resolve_context_map_reference, resolve_pruner_spec_reference, resolve_spec_reference
 from .installation import (
     add,
     add_pruner_spec_data,
+    add_context_map_data,
     add_rule_data,
     add_spec_data,
     install_defaults,
@@ -23,9 +24,11 @@ __all__ = [
     "add_rule_data",
     "add_spec_data",
     "add_pruner_spec_data",
+    "add_context_map_data",
     "install_defaults",
     "resolve_spec_reference",
     "resolve_pruner_spec_reference",
+    "resolve_context_map_reference",
     "list_installed",
     "remove",
 ]

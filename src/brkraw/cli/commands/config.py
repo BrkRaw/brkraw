@@ -22,15 +22,6 @@ def cmd_config(args: argparse.Namespace) -> int:
     return handler(args)
 
 
-def cmd_init(args: argparse.Namespace) -> int:
-    config_core.init(
-        root=args.root,
-        create_config=not args.no_config,
-        exist_ok=not args.no_exist_ok,
-    )
-    return 0
-
-
 def cmd_show(args: argparse.Namespace) -> int:
     config = config_core.resolve_config(root=args.root)
     if not config:
@@ -160,26 +151,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     config_parser.set_defaults(func=cmd_config, parser=config_parser)
     config_sub = config_parser.add_subparsers(dest="config_command")
 
-    init_parser = config_sub.add_parser("init", help="Create the config folders.")
-    init_parser.add_argument(
-        "--no-config",
-        action="store_true",
-        help="Do not create config.yaml.",
-    )
-    init_parser.add_argument(
-        "--no-exist-ok",
-        action="store_true",
-        help="Fail if the root directory already exists.",
-    )
-    init_parser.set_defaults(config_func=cmd_init)
-
+    # The config folder is created by `brkraw init` (the old `config init` is gone, BRK-0028).
     show_parser = config_sub.add_parser("show", help="Print resolved config values.")
     show_parser.set_defaults(config_func=cmd_show)
 
     path_parser = config_sub.add_parser("path", help="Print a specific config path.")
     path_parser.add_argument(
         "name",
-        choices=["root", "config", "rules", "specs", "transforms", "cache"],
+        choices=["root", "config", "rules", "specs", "pruner_specs", "context_maps", "transforms", "cache"],
         help="Path key to print.",
     )
     path_parser.set_defaults(config_func=cmd_path)

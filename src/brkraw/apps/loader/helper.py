@@ -12,7 +12,9 @@ from typing import (
     Any, 
     Mapping, 
     List, 
-    Dict
+    Dict,
+    Sequence,
+    NamedTuple,
 )
 from pathlib import Path
 from warnings import warn
@@ -24,7 +26,7 @@ from nibabel.nifti1 import Nifti1Image
 
 from ...core.config import resolve_root
 from ...core.parameters import Parameters
-from ...specs.remapper import load_spec, map_parameters, load_context_map, apply_context_map
+from ...specs.remapper import load_spec, map_parameters
 from ...specs.rules import load_rules, select_rule_use
 from ...dataclasses import Reco, Scan, Study
 from ...specs import hook as converter_core
@@ -40,6 +42,7 @@ from .types import (
     GetAffineType
 )
 if TYPE_CHECKING:
+    from ...resolver.image import ResolvedImage
     from ...resolver.nifti import Nifti1HeaderContents
     from .types import (
         SubjectType, 
@@ -98,6 +101,387 @@ def resolve_reco_id(
         )
         return None
     return reco_id
+
+
+def _normalize_pack_scaling(
+    value: Any,
+    pack_sizes: Sequence[int],
+    *,
+    name: str,
+    default: float,
+) -> List[np.ndarray]:
+    """Normalize scalar, per-pack, or per-slice scaling values into pack vectors."""
+    if not pack_sizes:
+        raise ValueError(f"{name} cannot be resolved without slice-pack sizes.")
+
+    if value is None:
+        raw = np.asarray([default], dtype=float)
+    elif isinstance(value, np.ndarray):
+        raw = np.asarray(value, dtype=float).reshape(-1)
+    elif isinstance(value, (list, tuple)):
+        raw = np.asarray(value, dtype=float).reshape(-1)
+    else:
+        raw = np.asarray([value], dtype=float)
+
+    if raw.size == 0:
+        raw = np.asarray([default], dtype=float)
+    if raw.size > 1 and _all_equal(raw):
+        # exactly equal values (for example one per frame) are one scalar (BRK-0035, BRK-0036)
+        raw = raw[:1]
+
+    normalized_pack_sizes = [int(size) for size in pack_sizes]
+    total_slices = int(sum(normalized_pack_sizes))
+    num_packs = len(normalized_pack_sizes)
+
+    if raw.size == 1:
+        scalar = float(raw[0])
+        return [
+            np.full(size, scalar, dtype=float)
+            for size in normalized_pack_sizes
+        ]
+
+    if raw.size == total_slices:
+        pack_values: List[np.ndarray] = []
+        offset = 0
+        for size in normalized_pack_sizes:
+            pack_values.append(np.asarray(raw[offset:offset + size], dtype=float))
+            offset += size
+        return pack_values
+
+    if raw.size == num_packs:
+        return [
+            np.full(size, float(raw[idx]), dtype=float)
+            for idx, size in enumerate(normalized_pack_sizes)
+        ]
+
+    raise ValueError(
+        f"{name} has {raw.size} values, expected 1 (global), "
+        f"{num_packs} (per-pack), or {total_slices} (per-slice); "
+        "different per-frame values are applied by convert(), or by a converter hook "
+        "with scale_frames() and scaling_applied=True."
+    )
+
+
+def _scaling_vector(value: Any, default: float) -> np.ndarray:
+    if value is None:
+        return np.asarray([default], dtype=float)
+    raw = np.asarray(value, dtype=float).reshape(-1)
+    return raw if raw.size else np.asarray([default], dtype=float)
+
+
+class FrameScaling(NamedTuple):
+    """How convert() applies VisuCoreDataSlope/VisuCoreDataOffs (BRK-0035, BRK-0036).
+
+    ``mode``: "header" (one value, or one per slice pack: header path),
+    "apply" (``packs`` holds per-pack (slope, offset) arrays for the data) or
+    "skip" (no layout matched; a warning was logged, no scaling).
+    """
+
+    mode: str
+    packs: Optional[List[Tuple[np.ndarray, np.ndarray]]] = None
+
+
+def _all_equal(vec: np.ndarray) -> bool:
+    # exactly equal only (BRK-0036); no tolerance
+    return vec.size <= 1 or bool(np.all(vec == vec[0]))
+
+
+def _scaling_layout(vec: np.ndarray, num_packs: int, fg_shape: Sequence[int]) -> Tuple[str, int]:
+    """BRK-0036 rule for one vector: ("equal", 0), ("pack", 0), ("trailing", j) or ("none", 0).
+
+    Exactly equal values are one value. Otherwise the count is compared with
+    the slice-pack count first, then with the products of the
+    VisuFGOrderDesc axes from the back (last axis, last two, ... all axes =
+    one value per frame); ``j`` is the number of trailing axes the values
+    vary along (the smallest j that matches).
+    """
+    if _all_equal(vec):
+        return "equal", 0
+    if vec.size == num_packs:
+        return "pack", 0
+    for j in range(1, len(fg_shape) + 1):
+        if int(np.prod(fg_shape[-j:])) == vec.size:
+            return "trailing", j
+    return "none", 0
+
+
+def _frame_scaling(
+    scan: "ScanLoader",
+    reco_id: int,
+    *,
+    axis: Optional[Union[str, int]] = None,
+    frames: Optional[Union[int, List[int], str]] = None,
+    cycle_index: Optional[int] = None,
+    cycle_count: Optional[int] = None,
+    full_frames: bool = False,
+) -> FrameScaling:
+    """Decide and lay out VisuCoreDataSlope/VisuCoreDataOffs for convert() (BRK-0035, BRK-0036).
+
+    Values that vary along trailing frame-group axes are laid out like the
+    data: the frame-group axes are the last axes of the resolved shape, in
+    2dseq (Fortran) order; then the same legacy cycle block, z-axis swap,
+    slice-pack split and ``axis``/``frames`` selection as the data. The
+    arrays broadcast against each pack's data. With ``full_frames`` every
+    frame axis has its full size (not 1), so the arrays can be flattened like
+    data flattened by ``flatten_fg``.
+    """
+    image_info = scan.image_info.get(reco_id)
+    affine_info = scan.affine_info.get(reco_id)
+    if image_info is None or affine_info is None:
+        return FrameScaling("header")
+    num_slices = [int(n) for n in affine_info["num_slices"]]
+    num_packs = len(num_slices)
+    slope = _scaling_vector(image_info.get("slope"), 1.0)
+    offset = _scaling_vector(image_info.get("offset"), 0.0)
+    if _all_equal(slope) and _all_equal(offset):
+        return FrameScaling("header")
+
+    from ...resolver.shape import resolve as shape_resolve
+    from ...specs.context_map.output import pick_axis, select_frames
+
+    shape_info = shape_resolve(scan, reco_id=reco_id)
+    fg = shape_info["objs"].frame_group if shape_info else None
+    fg_shape = [int(n) for n in (fg or {}).get("shape", [])] if fg and fg.get("type") is not None else []
+    fg_ids = [str(i) for i in (fg or {}).get("id", [])] if fg_shape else []
+    kinds = {}
+    for name, vec in (("VisuCoreDataSlope", slope), ("VisuCoreDataOffs", offset)):
+        kind, j = _scaling_layout(vec, num_packs, fg_shape)
+        if kind == "pack" and any(int(np.prod(fg_shape[-k:])) == vec.size for k in range(1, len(fg_shape) + 1)):
+            logger.info(
+                "scan %s reco %s: %s count %s matches the slice packs and frame axes %s; slice packs are "
+                "checked first (BRK-0036).",
+                getattr(scan, "scan_id", "?"), reco_id, name, vec.size, fg_ids,
+            )
+        if kind == "none":
+            logger.warning(
+                "scan %s reco %s: %s has %s values, which match neither the %s slice pack(s) nor a product of "
+                "the frame axes %s %s from the back; scaling not applied.",
+                getattr(scan, "scan_id", "?"), reco_id, name, vec.size, num_packs, fg_ids, fg_shape,
+            )
+            return FrameScaling("skip")
+        kinds[name] = (kind, j)
+    if not any(kind == "trailing" for kind, _ in kinds.values()):
+        return FrameScaling("header")
+
+    shape = [int(n) for n in shape_info["shape"]]
+    ndim = len(shape)
+
+    def full(arr: np.ndarray) -> np.ndarray:
+        if not full_frames:
+            return arr
+        return np.broadcast_to(arr, [1] * (ndim - len(fg_shape)) + fg_shape).copy()
+
+    def layout(vec: np.ndarray, kind: str, j: int) -> Optional[np.ndarray]:
+        if kind == "equal":
+            return full(np.full([1] * ndim, float(vec[0])))
+        if kind == "pack":
+            return None  # filled per pack below
+        tail = fg_shape[-j:]
+        return full(vec.reshape(tail, order="F").reshape([1] * (ndim - j) + tail))
+
+    vectors = [slope, offset]
+    arrays = [layout(v, *kinds[n]) for v, n in zip(vectors, ("VisuCoreDataSlope", "VisuCoreDataOffs"))]
+
+    # legacy cycle block (cycles are the last axis, as in the 2dseq block read)
+    total_cycles = int(image_info.get("num_cycles") or 1)
+    if (cycle_index is not None or cycle_count is not None) and total_cycles > 1:
+        start = int(cycle_index or 0)
+        stop = None if cycle_count is None else start + int(cycle_count)
+        arrays = [a if a is None or a.shape[-1] == 1 else a[..., start:stop] for a in arrays]
+
+    shape_desc: List[str] = list(image_resolver.normalized_layout(shape_info)[1])
+    swapped: List[Optional[np.ndarray]] = []
+    for arr in arrays:
+        if arr is None:
+            swapped.append(None)
+            continue
+        out, shape_desc = image_resolver.ensure_3d_spatial_data(arr, shape_info)
+        swapped.append(out)
+
+    packs: List[Tuple[np.ndarray, np.ndarray]] = []
+    start = 0
+    for p, count in enumerate(num_slices):
+        pair = []
+        for vec, arr in zip(vectors, swapped):
+            if arr is None:  # one value per slice pack
+                pair.append(np.full([1] * ndim, float(vec[p])))
+                continue
+            part = arr if arr.shape[2] == 1 else arr[:, :, start:start + count]
+            if frames is not None:
+                ax = pick_axis(shape_desc, axis)
+                if part.shape[ax] == 1:
+                    if isinstance(frames, int) and not isinstance(frames, bool):
+                        part = np.take(part, 0, axis=ax)
+                else:
+                    part, _ = select_frames(part, shape_desc, axis, frames)
+            pair.append(part)
+        if frames is not None and isinstance(frames, int) and not isinstance(frames, bool):
+            # a per-pack scalar array must lose the selected axis too
+            ax = pick_axis(shape_desc, axis)
+            pair = [np.take(a, 0, axis=ax) if a.ndim == ndim and a.shape[ax] == 1 and all(
+                s == 1 for s in a.shape) else a for a in pair]
+        packs.append((pair[0], pair[1]))
+        start += count
+    return FrameScaling("apply", packs)
+
+
+def _flatten_like(arr: np.ndarray, data: Any) -> np.ndarray:
+    """Flatten the frame axes (axis 3 on) of a scaling array like convert()'s -F flattened ``data``.
+
+    convert() flattens with order "F" when the data as read are only
+    Fortran-contiguous, else "C"; a reshape keeps that property, so the
+    flattened data show which order was used. When the flattened data are both
+    C- and F-contiguous (every spatial axis has size 1), the order cannot be
+    told; if two or more frame axes vary, the two orders give different values,
+    so this stops with an error instead of guessing (BRK-0051).
+    """
+    if arr.ndim <= 4:
+        return arr
+    data = np.asarray(data)
+    n = int(np.prod(arr.shape[3:]))
+    if n not in (1, int(data.shape[3])):
+        raise ValueError(
+            f"per-frame scaling has {n} frames, flattened data has {data.shape[3]}."
+        )
+    varying = sum(1 for s in arr.shape[3:] if s > 1)
+    if varying >= 2 and data.flags.f_contiguous and data.flags.c_contiguous:
+        raise ValueError(
+            "per-frame scaling: the order in which -F (flatten_fg) flattened the frame axes "
+            f"cannot be told from data of shape {data.shape}; convert without -F, or apply "
+            "scale_frames before flattening."
+        )
+    order = "F" if (data.flags.f_contiguous and not data.flags.c_contiguous) else "C"
+    return arr.reshape((*arr.shape[:3], n), order=order)
+
+
+def scale_frames(
+    scan: "ScanLoader",
+    reco_id: int,
+    dataobjs: Tuple[NDArray, ...],
+    *,
+    axis: Optional[Union[str, int]] = None,
+    frames: Optional[Union[int, List[int], str]] = None,
+    cycle_index: Optional[int] = None,
+    cycle_count: Optional[int] = None,
+) -> Tuple[Tuple[NDArray, ...], bool]:
+    """Apply per-frame VisuCoreDataSlope/VisuCoreDataOffs the way convert() does (BRK-0036).
+
+    For converter hooks, which get the data as read: pass the data objects
+    (one per slice pack, with the same frame selection as the call) and pass
+    the returned flag to ``get_nifti1image(..., scaling_applied=...)``.
+    Raises ValueError for ``-F`` data whose flatten order cannot be told (every
+    spatial axis 1, two or more varying frame axes; BRK-0051).
+
+    Returns:
+        ``(dataobjs, scaling_applied)``. When the values are one per reco, per
+        slice pack or per slice, nothing is changed (the header carries them) and
+        the flag is False. When they differ per frame, the data are scaled
+        (float) and the flag is True (header slope 1, offset 0). When no layout
+        matches, a warning is logged, the data stay raw and the flag is True.
+
+        Data flattened by ``flatten_fg`` (``-F``), as brkraw passes them to a
+        hook, are accepted: the frame axes of the values are flattened in the
+        same order as the data (the order brkraw's flattening used), so the
+        result equals the default path, which scales before flattening.
+    """
+    frame_scaling = _frame_scaling(
+        scan, reco_id, axis=axis, frames=frames, cycle_index=cycle_index, cycle_count=cycle_count
+    )
+    dataobjs = tuple(dataobjs)
+    if frame_scaling.mode == "apply":
+        assert frame_scaling.packs is not None
+        if len(frame_scaling.packs) != len(dataobjs):
+            raise ValueError(
+                f"per-frame scaling has {len(frame_scaling.packs)} slice packs, data has {len(dataobjs)}."
+            )
+        packs = frame_scaling.packs
+        if any(np.ndim(d) == 4 and a.ndim > 4 for d, pair in zip(dataobjs, packs) for a in pair):
+            # flatten_fg: brkraw flattened the frame axes before the hook got the data
+            full = _frame_scaling(
+                scan, reco_id, axis=axis, frames=frames, cycle_index=cycle_index,
+                cycle_count=cycle_count, full_frames=True,
+            )
+            assert full.packs is not None
+            packs = [
+                tuple(_flatten_like(a, d) for a in pair) for d, pair in zip(dataobjs, full.packs)
+            ]
+        return tuple(
+            np.asarray(d, dtype=float) * s_arr + o_arr
+            for d, (s_arr, o_arr) in zip(dataobjs, packs)
+        ), True
+    if frame_scaling.mode == "skip":
+        return dataobjs, True  # header 1/0, data raw
+    return dataobjs, False
+
+
+def _layout_warnings(scan: "ScanLoader", reco_id: int) -> None:
+    """BRK-0037 safeguards: warn when the slice-pack split or a scaling shape looks inconsistent.
+
+    1. With more than one slice pack, the frames assigned to each pack (a
+       contiguous split along FG_SLICE by the method's slices per pack) should
+       share one orientation (VisuCoreOrientation).
+    2. A slope or offset stored with two or more dimensions should list the
+       trailing frame axes slowest first (JCAMP stores the last dimension
+       fastest); values are always read in stored order.
+    Warnings only; conversion is unchanged.
+    """
+    from ...resolver.helpers import get_reco
+    from ...resolver.shape import resolve_frame_group
+
+    try:
+        visu_pars = get_file(get_reco(scan, reco_id), "visu_pars")
+    except Exception:
+        return
+    fg = resolve_frame_group(visu_pars) or {}
+    fg_shape = [int(n) for n in fg.get("shape", [])]
+    fg_ids = [str(i) for i in fg.get("id", [])]
+    label = f"scan {getattr(scan, 'scan_id', '?')} reco {reco_id}"
+
+    for key in ("VisuCoreDataSlope", "VisuCoreDataOffs"):
+        value = visu_pars.get(key)
+        shape = tuple(int(n) for n in np.shape(value)) if value is not None else ()
+        if len(shape) >= 2:
+            tail = fg_shape[-len(shape):] if len(shape) <= len(fg_shape) else None
+            if tail is None or shape != tuple(reversed(tail)):
+                logger.warning(
+                    "%s: %s is stored with shape %s, which does not match the frame axes %s %s; "
+                    "its values are read in stored order.",
+                    label, key, shape, fg_ids, fg_shape,
+                )
+
+    affine_info = scan.affine_info.get(reco_id) if getattr(scan, "affine_info", None) else None
+    if not affine_info:
+        return
+    num_slices = [int(n) for n in affine_info["num_slices"]]
+    if len(num_slices) < 2:
+        return
+    names = [i.strip("<>") for i in fg_ids]
+    if "FG_SLICE" not in names:
+        return
+    k = names.index("FG_SLICE")
+    if sum(num_slices) != fg_shape[k]:
+        logger.warning(
+            "%s: the slice packs hold %s slices but FG_SLICE has %s; the slice pack split may not match the data.",
+            label, sum(num_slices), fg_shape[k],
+        )
+        return
+    orient = visu_pars.get("VisuCoreOrientation")
+    n_frames = int(np.prod(fg_shape)) if fg_shape else 0
+    if orient is None or np.size(orient) != 9 * n_frames:
+        return
+    orient = np.asarray(orient, dtype=float).reshape(n_frames, 9)
+    frame_idx = np.arange(n_frames).reshape(fg_shape, order="F")
+    by_slice = np.moveaxis(frame_idx, k, 0).reshape(fg_shape[k], -1)
+    start = 0
+    for p, count in enumerate(num_slices, start=1):
+        frames = by_slice[start:start + count].ravel()
+        if not np.allclose(orient[frames], orient[frames[0]], atol=1e-6):
+            logger.warning(
+                "%s: the frames of slice pack %s do not share one orientation; the slice pack split "
+                "may not match the frame order.",
+                label, p,
+            )
+        start += count
 
 
 def resolve_data_and_affine(
@@ -373,9 +757,105 @@ def _finalize_affines(
     return tuple(affines)
 
 
+
+def _selection_flags(
+    shape_info: Any,
+    shape: Sequence[int],
+    num_slices: Sequence[int],
+    ax: int,
+    index: Any,
+) -> List[Tuple[bool, bool, bool]]:
+    """(f_contiguous, c_contiguous, writeable) of each slice pack's selection, without any data.
+
+    Builds a read-only stand-in with the strides of a Fortran-ordered array of
+    ``shape`` (one element of memory), then runs the same z-axis swap, slice pack
+    split and basic index (int or slice) that get_dataobj runs on the data.
+    """
+    from numpy.lib.stride_tricks import as_strided
+
+    shape = tuple(int(n) for n in shape)
+    strides = tuple(int(np.prod(shape[:i], dtype=np.int64)) * 2 for i in range(len(shape)))
+    proxy = as_strided(np.zeros(1, dtype="<i2"), shape=shape, strides=strides, writeable=False)
+    data, _ = image_resolver.ensure_3d_spatial_data(proxy, shape_info)
+    flags = []
+    start = 0
+    for count in num_slices:
+        pack = data[:, :, slice(start, start + int(count))]
+        start += int(count)
+        sel: List[Any] = [slice(None)] * pack.ndim
+        sel[ax] = index
+        view = pack[tuple(sel)]
+        flags.append((bool(view.flags.f_contiguous), bool(view.flags.c_contiguous), bool(view.flags.writeable)))
+    return flags
+
+
+def _partial_frames(
+    scan: "ScanLoader",
+    reco_id: int,
+    num_slices: Sequence[int],
+    axis: Any,
+    frames: Any,
+) -> Optional[Tuple[Any, int, Any, List[str]]]:
+    """Read only the asked frames of 2dseq (WI-0083, D-0106), or None to read all like 0.6.0.
+
+    Returns ``(image info with only those frames on the axis, axis, index into
+    that smaller axis, notes)``. None when the selection is bad (the full path
+    then raises its usual error), covers every frame, or when cutting the smaller
+    array would give different ``flags`` than cutting the full array: ``convert -F``
+    chooses its flatten order from the flags, so they must stay as in 0.6.0.
+    """
+    from ...resolver.shape import resolve as shape_resolve
+    from ...specs.context_map.output import parse_frames, pick_axis
+
+    try:
+        shape_info = shape_resolve(scan, reco_id=reco_id)
+        if not shape_info:
+            return None
+        shape, desc = image_resolver.normalized_layout(shape_info)
+        if len(shape) < 4 or len(shape) != len(desc):
+            return None
+        ax = pick_axis(desc, axis)
+        index, _keep, norm, notes = parse_frames(frames, int(shape[ax]))
+    except Exception:
+        return None
+    need = sorted(set(norm))
+    if len(need) >= int(shape[ax]):
+        return None
+    position = {v: i for i, v in enumerate(need)}
+    if isinstance(index, slice):
+        new_index: Any = slice(None, None, -1) if (index.step or 1) < 0 else slice(None)
+    elif isinstance(index, (list, tuple)):
+        new_index = [position[v] for v in norm]
+    else:
+        new_index = position[norm[0]]
+    if not isinstance(new_index, list):
+        # int and slice give views, whose flags follow the strides of the whole array
+        pre_shape = [int(n) for n in shape_info["shape"]]
+        swapped = image_resolver.z_swap_axis(list(shape_info["shape_desc"]))
+        pre_ax = ax
+        if swapped is not None and ax in (2, swapped):
+            pre_ax = swapped if ax == 2 else 2
+        small = list(pre_shape)
+        small[pre_ax] = len(need)
+        try:
+            same = _selection_flags(shape_info, pre_shape, num_slices, ax, index) == \
+                _selection_flags(shape_info, small, num_slices, ax, new_index)
+        except Exception:
+            same = False
+        if not same:
+            logger.debug("partial 2dseq read skipped: the array flags would differ from a full read")
+            return None
+    info = image_resolver.resolve_frames(scan, reco_id, ax, need, shape_info=shape_info)
+    if info is None or info.get("dataobj") is None:
+        return None
+    return info, ax, new_index, list(notes)
+
+
 def get_dataobj(
     self: "ScanLoader",
     reco_id: Optional[int] = None,
+    axis: Optional[Union[str, int]] = None,
+    frames: Optional[Union[int, List[int], str]] = None,
     **kwargs: Dict[str, Any]
 ) -> Dataobjs:
     """Return reconstructed data for a reco, split by slice pack if needed.
@@ -383,9 +863,14 @@ def get_dataobj(
     Args:
         self: Scan or ScanLoader instance.
         reco_id: Reco identifier to read (defaults to the first available).
-        cycle_index: Optional cycle start index (last axis), reads all cycles when None.
-        cycle_count: Optional number of cycles to read from cycle_index; reads to end when None.
-            Ignored when the dataset reports <= 1 total cycle.
+        axis: Frame axis for ``frames``: a lowercase name from the scan's frame
+            groups (``echo``, ``cycle`` ...; see "Frame axes" in ``brkraw info``)
+            or a data-axis number >= 3. Omitted: the scan's only frame axis.
+        frames: Frames to keep, numpy rules: an int picks one frame and removes
+            the axis, a list keeps the axis in that order, ``"start:stop[:step]"``
+            is a Python slice. Applied to each slice pack.
+        cycle_index, cycle_count: Legacy (0.5) cycle block read on the last axis;
+            deprecated, removed in 0.7.0 (use ``axis="cycle", frames="a:b"``).
 
     Returns:
         Single ndarray when one slice pack exists; otherwise a tuple of arrays.
@@ -393,6 +878,18 @@ def get_dataobj(
     """
     cycle_index = cast(Optional[int], kwargs.get('cycle_index'))
     cycle_count = cast(Optional[int], kwargs.get('cycle_count'))
+    if cycle_index is not None or cycle_count is not None:
+        if axis is not None or frames is not None:
+            raise ValueError("Use axis/frames or the legacy cycle_index/cycle_count, not both.")
+        start = 0 if cycle_index is None else int(cycle_index)
+        stop = "" if cycle_count is None else str(start + int(cycle_count))
+        message = (
+            "cycle_index/cycle_count are deprecated and will be removed in brkraw 0.7.0; "
+            f'use axis="cycle", frames="{start}:{stop}"'
+        )
+        warn(message, DeprecationWarning, stacklevel=2)
+    if axis is not None and frames is None:
+        raise ValueError("axis needs frames (which frames of that axis to keep).")
     resolved_reco_id = resolve_reco_id(self, reco_id)
     if resolved_reco_id is None:
         return None
@@ -425,7 +922,19 @@ def get_dataobj(
             cycle_count = None
             cycle_args_requested = False
 
-    if cycle_args_requested or image_info.get("dataobj") is None:
+    partial = None
+    if (
+        frames is not None
+        and image_resolver.PARTIAL_READ
+        and not cycle_args_requested
+        and image_info.get("dataobj") is None
+    ):
+        # read only the asked frames; the smaller array is not kept as the scan's data
+        partial = _partial_frames(self, resolved_reco_id, affine_info["num_slices"], axis, frames)
+
+    if partial is not None:
+        image_info = partial[0]
+    elif cycle_args_requested or image_info.get("dataobj") is None:
         image_info = image_resolver.resolve(
             self,
             resolved_reco_id,
@@ -433,7 +942,10 @@ def get_dataobj(
             cycle_index=cycle_index,
             cycle_count=cycle_count,
         )
-        self.image_info[resolved_reco_id] = image_info
+        if not cycle_args_requested:
+            # A legacy cycle block is returned to this caller only; keeping it
+            # would make later plain get_dataobj() calls return the block.
+            self.image_info[resolved_reco_id] = image_info
 
     num_slices = affine_info["num_slices"]
     dataobj = cast(dict, image_info).get("dataobj")
@@ -443,6 +955,30 @@ def get_dataobj(
         _dataobj = cast(NDArray, dataobj)[:, :, slice(slice_offset, slice_offset + _num_slices)]
         slice_offset += _num_slices
         slice_pack.append(_dataobj)
+
+    if frames is not None and partial is not None:
+        # the data hold only the asked frames on this axis; cut them like the full array
+        _, part_ax, part_index, part_notes = partial
+        selected = []
+        for pack in slice_pack:
+            cut: List[Any] = [slice(None)] * pack.ndim
+            cut[part_ax] = part_index
+            for note in part_notes:
+                logger.warning("scan %s: %s", getattr(self, "scan_id", "?"), note)
+            selected.append(pack[tuple(cut)])
+        slice_pack = selected
+    elif frames is not None:
+        # Slice packs first, then the frame selection inside each pack (BRK-0024).
+        from ...specs.context_map.output import select_frames
+
+        shape_desc = cast(dict, image_info).get("shape_desc") or []
+        selected = []
+        for pack in slice_pack:
+            part, notes = select_frames(pack, shape_desc, axis, frames)
+            for note in notes:
+                logger.warning("scan %s: %s", getattr(self, "scan_id", "?"), note)
+            selected.append(part)
+        slice_pack = selected
 
     if len(slice_pack) == 1:
         return slice_pack[0]
@@ -591,6 +1127,7 @@ def get_nifti1image(
     xyz_units: XYZUNIT = "mm",
     t_units: TUNIT = "sec",
     override_header: Optional[Nifti1HeaderContents] = None,
+    scaling_applied: bool = False,
 ) -> ConvertedObj:
     """Return NIfTI image(s) for a reco.
 
@@ -600,6 +1137,8 @@ def get_nifti1image(
         xyz_units: Spatial units for NIfTI header.
         t_units: Temporal units for NIfTI header.
         override_header: Optional header values to apply.
+        scaling_applied: The data objects already carry the slope/offset
+            (per-frame scaling, BRK-0035); the header gets slope 1, offset 0.
 
     Returns:
         Output object(s) supporting to_filename(). Returns None when required
@@ -614,12 +1153,40 @@ def get_nifti1image(
     if dataobjs is None or affines is None:
         return None
 
+    affine_info = self.affine_info.get(reco_id)
+    if affine_info is not None:
+        pack_sizes = [int(size) for size in affine_info["num_slices"]]
+    else:
+        pack_sizes = [int(dataobj.shape[2]) if dataobj.ndim >= 3 else 1 for dataobj in dataobjs]
+    if len(pack_sizes) != len(dataobjs):
+        raise ValueError(
+            f"Slice-pack metadata mismatch: {len(pack_sizes)} pack sizes for {len(dataobjs)} data objects."
+        )
+
+    raw_slope = 1.0 if scaling_applied else image_info.get("slope")
+    raw_offset = 0.0 if scaling_applied else image_info.get("offset")
+    slope_packs = _normalize_pack_scaling(
+        raw_slope,
+        pack_sizes,
+        name="VisuCoreDataSlope",
+        default=1.0,
+    )
+    offset_packs = _normalize_pack_scaling(
+        raw_offset,
+        pack_sizes,
+        name="VisuCoreDataOffs",
+        default=0.0,
+    )
     niiobjs = []
     for i, dataobj in enumerate(dataobjs):
         affine = affines[i]
         niiobj = Nifti1Image(dataobj, affine)
+        output_image_info = cast("ResolvedImage", dict(image_info))
+        output_image_info["dataobj"] = dataobj
+        output_image_info["slope"] = slope_packs[i]
+        output_image_info["offset"] = offset_packs[i]
         nifti1header_contents = nifti_resolver.resolve(
-            image_info, xyz_units=xyz_units, t_units=t_units
+            output_image_info, xyz_units=xyz_units, t_units=t_units
         )
         if override_header:
             for key, value in override_header.items():
@@ -691,7 +1258,7 @@ def convert(
     merged_kwargs: Dict[str, Any] = dict(hook_kwargs) if hook_kwargs else {}
     merged_kwargs.update(kwargs)
 
-    data_kwargs = _filter_hook_kwargs(self.get_dataobj, merged_kwargs)
+    data_kwargs = _filter_read_kwargs(self.get_dataobj, merged_kwargs)
     # flip_* are affine-only options; never pass them to get_dataobj.
     for key in ("flip_x", "flip_y", "flip_z"):
         data_kwargs.pop(key, None)
@@ -713,7 +1280,7 @@ def convert(
         )
         dataobjs = self.get_dataobj(resolved_reco_id)
 
-    affine_kwargs = _filter_hook_kwargs(self.get_affine, merged_kwargs)
+    affine_kwargs = _filter_read_kwargs(self.get_affine, merged_kwargs)
     convert_kwargs = {
         key: value
         for key, value in convert_kwargs.items()
@@ -755,16 +1322,52 @@ def convert(
         affines = (affines,)
     
     dataobjs = list(dataobjs)
+    # -F flattens like numpy order="A" on the data as read; keep that order after scaling
+    flatten_orders = [
+        "F" if (d.flags.f_contiguous and not d.flags.c_contiguous) else "C" for d in dataobjs
+    ]
+    # different per-frame slope/offset: apply to the data before flattening
+    # (BRK-0035 option C); converter hooks get the raw data as before
+    converter_func = getattr(self, "converter_func", None)
+    scaling_applied = False
+    if not isinstance(converter_func, ConvertType):
+        _layout_warnings(self, resolved_reco_id)
+        scaled, scaling_applied = scale_frames(
+            self,
+            resolved_reco_id,
+            tuple(dataobjs),
+            axis=merged_kwargs.get("axis"),
+            frames=merged_kwargs.get("frames"),
+            cycle_index=merged_kwargs.get("cycle_index"),
+            cycle_count=merged_kwargs.get("cycle_count"),
+        )
+        dataobjs = list(scaled)
     for i, dataobj in enumerate(dataobjs):
         if flatten_fg and dataobj.ndim > 4:
             spatial_shape = dataobj.shape[:3]
             flattened = int(np.prod(dataobj.shape[3:]))
-            dataobjs[i] = dataobj.reshape((*spatial_shape, flattened), order="A")
+            dataobjs[i] = dataobj.reshape((*spatial_shape, flattened), order=flatten_orders[i])
     dataobjs = tuple(dataobjs)
 
-    converter_func = getattr(self, "converter_func", None)
     if isinstance(converter_func, ConvertType):
-        hook_call_kwargs = _filter_hook_kwargs(converter_func, convert_kwargs)
+        # the hook gets the reco id and the frame selection when it takes them or **kwargs
+        # (BRK-0046); the data stay as read, and helper.scale_frames applies the per-frame
+        # rule with the same selection if the hook wants it
+        selection = {
+            key: merged_kwargs[key]
+            for key in ("axis", "frames", "cycle_index", "cycle_count")
+            if merged_kwargs.get(key) is not None
+        }
+        # the NIfTI output options always go to the hook's convert when it takes them
+        # or **kwargs, even when get_dataobj/get_affine named them (WI-0110)
+        output = {key: merged_kwargs[key] for key in ("xyz_units", "t_units") if key in merged_kwargs}
+        header = override_header if override_header is not None else merged_kwargs.get("override_header")
+        if header is not None:
+            output["override_header"] = header
+        hook_call_kwargs = _filter_hook_kwargs(
+            converter_func,
+            {**convert_kwargs, **output, **selection, "reco_id": resolved_reco_id},
+        )
         logger.debug(
             "Calling converter hook for scan %s reco %s with args %s",
             getattr(self, "scan_id", "?"),
@@ -782,6 +1385,7 @@ def convert(
         **kwargs,
     }
     nifti1image_kwargs = _filter_hook_kwargs(get_nifti1image, nifti1image_kwargs)
+    nifti1image_kwargs["scaling_applied"] = scaling_applied
     return get_nifti1image(
         self,
         reco_id=resolved_reco_id,
@@ -880,6 +1484,34 @@ def _filter_hook_kwargs(func: Any, hook_kwargs: Mapping[str, Any]) -> Dict[str, 
     return filtered
 
 
+# NIfTI output options: they describe the written file, not how the data or the
+# affine are read (WI-0110, D-0180).
+OUTPUT_KWARGS = ("xyz_units", "t_units", "override_header")
+
+
+def _filter_read_kwargs(func: Any, kwargs: Mapping[str, Any]) -> Dict[str, Any]:
+    """Kwargs for ``get_dataobj``/``get_affine``.
+
+    Like :func:`_filter_hook_kwargs`, but the NIfTI output options are passed
+    only when ``func`` names them as parameters, never through ``**kwargs``:
+    a hook that takes ``**kwargs`` for its own options would otherwise take
+    them away from ``convert``.
+    """
+    filtered = _filter_hook_kwargs(func, kwargs)
+    try:
+        named = {
+            param.name
+            for param in inspect.signature(func).parameters.values()
+            if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        }
+    except (TypeError, ValueError):
+        named = set()
+    for key in OUTPUT_KWARGS:
+        if key in filtered and key not in named:
+            del filtered[key]
+    return filtered
+
+
 def _resolve_metadata_spec(
     scan: "ScanLoader",
     spec: Optional[Union[Mapping[str, Any], str, Path]],
@@ -924,16 +1556,17 @@ def get_metadata(
     self,
     reco_id: Optional[int] = None,
     spec: Optional[Union[Mapping[str, Any], str, Path]] = None,
-    context_map: Optional[Union[str, Path]] = None,
     return_spec: bool = False,
 ) -> Metadata:
     """Resolve metadata using a remapper spec.
 
+    A context map's ``sidecar`` fields are applied by the caller with
+    ``brkraw.specs.context_map.plan_scan`` (0.6.0: no ``context_map`` argument).
+
     Args:
         self: Scan instance.
-    reco_id: Reco identifier (defaults to the first available).
+        reco_id: Reco identifier (defaults to the first available).
         spec: Optional spec mapping or spec file path.
-    context_map: Optional context map override.
         return_spec: If True, return spec info alongside metadata.
 
     Returns:
@@ -958,17 +1591,8 @@ def get_metadata(
         spec_data,
         transforms,
         validate=False,
-        context_map=None,
         context={"scan_id": getattr(scan, "scan_id", None), "reco_id": resolved_reco_id},
     )
-    if context_map:
-        map_data = load_context_map(context_map)
-        metadata = apply_context_map(
-            metadata,
-            map_data,
-            target="metadata_spec",
-            context={"scan_id": getattr(scan, "scan_id", None), "reco_id": resolved_reco_id},
-        )
     if not return_spec:
         return metadata
     meta = spec_data.get("__meta__")

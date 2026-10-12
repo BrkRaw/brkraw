@@ -1,159 +1,119 @@
-# convert / convert-batch
+# convert
 
-Convert Bruker Paravision scans into NIfTI files, optionally writing JSON sidecars and applying hooks.
-
----
-
-## brkraw convert
-
-### Basic usage
-
-Convert a single scan/reco:
+Convert ParaVision scans to NIfTI files, optionally with JSON sidecars.
 
 ```bash
-brkraw convert /path/to/study --scan-id 3 --reco-id 1
+brkraw convert /path/to/study                    # every scan and reco
+brkraw convert /path/to/study -s 3 -r 1 -o out/  # one scan, one reco
+brkraw convert /path/to/study -s 3 4 5 -o out/   # three scans (also -s 3,4,5)
+brkraw convert /path/to/studies --batch -o out/  # every study in a folder
 ```
 
-If `path` is omitted, `BRKRAW_PATH` is used.
+If the path is omitted, `BRKRAW_PATH` is used (set with `brkraw session`),
+or on a scanner console the study open in ParaVision.
 
----
+!!! note "Changed in 0.6.0"
+    `brkraw convert-batch` became `brkraw convert --batch`. Context maps use
+    the v3 format and are found next to the dataset by name. `--axis` and
+    `--frames` select frames; `--cycle-index` / `--cycle-count` still work
+    but are deprecated. See [Migrating to 0.6](../getting-started/migrating.md).
 
-## Scan and reco selection
+## Selection
 
-### --scan-id
+| Option | Meaning |
+| --- | --- |
+| `-s`, `--scan-id` | Scan ID(s) to convert: `-s 3`, `-s 3 4 5` or `-s 3,4,5`. Without it, every scan is converted. With two or more, `--output` must be a folder. |
+| `-r`, `--reco-id` | Reco ID to convert. Without it, every reco of each scan is converted. With `-s`, every named scan must have this reco, else nothing is written; without `-s`, scans that lack it are skipped and a warning names them (no scan with it: nothing is written). |
 
-Convert a single scan.
+A scan ID that the dataset does not have stops the run before anything is
+written.
+| `--batch` | Convert every dataset in the folder `path` (sub-folders and `.zip` files directly under it). Not with `-s`, `-r` or `-M`. |
 
-If omitted, BrkRaw converts all available scans.
+With `--batch`, one failed dataset does not stop the others; the run fails
+only when no dataset was converted. Each dataset uses its own same-name
+context map, if any.
 
-### --reco-id
+## Output
 
-Convert a single reconstruction within the scan.
+| Option | Meaning |
+| --- | --- |
+| `-o`, `--output` | A folder, or a `.nii` / `.nii.gz` file name for one scan. Without `-s`, it must be a folder. Folders are created. |
+| `--prefix` | File name template with `{Key}` tags of the config layout (may contain `/`). Not with a file `-o`. When given, a context map's `layout_template` is not used. |
+| `--no-compress` | Write `.nii` instead of `.nii.gz`. |
+| `-M`, `--context-map` | Context map file to use instead of the same-name file next to the dataset. |
+| `--no-context-map` | Use no context map, not even the same-name file. |
 
-If omitted, BrkRaw converts all available reconstructions for each scan.
+### How files are named
 
----
+- **With a context map that has `layout_template`:** the template names every
+  output. All paths are planned first; if two outputs get the same path, or a
+  path (or its sidecar with `-c`) already exists, nothing is written and the
+  scans are named. `on_collision: suffix` adds `_2`, `_3` … instead. See
+  [Context maps](../extensions/context-map.md).
+- **Otherwise:** the config layout names the files (see
+  [Layout and naming](../extensions/layout.md)). Names that repeat get `_2`,
+  `_3` …, or the next `{Counter}` value when the layout uses `{Counter}`.
+  Several slice packs get the config's slice pack suffix.
 
-## Output control
+Invalid characters in names are replaced.
 
-### -o, --output
+## Metadata
 
-Where to write outputs:
+| Option | Meaning |
+| --- | --- |
+| `-c`, `--sidecar` | Write a JSON sidecar next to each NIfTI file (metadata spec plus the context map's `sidecar` fields). |
+| `--no-convert` | Write sidecars only (needs `-c`). |
 
-- Directory: write files under that directory.
-- File path (`.nii` / `.nii.gz`): treated as a base name in the file's parent directory.
-  For multi-slicepack outputs, BrkRaw appends slicepack suffixes.
+## Orientation
 
-Examples:
+| Option | Meaning |
+| --- | --- |
+| `-S`, `--space` | Affine space: `raw`, `scanner` or `subject_ras` (default). |
+| `-T`, `--override-subject-type` | Subject type for the subject-view affine (`subject_ras` only). |
+| `-P`, `--override-subject-pose` | Subject pose for the subject-view affine (`subject_ras` only). |
+
+## Data
+
+| Option | Meaning |
+| --- | --- |
+| `-F`, `--flatten-fg` | Flatten frame axes into one 4th axis when the data has 5 or more axes. |
+| `--axis` | Frame axis for `--frames`: a name shown by `brkraw info` under "Frame axes" (`echo`, `cycle`, …) or an axis number (3 or more). Can be left out when the data has one frame axis. |
+| `--frames` | Frames to keep, numpy style: `2` (one frame, the axis is removed), `2,0` (a list, the axis is kept), `1:3` (a slice `start:stop[:step]`, the axis is kept). |
+| `-I`, `--cycle-index`, `-N`, `--cycle-count` | Deprecated, removed in 0.7.0: a block of cycles on the last axis. Use `--axis cycle --frames START:STOP`; brkraw warns and shows the equivalent. Not together with `--axis` / `--frames`. |
 
 ```bash
-brkraw convert /path/to/study --scan-id 3 -o out/
-brkraw convert /path/to/study --scan-id 3 -o scan3.nii.gz
+brkraw convert /path/to/study -s 5 -o rest.nii.gz --axis cycle --frames 5:   # drop 5 dummy volumes
+brkraw convert /path/to/study -s 8 -o echo1.nii.gz --axis echo --frames 0
 ```
 
-Notes:
+Frame axis names follow the ParaVision frame groups (`FG_ECHO` → `echo`,
+`FG_CYCLE` → `cycle` …); the table is in
+[Context maps](../extensions/context-map.md#frame-axis-names). Slice packs are
+split first, then frames are selected in each pack.
 
-- When `--scan-id` is omitted (convert all scans), `--output` must be a directory.
-- If `--output` is a file path, `--prefix` cannot be used.
-- Output directories are created automatically.
+### Intensity scaling
 
-### --prefix
+brkraw applies the ParaVision slope and offset (`VisuCoreDataSlope`,
+`VisuCoreDataOffs`); slope and offset are handled separately.
 
-Override the base output name using a template.
-
-The template supports `{Key}` tags from layout info (and can include `/` to build subfolders).
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --prefix "{Protocol}_{ScanID}"
-```
-
-### Name de-duplication
-
-BrkRaw avoids overwriting existing outputs.
-
-- If your layout or `--prefix` contains `{Counter}`, it will try `Counter=1..` until names are unique.
-- If you do not use `{Counter}`, BrkRaw appends `_<N>` (for example `_2`, `_3`, ...) when needed.
-
-BrkRaw also sanitizes invalid characters in rendered names.
-
-### --no-compress
-
-Write `.nii` instead of `.nii.gz` (default: compressed).
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --no-compress
-```
-
----
-
-## Sidecar metadata
-
-### --sidecar
-
-Write a JSON sidecar next to each NIfTI output.
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --sidecar
-```
-
-### --no-convert
-
-Skip NIfTI conversion and only write sidecar metadata (requires `--sidecar`).
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --sidecar --no-convert
-```
-
----
-
-## Context maps
-
-### --context-map
-
-Apply a context map YAML for selection and mapping.
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --context-map map.yaml --sidecar
-```
-
-Notes:
-
-- Context map selectors may skip specific scan/reco pairs.
-- Context maps can influence layout metadata (layout template/entries and slicepack suffix) for that run.
-
----
+- When all values are exactly the same, the value goes into the NIfTI header
+  and the data keeps its stored integer type.
+- When the values differ per slice pack or per frame, brkraw applies each
+  value to its own frames and writes floating-point data (larger files).
+- The number of values is compared first with the number of slice packs,
+  then with the frame axes multiplied from the last one (one value per frame
+  when it matches all of them). When nothing matches, brkraw warns and writes
+  the data without scaling.
+- brkraw also warns when the frames of one slice pack do not share one
+  orientation, or when a slope or offset is stored with more than one
+  dimension that does not match the frame axes.
 
 ## Hooks
 
-### --hook-arg
-
-Pass a single hook argument (repeatable):
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --hook-arg "<hook-name>:key=value"
-```
-
-Format:
-
-```text
-HOOK:KEY=VALUE
-```
-
-Value coercion:
-
-- `true` / `false` are parsed as booleans.
-- integers and floats are parsed when possible.
-- otherwise values are treated as strings.
-
-### --hook-args-yaml
-
-Load hook arguments from a YAML file (repeatable). CLI `--hook-arg` values override YAML.
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --hook-args-yaml hook_args.yaml
-```
-
-Example YAML:
+| Option | Meaning |
+| --- | --- |
+| `-H`, `--hook-arg` | `HOOK:KEY=VALUE`, repeatable. `true`/`false`, integers and floats are converted; everything else is text. |
+| `--hook-args-yaml` | YAML file with hook arguments (repeatable). `-H` values win. |
 
 ```yaml
 hooks:
@@ -161,116 +121,34 @@ hooks:
     key: value
 ```
 
-Environment variables:
+A hook may stop a scan before it starts because it would need more memory than
+its limit (for example SORDINO, `max_memory_gb`). In a terminal, `convert` then
+shows the reason and asks `Proceed anyway with max_memory_gb=... for scan N? [y/N]`;
+`y` converts that scan once more with the proposed value. Without a terminal
+the scan fails with the message, as any other conversion error; give the value
+with `-H sordino:max_memory_gb=...` to run it.
 
-- `BRKRAW_CONVERT_HOOK_ARGS_YAML` (comma-separated paths)
-- `BRKRAW_HOOK_ARGS_YAML` (comma-separated paths)
+## NIfTI header
 
----
+| Option | Meaning |
+| --- | --- |
+| `--xyz-units` | Spatial units in the header (default `mm`). |
+| `--t-units` | Time units in the header (default `sec`). |
+| `--header` | YAML file with header values to set. |
 
-## Affines, units, and headers
+## Config folder
 
-### --space
-
-Select affine space:
-
-- `raw`
-- `scanner`
-- `subject_ras` (default)
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --space subject_ras
-```
-
-### --override-subject-type / --override-subject-pose
-
-Override subject metadata used for subject-view affines (`space=subject_ras` only).
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --override-subject-type Quadruped
-brkraw convert /path/to/study --scan-id 3 --override-subject-pose Head_Supine
-```
-
-### --xyz-units / --t-units
-
-Set NIfTI header units (defaults: `mm`, `sec`).
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --xyz-units mm --t-units sec
-```
-
-### --header
-
-Provide a YAML file containing NIfTI header overrides.
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --header header.yaml
-```
-
----
-
-## Multi-dimensional data
-
-### --flatten-fg
-
-Flatten frame-group dimensions to 4D when data is 5D or higher.
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --flatten-fg
-```
-
-### --cycle-index / --cycle-count
-
-Read only a subset of cycles from multi-cycle data (last axis).
-
-```bash
-brkraw convert /path/to/study --scan-id 3 --cycle-index 0 --cycle-count 10
-```
-
-If `--cycle-count` is set but `--cycle-index` is omitted, BrkRaw defaults `cycle-index` to `0`.
-
----
-
-## brkraw convert-batch
-
-Convert all datasets under a root folder.
-
-```bash
-brkraw convert-batch /path/to/datasets -o out/
-```
-
-Dataset discovery:
-
-- subdirectories under the root folder
-- zip files directly under the root folder
-
-Notes:
-
-- `--output` must be a directory for `convert-batch`.
-- failures in one dataset do not stop the whole batch, but a full run with zero successes is treated as an error.
-
----
+`--root DIR` uses another config folder (default: `BRKRAW_CONFIG_HOME`, else
+`~/.brkraw`).
 
 ## Environment defaults
 
-Many flags can be provided through environment variables (commonly set via `brkraw session set`).
-
-Common ones:
-
-- `BRKRAW_PATH`
-- `BRKRAW_SCAN_ID`
-- `BRKRAW_RECO_ID`
-- `BRKRAW_CONVERT_OUTPUT`
-- `BRKRAW_CONVERT_PREFIX`
-- `BRKRAW_CONVERT_SIDECAR`
-- `BRKRAW_CONVERT_CONTEXT_MAP`
-- `BRKRAW_CONVERT_SPACE`
-- `BRKRAW_CONVERT_COMPRESS`
-- `BRKRAW_CONVERT_FLATTEN_FG`
-- `BRKRAW_CONVERT_CYCLE_INDEX`
-- `BRKRAW_CONVERT_CYCLE_COUNT`
-- `BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE`
-- `BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE`
-- `BRKRAW_CONVERT_XYZ_UNITS`
-- `BRKRAW_CONVERT_T_UNITS`
-- `BRKRAW_CONVERT_HEADER`
+Options can also come from environment variables, usually set with
+`brkraw session set`: `BRKRAW_PATH`, `BRKRAW_SCAN_ID`, `BRKRAW_RECO_ID`,
+`BRKRAW_CONVERT_OUTPUT`, `BRKRAW_CONVERT_PREFIX`, `BRKRAW_CONVERT_SIDECAR`,
+`BRKRAW_CONVERT_SPACE`, `BRKRAW_CONVERT_COMPRESS`, `BRKRAW_CONVERT_FLATTEN_FG`,
+`BRKRAW_CONVERT_OVERRIDE_SUBJECT_TYPE`, `BRKRAW_CONVERT_OVERRIDE_SUBJECT_POSE`,
+`BRKRAW_CONVERT_XYZ_UNITS`, `BRKRAW_CONVERT_T_UNITS`, `BRKRAW_CONVERT_HEADER`,
+`BRKRAW_CONVERT_HOOK_ARGS_YAML`, `BRKRAW_HOOK_ARGS_YAML`.
+`BRKRAW_CONVERT_CYCLE_INDEX` / `BRKRAW_CONVERT_CYCLE_COUNT` are read like the
+deprecated options. `BRKRAW_CONVERT_CONTEXT_MAP` is no longer read (0.6.0).

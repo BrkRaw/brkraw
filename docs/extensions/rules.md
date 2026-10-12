@@ -1,7 +1,7 @@
 # Rule Syntax Reference
 
 Rules select which specs and converter hooks apply to a scan. They are evaluated
-against Bruker Paravision parameter values and **only select behavior** (they do
+against Bruker ParaVision parameter values and **only select behavior** (they do
 not modify metadata).
 
 ---
@@ -40,7 +40,7 @@ metadata_spec:
 
 Interpretation:
 
-- When the Paravision parameter `method:Method` is mapped to the variable
+- When the ParaVision parameter `method:Method` is mapped to the variable
   `$Method`, if `$Method` matches `^EPI`, select the metadata spec
   `bids_bold_metadata`.
 
@@ -74,7 +74,7 @@ Minimal schema:
 
 ## Variables (`when`)
 
-`when` binds variables from Paravision parameter files using the same “remapper”
+`when` binds variables from ParaVision parameter files using the same “remapper”
 binding shape as specs (i.e., `sources` and optional `transform`). The name
 `when` is intended to read as “when these variables (bindings) are available,
 evaluate the condition”.

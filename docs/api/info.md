@@ -1,7 +1,7 @@
 # Inspecting datasets (info and params)
 
 The brkraw Python API provides read-only inspection utilities for
-Paravision datasets.
+ParaVision datasets.
 
 These APIs are designed to help users understand dataset structure
 and metadata before running any conversion.

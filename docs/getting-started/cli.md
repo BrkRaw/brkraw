@@ -2,13 +2,13 @@
 
 This page provides a quick-start overview of the BrkRaw Command Line Interface (CLI).
 The CLI is designed for interactive inspection and lightweight conversion of
-Paravision datasets, with support for extensible rules, specs, and sequence-specific hooks.
+ParaVision datasets, with support for extensible rules, specs, and sequence-specific hooks.
 
 ---
 
 ## Inspect a dataset (brkraw info)
 
-Print a structured overview of a Paravision dataset, including
+Print a structured overview of a ParaVision dataset, including
 study-level and scan-level information.
 
 ```bash
@@ -16,19 +16,22 @@ brkraw info /path/to/study
 ```
 
 This command works with dataset directories, zip archives, and
-Paravision-exported `.PvDatasets` files.
+ParaVision-exported `.PvDatasets` files.
 
-To include detailed scan and reconstruction information:
+The default scope (`full`) shows the study and every scan. To see only the
+study, or to include reco entries (with each reco's frame axes, such as
+`echo(2), cycle(3)`):
 
 ```bash
-brkraw info /path/to/study --scope full
+brkraw info /path/to/study --scope study
+brkraw info /path/to/study --show-reco
 ```
 
 ---
 
 ## Inspect scan parameters (brkraw params)
 
-Search acquisition or reconstruction parameters from Paravision parameter files
+Search acquisition or reconstruction parameters from ParaVision parameter files
 (e.g. `method`, `acqp`, `visu_pars`, `reco`).
 
 Search for a parameter key across the study:
@@ -62,13 +65,14 @@ how acquisition and reconstruction parameters vary before conversion.
 
 ## Convert a scan to NIfTI (brkraw convert)
 
-Convert a single scan using the default reconstruction.
+Convert one scan (every reco of it):
 
 ```bash
 brkraw convert /path/to/study --scan-id 3
 ```
 
-If `--scan-id` is supplied without `--reco-id`, BrkRaw converts all available recos.
+Without `--reco-id`, brkraw converts every reco of the scan; without
+`--scan-id`, every scan.
 
 Specify a reconstruction ID and output directory:
 
@@ -79,8 +83,9 @@ brkraw convert /path/to/study \
     --output ./nifti_out
 ```
 
-Output filenames and directory structure are controlled by the
-configured layout entries and templates.
+Output file names and folders come from the config layout, or from a context
+map next to the dataset (see [Layout and naming](../extensions/layout.md) and
+[BIDS integration](bids.md)).
 
 ---
 
@@ -95,46 +100,36 @@ brkraw convert /path/to/study \
     --sidecar
 ```
 
-The content of sidecar metadata is determined by context maps,
-rules, and specs.
+The sidecar content comes from the metadata spec (installed with
+`brkraw init --install-default`) plus the `sidecar` fields of a context map.
 
 ---
 
-## Convert multiple studies (brkraw convert-batch)
+## Convert many studies (brkraw convert --batch)
 
-Convert all Bruker studies located under a root directory. This command is intended
-for batch-style conversion when multiple studies are organized under a common folder.
-
-The target path should be a directory containing one or more Paravision studies.
+Convert every study in a folder (sub-folders and `.zip` files directly under
+it):
 
 ```bash
-brkraw convert-batch /path/to/root_folder
+brkraw convert /path/to/studies --batch --output ./converted --sidecar
 ```
 
-By default, each detected study is converted using the configured rules, specs,
-and hooks.
+Each study uses its own same-name context map, if any. The other `convert`
+options apply to every study; `-s`, `-r` and `-M` cannot be used with
+`--batch`. See [convert](../cli/convert.md).
 
-Common options:
+---
 
-- `-o, --output`: Output directory for converted files
-- `--sidecar`: Generate metadata sidecars
-- `--context-map`: Override the context map used for conversion
-- `--hook-arg`, `--hook-args-yaml`: Pass arguments to conversion hooks
-- `--space`: Select output coordinate space (`raw`, `scanner`, `subject_ras`)
-- `--no-convert`: Parse metadata and generate sidecars without converting images
+## Share a study (brkraw prune)
 
-Example with explicit output directory and sidecar generation:
+Copy a study, or chosen scans, into one zip:
 
 ```bash
-brkraw convert-batch /path/to/root_folder \
-    --output ./converted \
-    --sidecar
+brkraw prune /path/to/study -s 3 5                           # values unchanged
+brkraw prune /path/to/study --anonymize --subject-id M01     # example anonymization
 ```
 
-This command is useful for converting large collections of studies in a
-consistent and reproducible manner.
-
-For large-scale automation, consider using the Python API.
+Nothing is anonymized unless you ask for it. See [prune](../cli/prune.md).
 
 ---
 
@@ -144,7 +139,8 @@ BrkRaw supports optional, installable hooks that extend conversion and
 reconstruction workflows for specific modalities or sequences (e.g. MRS, DTI).
 
 !!! note "Available hook packages"
-    Currently installable hook packages include `brkraw-mrs` and `brkraw-dti`.
+    Currently installable hook packages include `brkraw-mrs`, `brkraw-dti`
+    and `brkraw-sordino`.
 
 ### Install a hook
 
@@ -161,7 +157,7 @@ brkraw hook install <hook-name>
 ```
 
 Once a hook is installed, it is automatically applied during conversion.
-You can use `brkraw convert` or `brkraw convert-batch` as usual, without changing your workflow.
+You can use `brkraw convert` (with or without `--batch`) as usual, without changing your workflow.
 
 ```bash
 brkraw convert /path/to/study --scan-id 3

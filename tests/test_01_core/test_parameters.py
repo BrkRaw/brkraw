@@ -307,3 +307,67 @@ def test_replace_value_updates_blocks(monkeypatch, fake_parsed_data):
     assert "##$Param1= 9\n" in text
     assert "Param2" not in text
     assert "Param3" not in text
+
+
+# --- JCAMP sniff reads only the head of a file --------------------------------
+
+HEAD = 65536
+
+
+class _SpyBytes(bytes):
+    """bytes that record slicing and whole-object decoding."""
+
+    def __getitem__(self, key):
+        self.keys.append(key)
+        return bytes.__getitem__(self, key)
+
+    def decode(self, *args, **kwargs):
+        self.whole_decoded = True
+        return bytes.decode(self, *args, **kwargs)
+
+
+def test_sniff_head_size():
+    assert p.JCAMP_SNIFF_BYTES == HEAD
+
+
+def test_sniff_real_parameter_files_are_jcamp():
+    files = sorted((Path(__file__).parent / "fixtures").glob("*.jdx"))
+    assert files
+    for path in files:
+        assert Parameters._looks_like_jcamp(path.read_bytes()), path.name
+
+
+def test_sniff_header_followed_by_binary_is_jcamp():
+    data = b"##TITLE=Parameter List\n##JCAMPDX=4.24\n" + bytes(range(256)) * 8192
+    assert Parameters._looks_like_jcamp(data)
+
+
+def test_sniff_binary_is_not_jcamp():
+    assert not Parameters._looks_like_jcamp(bytes(range(256)) * 8192)
+    assert not Parameters._looks_like_jcamp(b"")
+
+
+def test_sniff_header_must_start_in_the_head():
+    assert not Parameters._looks_like_jcamp(b"x" * (HEAD + 10) + b"\n##A=1\n")
+    assert Parameters._looks_like_jcamp(b"x" * (HEAD - 100) + b"\n##A=1\n")
+
+
+def test_sniff_decodes_only_the_head():
+    data = _SpyBytes(b"\x00" * (4 * HEAD))
+    data.keys, data.whole_decoded = [], False
+    assert not Parameters._looks_like_jcamp(data)
+    assert not data.whole_decoded
+    assert data.keys == [slice(None, HEAD, None)]
+
+
+def test_sniff_memory_does_not_grow_with_file_size():
+    import tracemalloc
+
+    data = b"\x01\x02" * (16 * 2**20)  # 32 MiB of binary
+    tracemalloc.start()
+    try:
+        Parameters._looks_like_jcamp(data)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert peak < 2**20

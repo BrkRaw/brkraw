@@ -12,7 +12,7 @@ from pathlib import Path
 import yaml
 import numpy as np
 
-from brkraw.cli.utils import load
+from brkraw.cli.utils import add_root_argument, load, parse_scan_ids
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +30,20 @@ def cmd_params(args: argparse.Namespace) -> int:
         return 2
     if args.scan_id is None:
         env_scan = os.environ.get("BRKRAW_SCAN_ID")
-        if env_scan:
+        if env_scan and env_scan.strip():
+            # one scan-id rule (cli.utils.parse_scan_ids); params searches one scan
             try:
-                args.scan_id = int(env_scan)
-            except ValueError:
-                logger.error("Invalid BRKRAW_SCAN_ID: %s", env_scan)
+                ids = parse_scan_ids([env_scan])
+            except ValueError as exc:
+                logger.error("BRKRAW_SCAN_ID: %s", exc)
                 return 2
+            if len(ids) > 1:
+                logger.error(
+                    "params searches one scan id; BRKRAW_SCAN_ID holds %s. Give one with -s/--scan-id.",
+                    ", ".join(str(i) for i in ids),
+                )
+                return 2
+            args.scan_id = ids[0]
     if args.reco_id is None:
         env_reco = os.environ.get("BRKRAW_RECO_ID")
         if env_reco:
@@ -58,8 +66,9 @@ def cmd_params(args: argparse.Namespace) -> int:
         scan_id=args.scan_id,
         reco_id=args.reco_id,
     )
+    # the result is the command's output: stdout, whatever the logging level
     if result is None:
-        logger.info("(none)")
+        print("(none)")
         return 0
     def _to_yaml_safe(value):
         if isinstance(value, dict):
@@ -70,7 +79,7 @@ def cmd_params(args: argparse.Namespace) -> int:
             return value.tolist()
         return value
 
-    logger.info("%s", yaml.safe_dump(_to_yaml_safe(result), sort_keys=False))
+    print(yaml.safe_dump(_to_yaml_safe(result), sort_keys=False), end="")
     return 0
 
 
@@ -89,7 +98,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "-s",
         "--scan-id",
         type=int,
-        help="Scan id to search (required for study-level search).",
+        help="Scan id to search (one; also BRKRAW_SCAN_ID). A study path needs it: without a scan id nothing is found.",
     )
     params_parser.add_argument(
         "-r",
@@ -103,4 +112,5 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         nargs="*",
         help="Parameter file(s) to search (method, acqp, visu_pars, reco).",
     )
+    add_root_argument(params_parser)
     params_parser.set_defaults(func=cmd_params, parser=params_parser)

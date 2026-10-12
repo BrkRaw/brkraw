@@ -37,13 +37,14 @@ Addon types include:
 - specs
 - rules
 - pruner specs
+- shared context maps (bases for `include`, in `context_maps/`)
 - transforms
 
 Addons are managed via the `addon` CLI and API.
 
 ### Specs
 
-Specs map Bruker Paravision parameter files into structured outputs.
+Specs map Bruker ParaVision parameter files into structured outputs.
 
 There are two main spec categories:
 
@@ -61,7 +62,7 @@ Specs may reference Python transforms and may include other specs.
 
 Rules select which specs or converter hooks apply to a scan.
 
-Rules are evaluated against Paravision parameters and can:
+Rules are evaluated against ParaVision parameters and can:
 
 - choose an `info_spec`
 - choose a `metadata_spec`
@@ -93,7 +94,9 @@ They control:
 - comment stripping
 - output zip structure
 
-Pruner specs are YAML files and are stored separately from specs and rules.
+Pruner specs are YAML files and are stored separately from specs and rules
+(the config folder's `pruner_specs/`; `brkraw addon add my_spec.yaml`
+installs one). The format is described in [Pruner specs](pruner-specs.md).
 
 ---
 

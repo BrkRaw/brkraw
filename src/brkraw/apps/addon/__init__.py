@@ -10,9 +10,11 @@ from .core import (
     add_rule_data,
     add_spec_data,
     add_pruner_spec_data,
+    add_context_map_data,
     install_defaults,
     resolve_spec_reference,
     resolve_pruner_spec_reference,
+    resolve_context_map_reference,
     list_installed,
     remove,
 )
@@ -22,9 +24,11 @@ __all__ = [
     "add_rule_data",
     "add_spec_data",
     "add_pruner_spec_data",
+    "add_context_map_data",
     "install_defaults",
     "resolve_spec_reference",
     "resolve_pruner_spec_reference",
+    "resolve_context_map_reference",
     "list_installed",
     "remove",
 ]

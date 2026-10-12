@@ -80,7 +80,7 @@ Set a default dataset path:
 eval "$(brkraw session set --path /path/to/study)"
 ```
 
-Set default scan/reco ids:
+Set default scan/reco IDs:
 
 ```bash
 eval "$(brkraw session set --scan-id 3 --reco-id 1)"
@@ -108,16 +108,18 @@ Convert option keys map to `BRKRAW_CONVERT_<OPTION>` environment variables.
 
 Supported keys include:
 
-- OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, CONTEXT_MAP
+- OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR
 - COMPRESS, SPACE, FLATTEN_FG
 - OVERRIDE_SUBJECT_TYPE, OVERRIDE_SUBJECT_POSE
 - XYZ_UNITS, T_UNITS
 - HEADER
-- FORMAT
 
 Notes:
 
 - `--convert-option` expects `KEY=VALUE`.
+- `CONTEXT_MAP` was removed in 0.6.0 and is refused with an error: put the
+  context map next to the dataset with the same name, or pass `-M FILE` to
+  `brkraw convert`.
 - Keys are normalized to uppercase and `-` becomes `_`.
 - When setting `--path`, the path is validated and BrkRaw checks it can load as a dataset.
 
@@ -153,7 +155,7 @@ eval "$(brkraw session unset --convert-option)"
 
 Notes:
 
-- `unset` flags are toggles (e.g., `--reco-id` unsets the default reco id).
+- `unset` flags are toggles (e.g., `--reco-id` unsets the default reco ID).
 
 ---
 
@@ -175,12 +177,16 @@ If nothing is set:
 
 ## Note on BRKRAW_SCAN_ID
 
-`BRKRAW_SCAN_ID` is stored as a comma-separated string.
-Different commands may interpret it differently:
+`BRKRAW_SCAN_ID` is stored as a comma-separated string. Every command reads it
+with the same rule as its own `-s`:
 
-- `brkraw info` treats it as a list of scan ids.
-- `brkraw convert` uses only the first scan id when `--scan-id` is omitted.
-- `brkraw params` expects a single scan id; set `-s/--scan-id` explicitly if needed.
+- Commands that take several scans (`brkraw info`, `brkraw convert`) use every
+  scan ID in it.
+- `brkraw params` searches one scan: `BRKRAW_SCAN_ID` must hold one scan ID,
+  several are an error (give one with `-s`).
+
+!!! note "Changed in 0.6.0rc1"
+    Before, `brkraw convert` used only the first scan ID of `BRKRAW_SCAN_ID`.
 
 ---
 

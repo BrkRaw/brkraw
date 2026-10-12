@@ -8,7 +8,7 @@ intended for interactive use and scripting.
 
 ## Load a dataset
 
-Load a Paravision dataset from a directory, zip archive, or
+Load a ParaVision dataset from a directory, zip archive, or
 `.PvDatasets` file.
 
 ```python
@@ -148,11 +148,12 @@ Render output paths using layout templates, then pass the result to `to_filename
 
 ```python
 from pathlib import Path
-from brkraw.core import layout as layout_core
+from brkraw.api import layout
 
-out_path = layout_core.render_layout(
+out_path = layout.render_layout(
     loader,
-    scan_id=3,
+    3,
+    reco_id=1,
     layout_template="sub-{Subject.ID}/scan-{ScanID}_{Protocol}",
 )
 
@@ -188,7 +189,7 @@ for dataset in root.iterdir():
     try:
         loader = brk.load(dataset)
     except ValueError:
-        # Not a Paravision dataset directory.
+        # Not a ParaVision dataset directory.
         continue
 
     for scan_id in loader.avail:

@@ -1,6 +1,6 @@
 # info
 
-Print a formatted summary of a Paravision dataset.
+Print a formatted summary of a ParaVision dataset.
 
 This command is intended to answer questions such as:
 

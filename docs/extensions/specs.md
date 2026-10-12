@@ -1,6 +1,6 @@
 # Spec Syntax Reference
 
-Specs define how Bruker Paravision parameter files are mapped into structured
+Specs define how Bruker ParaVision parameter files are mapped into structured
 outputs. They are pure mapping recipes: no conditional selection, no runtime
 state, no project-specific logic.
 
@@ -158,7 +158,7 @@ Specification:
 
 ---
 
-## **meta** block
+## `__meta__` block
 
 Every spec **must** define `__meta__`.
 

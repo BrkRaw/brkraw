@@ -1,264 +1,123 @@
-# Output Layout and Naming
+# Layout and naming
 
-The layout system defines how converted outputs are named and organized on
-disk. It consumes structured metadata produced by specs and optionally
-remapped by context maps.
+The layout decides where converted files go and what they are called. brkraw
+has **two independent layouts**:
 
-Layout logic is purely about **paths and filenames**. It does not inspect raw
-Bruker parameters and does not perform metadata mapping itself.
+| | Config layout | Context map layout |
+| --- | --- | --- |
+| Where | `output:` in `config.yaml` (your config folder) | `__meta__.layout_template` in a context map next to the dataset |
+| Applies to | every dataset converted with that config | the dataset of that context map |
+| Tags | original information: `{Subject.ID}`, `{Study.ID}`, `{Protocol}`, `{ScanID}`, `{RecoID}`, `{Counter}` …, and context map namespaces (`{bids.sub}`) | context map namespaces (`{bids.sub}`) and `utils` values (`{utils.counter}`, `{utils.slicepack}`, `{utils.split}`) |
+| Optional parts | empty values are skipped (`layout_entries`) | `[ ... ]` groups disappear when a tag is empty |
+| Same name twice | `_2`, `_3` … (or the next `{Counter}`) | error, nothing written (or `on_collision: suffix`) |
+| Slice packs | `slicepack_suffix` appended | only through `{utils.slicepack}` in the template |
 
----
+When a context map has a `layout_template`, it names the files for that run
+and the config layout is not used. Otherwise (no context map, or a context map
+without `layout_template`) the config layout is used. `--prefix` always uses
+the config layout's tags. The two syntaxes are not mixed: config tags do not
+work in a context map template and `utils` tags do not work in the config.
 
-## Purpose
+This page describes the config layout. The context map layout is described in
+[Context maps](context-map.md#output-paths-layout_template).
 
-Layouts are used to:
+!!! note "Changed in 0.6.0"
+    A context map can no longer set `layout_entries` or `slicepack_suffix`;
+    it has its own `layout_template` with `utils` values. The config layout
+    is unchanged. See [Migrating to 0.6](../getting-started/migrating.md).
 
-- generate standardized directory structures
-- construct filenames from metadata fields
-- hide or expose metadata keys in paths
-- support project-specific naming conventions (for example BIDS-like layouts)
-
-Layouts do **not**:
-
-- select scans (rules do that)
-- compute metadata values (specs do that)
-- remap values conditionally (context maps do that)
-
----
-
-## Data flow overview
-
-```text
-Bruker parameters
-    ↓
-specs (info_spec / metadata_spec)
-    ↓
-context map (optional, runtime)
-    ↓
-layout (entries or template)
-    ↓
-output paths and filenames
-```
-
----
-
-## Where layout configuration lives
-
-Layout configuration can be defined in three places, evaluated in this order:
-
-1. Runtime context map (`context_map.__meta__`)
-2. Global config (`config.yaml`)
-3. Built-in defaults
-
-The first definition found wins.
-
----
-
-## Layout configuration options
-
-Two layout mechanisms are supported:
-
-- `layout_entries` (structured, recommended)
-- `layout_template` (string template)
-
-You may use either or both, but `layout_template` takes precedence if defined.
-
----
-
-## layout_entries
-
-`layout_entries` defines a structured path builder.
-
-Example:
+## Where the config layout lives
 
 ```yaml
-__meta__:
+# config.yaml (brkraw config path config)
+output:
   layout_entries:
-    - key: Study.ID
-      entry: study
-      sep: "/"
-    - key: Subject.ID
-      entry: sub
-      sep: "/"
-    - key: Session
-      entry: ses
-      sep: "/"
-    - key: Modality
-      hide: true
+    - {key: Subject.ID, entry: sub}
+    - {key: Study.ID, entry: study}
+    - {key: ScanID, entry: scan}
+    - {key: Protocol, hide: true}
+  layout_template: null
+  slicepack_suffix: "_slpack{index}"
 ```
 
-Each entry supports:
+These are the defaults: a scan is written as
+`sub-<Subject.ID>_study-<Study.ID>_scan-<ScanID>_<Protocol>.nii.gz`. Change
+values with `brkraw config set` or `brkraw config edit`
+(see [config](../cli/config.md)).
 
-- `key`
-    - metadata field name
-    - dotted keys are supported
-- `entry`
-    - path label (for example `sub`, `ses`, `run`)
-    - when omitted and `hide: false`, a default entry is derived from `key`
-- `sep`
-    - separator inserted between fields (default `_`)
-    - use `/` to create nested directories
-- `hide`
-    - if true, only the value is appended (the entry label is omitted)
-    - when `entry` is omitted and `hide: true`, the value is not reusable via `use_entry`
-- `use_entry`
-    - reuse a previously defined `entry` value (for formatting or truncation)
+## `layout_entries`
 
----
+A list of parts, joined in order:
 
-### Resulting path example
+| Field | Meaning |
+| --- | --- |
+| `key` | information key; dotted keys (`Subject.ID`) and context map namespaces (`bids.run`) work |
+| `entry` | label written before the value (`sub` gives `sub-01`); derived from `key` when left out and `hide` is false |
+| `hide` | `true` writes only the value, without the label |
+| `sep` | separator before the next part (default `_`); `/` makes a folder |
+| `use_entry` | reuse the value of an earlier `entry` |
 
-Given metadata:
-
-```json
-{
-  "Study": {"ID": "001"},
-  "Subject": {"ID": "003"},
-  "Session": "baseline",
-  "Modality": "T1w"
-}
-```
-
-Result (Modality `hide: true` only omits the entry label, not the value):
-
-```text
-study-001/sub-003/ses-baseline/T1w
-```
-
-Example (missing values are skipped; common when a spec does not emit `Modality`):
-
-```json
-{
-  "Study": {"ID": "001"},
-  "Subject": {"ID": "003"},
-  "Session": "baseline"
-}
-```
-
-Result:
-
-```text
-study-001/sub-003/ses-baseline
-```
-
----
-
-## layout_template
-
-`layout_template` defines a full path as a format string.
-
-Example:
+A part whose value is empty is skipped.
 
 ```yaml
-__meta__:
-  layout_template: "study-{Study.ID}/sub-{Subject.ID}/ses-{Session}/{Modality}"
+output:
+  layout_entries:
+    - {key: Study.ID, entry: study, sep: "/"}
+    - {key: Subject.ID, entry: sub, sep: "/"}
+    - {key: ScanID, entry: scan}
+    - {key: Protocol, hide: true}
 ```
 
-Rules:
+gives `study-001/sub-003/scan-5_EPI_rest` (folders from `sep: "/"`).
 
-- `{Key}` placeholders are replaced with metadata values
-- missing keys render as empty strings
-- template overrides `layout_entries` entirely
+## `layout_template`
 
-Use templates when:
+A full path as one text with `{Key}` tags. When set, it replaces
+`layout_entries`.
 
-- strict compatibility is required
-- external standards mandate exact paths
+```yaml
+output:
+  layout_template: "{Subject.ID}/{Study.ID}/scan-{ScanID}_{Protocol}"
+```
 
----
+Missing keys become empty text.
 
 ## Fixed keys
 
-Some placeholders are always available, even if they are not present in mapped
-metadata. These are referred to as *fixed keys*.
+Always available in `layout_entries` (`key: ScanID`) and `layout_template`:
 
-- `{ScanID}` / `{scan_id}` / `{scanid}`: current scan id.
-- `{RecoID}` / `{reco_id}` / `{recoid}`: current reconstruction id (may be empty when not applicable).
-- `{Counter}` / `{counter}`: run-local counter used for de-duplication.
+- `{ScanID}` (also `{scan_id}`, `{scanid}`): the scan ID
+- `{RecoID}` (also `{reco_id}`, `{recoid}`): the reco ID (may be empty)
+- `{Counter}` (also `{counter}`): 1, 2, 3 … the first number whose name is free
 
-These fixed keys work in both:
+## Slice packs
 
-- `layout_template` placeholders
-- `layout_entries` via `key: ScanID` / `key: RecoID` / `key: Counter`
-
----
-
-## slicepack suffix
-
-For multi-slicepack acquisitions, an optional suffix may be applied.
+A scan with several slice packs gets one file per pack, named with
+`slicepack_suffix` (`{index}` from 1):
 
 ```yaml
-__meta__:
-  slicepack_suffix: "_sl{index}"
+output:
+  slicepack_suffix: "_slpack{index}"
 ```
 
-- `{index}` is 1-based
-- appended to filenames, not directories
-- applied only when slicepacks are present
+## Reading context map values
 
----
-
-## Interaction with context maps
-
-Context maps may define layout metadata:
+With a context map that has no `layout_template`, the config layout can use
+its namespaces:
 
 ```yaml
-__meta__:
-  layout_entries: ...
-  layout_template: ...
+output:
+  layout_template: "sub-{bids.sub}/scan-{ScanID}"
 ```
 
-Important rules:
+## Names on disk
 
-- context-map layout applies **only for that run**
-- it does not persist or modify global config
-- layout metadata does not affect mapping rules
-
----
-
-## Filename construction
-
-Layouts define directory structure. Filenames are built from:
-
-- scan ID
-- reco ID
-- modality or protocol fields
-- slicepack suffix (if applicable)
-
-Exact filename patterns are controlled by:
-
-- layout configuration
-- converter behavior
-- selected converter hook (if any)
-
----
-
-## Error handling
-
-Layout evaluation fails if:
-
-- `value_pattern` is an invalid regex
-- an override spec resolves to a non-mapping
-- required files cannot be read
-
-When conversion runs, output directories implied by `/` separators are created
-before writing files.
-
----
-
-## Best practices
-
-- Prefer `layout_entries` for readability and composability
-- Use `layout_template` only when exact paths are required
-- Keep specs free of layout logic
-- Use context maps for project-specific naming
-- Avoid embedding scan IDs directly into specs
-
----
+- Invalid characters in names are replaced; folders from `/` are created.
+- Repeated names get `_2`, `_3` … unless `{Counter}` is used.
 
 ## Related documents
 
-- [Spec syntax](specs.md)
-- [Context map syntax](context-map.md)
-- [Rule syntax](rules.md)
-- [Extensibility model](extensibility.md)
+- [Context maps](context-map.md)
+- [convert](../cli/convert.md)
+- [config](../cli/config.md)
+- [Layout (Python API)](../api/layout.md)

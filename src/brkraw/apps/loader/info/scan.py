@@ -5,12 +5,37 @@ from pathlib import Path
 import logging
 from ....specs.remapper import load_spec, map_parameters
 from ....specs.remapper.validator import validate_spec
+from ....resolver.helpers import get_file, get_reco, strip_comment
+from ....resolver.shape import resolve_frame_group
 
 
 if TYPE_CHECKING:
     from ..types import ScanLoader
 
 logger = logging.getLogger(__name__)
+
+
+def frame_axes(scan: "ScanLoader", reco_id: int) -> Optional[str]:
+    """Frame axes of a reco as "name(size), ..." (e.g. "echo(2), cycle(3)"), or None.
+
+    Names follow brkraw's shape rule: the ParaVision frame group id without
+    "<>" and "FG_", lowercased (FG_ECHO -> echo). The slice group is not a
+    frame axis (it becomes the third spatial axis) and is left out.
+    """
+    try:
+        visu_pars = get_file(get_reco(scan, reco_id), "visu_pars")
+        fg_info = resolve_frame_group(visu_pars)
+    except Exception:
+        return None
+    if not fg_info:
+        return None
+    parts = []
+    for raw_id, size in zip(fg_info.get("id", []), fg_info.get("shape", [])):
+        name = strip_comment(raw_id).replace("FG_", "").strip().lower()
+        if name == "slice":
+            continue
+        parts.append(f"{name}({int(size)})")
+    return ", ".join(parts) if parts else None
 
 
 def resolve(
@@ -75,6 +100,9 @@ def resolve(
             }
             try:
                 results["Reco(s)"][reco_id] = map_parameters(scan, reco_spec)
+                axes = frame_axes(scan, reco_id)
+                if axes:
+                    results["Reco(s)"][reco_id]["Frame axes"] = axes
             except (FileNotFoundError, AttributeError) as exc:
                 logger.warning(
                     "visu_pars missing for scan %s reco %s; skipping reco entry: %s",

@@ -24,7 +24,20 @@ Discussion proposal → Issue(s) → Pull request
 We track a shared `.vscode/` directory to provide consistent tasks and settings
 across contributors.
 
-1) Create a virtual environment and install development dependencies:
+1) Create a virtual environment and install development dependencies.
+
+With [uv](https://docs.astral.sh/uv/) (recommended; uses the tracked
+`uv.lock` and `.python-version`):
+
+```bash
+uv sync --locked --extra dev
+uv run --locked --extra dev pytest
+```
+
+Keep `--extra dev` on `uv run` too; without it uv syncs the environment back
+to the runtime dependencies only and removes the development tools.
+
+Or with pip:
 
 ```bash
 python3 -m venv .venv
@@ -40,6 +53,39 @@ python -m pip install -e ".[dev]"
 - `Standard: Setup venv + deps`
 - `Standard: MkDocs Serve`
 - `Standard: Release Prep PR (2-step)`
+
+---
+
+## Tests and manual checks on real data
+
+`tests/` is the automatic suite that CI runs on every push. It uses synthetic
+data only (the PvDataset builder in `tests/helpers.py`) and never reads a real
+study, so it passes the same way on every machine.
+
+Checks that need real, approved anonymized ParaVision studies are not tests.
+They are kept in `scripts/validate/` and are run by hand, for example before a
+release or when you change prune, convert, context maps, scaling or study info.
+CI does not run them, and a plain `pytest` does not collect them (the file name
+starts with `check_`, and `pytest` collects `test_*.py`).
+
+The approved zips (ParaVision 5.1, 6.0.1 and 360.3.x) are kept outside Git in a
+folder next to your checkout, `<checkout>/../agent-fixtures`, with a README
+that lists each zip, its SHA-256 and whether it is approved. Only approved zips
+with a matching SHA-256 are used, and they are copied to a temporary folder;
+nothing is written in the folder. To use another folder, set
+`BRKRAW_AGENT_FIXTURES=/path/to/agent-fixtures`. If the folder is missing the
+run stops with a message (it does not skip).
+
+```bash
+pytest -v scripts/validate/check_agent_fixtures.py
+```
+
+`check_agent_fixtures.py` holds the checks that were moved out of `tests/`:
+the byte-identical default prune of the 5.1 zips, a same-name context map
+converting every scan of the 5.1, 6.0.1 and 360.3.x zips, scans with one equal
+slope per frame keeping raw data, context map values read from real scan info
+leaving it unchanged, and the self-test of the fixture finder. Each of these
+has a synthetic counterpart in `tests/`.
 
 ---
 
@@ -101,22 +147,21 @@ independent plugins.
 
 ## Layout design and data structure
 
-The layout system constructs output paths and filenames from metadata using one
-of the following mechanisms:
+brkraw has two independent layouts:
 
-- `layout_entries`: structured entries with `key`, `entry`, and `sep`
-- `layout_template`: string templates with `{Key}` placeholders
+- the config layout in `config.yaml` (`output.layout_entries` with `key`,
+  `entry`, `sep`, or `output.layout_template` with `{Key}` tags);
+- a context map's own `__meta__.layout_template`, which uses namespace tags and
+  `utils` values and is used instead of the config layout for that dataset.
 
-Defaults may be defined in `config.yaml` or in `context_map.__meta__`, and can be
-overridden at runtime via the API or CLI.
-
-See `extensions/layout.md` for details.
+See [Layout and naming](../extensions/layout.md) and
+[Context maps](../extensions/context-map.md).
 
 ---
 
 ## Core development policy
 
-Core changes are limited to maintaining compatibility with Paravision layouts
+Core changes are limited to maintaining compatibility with ParaVision layouts
 and metadata conventions. All other customization should be implemented as
 addons (rules, specs, transforms, context maps) or external plugins.
 

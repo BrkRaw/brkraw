@@ -126,7 +126,7 @@ The `target` may be:
 If multiple hooks match the target, installation fails with `ValueError`.
 If no hook matches, installation fails with `LookupError`.
 
-### Install all hooks (CLI: `brkraw hook install --all`)
+### Install all hooks (CLI: `brkraw hook install all`)
 
 ```python
 from brkraw.api import hook_manager as hook

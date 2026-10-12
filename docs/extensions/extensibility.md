@@ -21,14 +21,14 @@ BrkRaw exposes extension points in layers so you can plug in only what you need:
     - Add new CLI commands and workflows as separate Python packages.
 
 - Rules
-    - Select specs and converter hooks based on Paravision parameters.
+    - Select specs and converter hooks based on ParaVision parameters.
 
 - Converter hooks (`brkraw.converter_hook` entry point group)
     - Override conversion behavior (data loading, affine, conversion) for
     sequence-specific pipelines.
 
 - Specs
-    - Map Paravision parameter files into structured outputs for inspection
+    - Map ParaVision parameter files into structured outputs for inspection
     and metadata generation.
 
 - Transforms
@@ -107,6 +107,7 @@ Addons are YAML and Python files installed into the user's brkraw config root:
 - specs (YAML)
 - rules (YAML)
 - pruner specs (YAML)
+- shared context maps (YAML, bases for `include`)
 - transforms (Python)
 
 Addons are managed by:
@@ -130,15 +131,25 @@ Hook packages are managed by:
 - API: `brkraw.api.hook_manager`
 
 Hook packages are the preferred way to distribute sequence-specific conversion
-pipelines.
+pipelines. They reuse brkraw's metadata, layout and sidecar handling: addons
+provide case-dependent customization, while a hook package provides new
+conversion behavior (data loading, affine, conversion) and may ship addon
+assets through a manifest. For authoring, packaging and manifests, see
+[Building hook packages](../dev/hook-packages.md).
 
 ### CLI plugins (Python packages for new commands)
 
 CLI plugins are Python distributions that:
 
-- expose new CLI commands via the `brkraw.cli` entry point group
+- expose new CLI commands via the `brkraw.cli` entry point group (each entry
+  point is a `register(subparsers)` function that adds one or more commands)
 
-They are used to add new workflows without changing the core CLI.
+Use a CLI plugin to add a top-level command (for example `brkraw viewer`),
+to build project-specific workflows on top of the brkraw API, or to provide
+interactive tools (GUI, QA, automation) without changing the core. Converter
+hooks change how data is converted; CLI plugins change how users work with
+brkraw. For authoring and packaging, see
+[Building CLI plugins](../dev/cli-extensions.md).
 
 In practice, hook packages and CLI plugins are BrkRaw's *plugin* system (they
 ship code and register entry points), while addons are configuration assets
@@ -150,7 +161,7 @@ that customize behavior in a case-dependent way.
 
 As a rule of thumb:
 
-- Core stays focused on Paravision compatibility and stable infrastructure.
+- Core stays focused on ParaVision compatibility and stable infrastructure.
 - Project-specific behavior should live in addons and plugins.
 
 For contributor-facing guidance (how to decide and when to propose core
@@ -163,6 +174,7 @@ changes), see [Core vs addon development](../dev/core-vs-addon.md).
 - [Addons and plugins](addons-and-plugins.md)
 - [Rule syntax](rules.md)
 - [Spec syntax](specs.md)
-- [Context map syntax](context-map.md)
-- [Output layout and naming](layout.md)
+- [Pruner specs](pruner-specs.md)
+- [Context maps](context-map.md)
+- [Layout and naming](layout.md)
 - [Contribution guide](../dev/contributing.md)

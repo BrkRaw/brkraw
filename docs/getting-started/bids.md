@@ -1,126 +1,116 @@
-# BIDS integration (current guidance)
+# BIDS integration
 
-Earlier versions of BrkRaw provided more direct support for BIDS-style workflows,  
-and these features were actively used by many users. However, as the BIDS  
-specification has rapidly expanded and evolved, maintaining a fully compliant  
-BIDS implementation directly within the BrkRaw core became increasingly difficult.
+brkraw can write a BIDS-style folder tree directly from a ParaVision study:
+you put a context map next to the dataset, and `brkraw convert` names every
+output from it. The context map holds your project's choices (subject and
+session labels, which method is `anat` or `func`, run numbers, how to split a
+field map); brkraw does not guess them.
 
-As a result, BrkRaw has shifted toward an extensible, framework-based design,  
-rather than hard-coding BIDS logic into the core.
+!!! note "Changed in 0.6.0"
+    BIDS output through context maps is new in 0.6.0 (context map format v3).
+    The 0.5.x guidance on this page ("not for general users yet") no longer
+    applies. See [Migrating to 0.6](migrating.md).
 
-In the current architecture, BIDS-related behavior is conceptually expressed  
-through a layered workflow:
+What brkraw does and does not do:
 
-- **Rules** select modality-specific logic, metadata specs, and hooks.  
-- **Specs** map Bruker ParaVision parameters into normalized metadata fields.  
-- **Context maps** normalize subject, session, and scan-level identifiers at runtime.  
-- **Output layouts** render structured file paths and filenames.
+- It writes the paths and file names you define, NIfTI files, and JSON
+  sidecars (`-c`) from the metadata spec plus the fields your context map adds.
+- It does not validate the result against the BIDS specification and does
+  not write `dataset_description.json`, `participants.tsv` or events files.
+  Run the [BIDS validator](https://bids-standard.github.io/bids-validator/)
+  on the result.
 
-This rule–spec–context–layout workflow forms the architectural foundation for  
-future BIDS-oriented extensions.
+## Example
 
----
+A study folder `20240101_mouse01` with a RARE scan (3), two resting-state EPI
+runs (5 and 6) and a field map with two echoes (8). Save this as
+`20240101_mouse01.yaml` next to the study folder:
 
-## Practical guidance (recommended usage)
-
-While the framework above is flexible, it is **not intended for general users**  
-to construct fully BIDS-compliant datasets at this stage. In addition, parts of  
-the BrkRaw core - particularly **context mapping** and **output layout handling**  
-- may continue to evolve.
-
-For now, BIDS-related usage of BrkRaw is recommended in the following, limited scope:
-
-- Generating metadata sidecars via **metadata specs**  
-- Producing **BIDS-like directory structures** using output layout templates
-
-These outputs are suitable for inspection, preparation, or downstream processing,  
-but **should not be considered strictly BIDS-compliant datasets**.
-
----
-
-## BIDS-like layout example (informal)
-
-You can approximate a BIDS-like directory structure using output layout  
-configuration. This is useful for inspection or early-stage preparation,  
-but it does not replace a full BIDS implementation.
-
-Example layout configuration:
-
+<!-- example: bids-context-map -->
 ```yaml
-output:
-  layout_entries:
-    - key: Subject.ID
-      entry: sub
-      sep: "/"
-    - key: Session.ID
-      entry: ses
-      sep: "/"
-    - key: Subject.ID
-      entry: sub
-    - key: Session.ID
-      entry: ses
-    - key: Modality
-      hide: true
-    - key: ScanID
-      entry: scan
+__meta__:
+  category: context_map
+  layout_template: "sub-{bids.sub}/ses-{bids.ses}/{bids.datatype}/sub-{bids.sub}_ses-{bids.ses}[_task-{bids.task}][_run-{bids.run}]_{bids.suffix}"
+
+bids:
+  sub: "01"
+  ses: baseline
+  datatype: {from: MethodBase, map: {EPI: func, RARE: anat, FieldMap: fmap}}
+  suffix: {from: MethodBase, map: {EPI: bold, RARE: T2w, FieldMap: fieldmap}}
+  task: {when: {MethodBase: EPI}, value: rest}
+  run:
+    - {when: {ScanID: 5}, value: 1}
+    - {when: {ScanID: 6}, value: 2}
+
+convert:
+  - {when: {MethodBase: {in: [Localizer, TriPilot]}}, value: false}
+
+split:
+  when: {MethodBase: FieldMap}
+  value:
+    - {axis: echo, frames: 0, bids: {suffix: magnitude1}}
+    - {axis: echo, frames: 1, bids: {suffix: phasediff}, sidecar: {EchoNumber: 2}}
+
+sidecar:
+  TaskName: {from: bids.task}
 ```
 
-This configuration produces paths such as:
+Then convert:
 
+```bash
+brkraw convert /path/to/20240101_mouse01 -o /path/to/bids -c
+```
+
+Result (NIfTI files; each has a `.json` sidecar next to it):
+
+<!-- example: bids-paths -->
 ```text
-sub-01/ses-1/sub-01_ses-1_anat_scan-3.nii.gz
+sub-01/ses-baseline/anat/sub-01_ses-baseline_T2w.nii.gz
+sub-01/ses-baseline/fmap/sub-01_ses-baseline_magnitude1.nii.gz
+sub-01/ses-baseline/fmap/sub-01_ses-baseline_phasediff.nii.gz
+sub-01/ses-baseline/func/sub-01_ses-baseline_task-rest_run-1_bold.nii.gz
+sub-01/ses-baseline/func/sub-01_ses-baseline_task-rest_run-2_bold.nii.gz
 ```
 
-Important notes:
+This example is checked by brkraw's test suite on a synthetic study.
 
-- This layout is **not BIDS-compliant by itself**.  
-- Scan-ID-based naming is often insufficient for BIDS.  
-- Correct BIDS organization requires modality-aware and project-specific mapping.
+How it works:
 
----
+- `MethodBase` is the method name without the vendor prefix: the scan's
+  `Method` is `Bruker:EPI`, its `MethodBase` is `EPI`. Use `brkraw info` to
+  see the values of your data.
+- `[_task-{bids.task}]` and `[_run-{bids.run}]` disappear for scans where
+  the value is empty (the RARE and the field map scans).
+- The field map scan is split on its echo axis into two outputs; each part
+  sets its own `suffix`, and the second part adds `EchoNumber` to its sidecar.
+- `TaskName` is added to the sidecar of the EPI scans only (it is empty for
+  the others, so no field is added).
+- If two scans end up with the same path, nothing is written and brkraw names
+  the scans (add a `run` value, or `on_collision: suffix`).
 
-## Metadata specs and current defaults
+## Typical choices
 
-The metadata specs installed via `brkraw init` are **not a frozen BIDS standard**.  
-Because the official BIDS specification continues to evolve, BrkRaw does not  
-attempt to track all BIDS updates directly within the core package.
+| Need | Context map |
+| --- | --- |
+| Subject label from the dataset | `sub: {from: Subject.ID}` |
+| Session from the study | `ses: {from: Session.ID}` (the study ID unless the data gives a session) |
+| Skip localizers | `convert: [{when: {MethodBase: {in: [Localizer, TriPilot]}}, value: false}]` |
+| Drop dummy volumes | `split: {when: {MethodBase: EPI}, value: [{axis: cycle, frames: "5:"}]}` |
+| One file per slice pack | add `[_sp{utils.slicepack}]` or `[_acq-sp{utils.slicepack}]` to the template |
+| Same settings for many datasets | a base map shared with `include` (see [Context maps](../extensions/context-map.md#sharing-a-base-map-include)) |
 
-Instead, future BIDS-aligned metadata specs are expected to be provided through:
+## Sidecar metadata
 
-- Dedicated extension packages  
-- Modality-specific hooks
+The metadata spec installed with `brkraw init --install-default` writes
+sidecar fields from the DICOM metadata definitions in the ParaVision manual,
+not the full BIDS sidecar specification. Add or remove fields per project
+with the context map's `sidecar` section. Modality-specific BIDS metadata
+(for example diffusion or perfusion fields) is expected from extension
+packages and hooks.
 
-At present, the default metadata specs distributed with BrkRaw generate sidecar  
-metadata based on the **DICOM metadata definitions provided in the Bruker  
-ParaVision manual**, rather than the full BIDS specification.
+## Related documents
 
----
-
-## Future direction: brkraw-bids
-
-BrkRaw intentionally avoids embedding BIDS logic directly into the core.
-
-More advanced and BIDS-specific tasks - such as:
-
-- Modality-aware naming and entity resolution  
-- Scan-level to BIDS-entity mapping  
-- Project- or study-specific conventions  
-- Dataset-wide validation and restructuring
-
-are planned to be handled by a dedicated tool:
-
-```text
-brkraw-bids
-```
-
-This separation keeps BrkRaw focused on reliable data access, metadata normalization,  
-and extensible conversion, while allowing BIDS-specific logic to evolve independently.
-
----
-
-## References
-
-- Rules for modality-specific selection: [Rule syntax](../extensions/rules.md)  
-- Specs for `info_spec` and `metadata_spec`: [Spec syntax](../extensions/specs.md)  
-- Context maps for runtime remapping: [Context map syntax](../extensions/context-map.md)  
-- Layout rules for directory structure and naming: [Layout and naming](../extensions/layout.md)
+- [Context maps](../extensions/context-map.md): full syntax
+- [convert](../cli/convert.md): options
+- [Layout and naming](../extensions/layout.md): the config layout, used when
+  there is no context map

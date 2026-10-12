@@ -1,8 +1,15 @@
-# Roadmap: Dataset-driven integration tests
+# Integration test plan (proposal)
+
+!!! note "Proposal"
+    This page is a plan, not a description of existing features. Commands it
+    mentions, such as `brkraw test`, do not exist yet. Since 0.6.0 the
+    repository can be checked by hand on anonymized studies kept outside it
+    (`scripts/validate/`, `BRKRAW_AGENT_FIXTURES`); these checks are not part
+    of `tests/` or CI (see the contribution guide).
 
 This project currently has strong unit-tested coverage in core/dataclasses, but
 end-to-end validation of `resolver/`, `apps/`, and `cli/` is limited by the need
-for real Paravision datasets.
+for real ParaVision datasets.
 
 The goal of this roadmap is to add **dataset-driven integration tests** that
 can run locally and in CI by downloading a canonical dataset bundle and
@@ -155,7 +162,7 @@ Required (must be provided in the sidecar manifest):
   archive via the `brkraw-dataset` repository.
 - License identifier (for the dataset bundle).
 - Minimal attribution (at least names; ORCIDs optional).
-- Paravision version (if known) and a short `notes` description.
+- ParaVision version (if known) and a short `notes` description.
 - Privacy confirmation: de-identified / no PHI.
 - Integrity pinning: a checksum for the archived bundle (recommended `sha256`).
 
@@ -239,7 +246,7 @@ privacy:
 artifacts:
   sha256: "<bundle-or-root-hash>"
 
-notes: Paravision 5.1 example dataset
+notes: ParaVision 5.1 example dataset
 comments: Add any additional context if needed
 ```
 
@@ -248,7 +255,7 @@ Guidelines:
 - `dataset_id` must be unique within the dataset set and stable over time.
 - `version` should change when curated contents change (even if the source study
   is the same).
-- `scans` keys should be scan ids as they appear in BrkRaw (`loader.avail`).
+- `scans` keys should be scan IDs as they appear in BrkRaw (`loader.avail`).
 - Prefer structured `authors` entries so ORCIDs/affiliations can be added later.
 
 ### Manifest validation (in the dataset repo)
@@ -262,7 +269,7 @@ Minimum checks:
   (`NAME.*` + `NAME.yaml`/`NAME.yml`).
 - Registry contains an entry for every hosted dataset bundle.
 - required keys present (`dataset_id`, `license`, `paravision.version`, `scans`)
-- scan ids are integers and scan entries include `name`
+- scan IDs are integers and scan entries include `name`
 - `license` matches an allowlist (SPDX-like identifiers where possible)
 - optional: verify `artifacts.sha256` matches the dataset root content
 
@@ -276,7 +283,7 @@ Implementation options (pick one):
 Use manifests to drive the integration suite:
 
 - discover dataset roots by locating `dataset.yaml`
-- optionally select subsets by tags/fields (institution, paravision version, size)
+- optionally select subsets by tags/fields (institution, ParaVision version, size)
 - name artifacts using `dataset_id` rather than filesystem paths
 
 ### Using `brkraw prune` to curate datasets
@@ -321,12 +328,12 @@ Open questions to settle for the dataset system:
 Implement a discovery routine that:
 
 1) identifies dataset roots (prefer `dataset.yaml` when available), then
-2) discovers Paravision study roots under each dataset root.
+2) discovers ParaVision study roots under each dataset root.
 
 Study discovery should:
 
 - ignore hidden directories and common junk (`.git`, `.venv`, `__pycache__`, etc.)
-- detect candidate studies based on Paravision directory structure heuristics
+- detect candidate studies based on ParaVision directory structure heuristics
   (define explicit rules and keep them stable)
 - deduplicate nested matches (prefer the shallowest valid root)
 
@@ -464,7 +471,7 @@ Deliverable:
 
 ## Open questions
 
-- What is the stable heuristic for "Paravision study root" discovery?
+- What is the stable heuristic for "ParaVision study root" discovery?
 - Which datasets are representative enough for PR-level checks?
 - Should integration tests assert numerical ranges (tight) or only structural
   invariants (loose)?

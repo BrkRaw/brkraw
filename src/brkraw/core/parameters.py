@@ -32,6 +32,9 @@ from .jcamp import parse_jcamp
 
 logger = logging.getLogger(__name__)
 
+# Only the head of a file is needed to tell JCAMP text from binary data.
+JCAMP_SNIFF_BYTES = 65536
+
 
 class Parameters:
     _header: OrderedDict
@@ -150,9 +153,9 @@ class Parameters:
 
     @staticmethod
     def _looks_like_jcamp(data: bytes) -> bool:
-        """Heuristic: check for JCAMP-style header lines in decoded text."""
+        """Heuristic: check for JCAMP-style header lines in the first JCAMP_SNIFF_BYTES bytes."""
         try:
-            text = data.decode("utf-8", errors="ignore")
+            text = data[:JCAMP_SNIFF_BYTES].decode("utf-8", errors="ignore")
         except Exception:
             return False
 

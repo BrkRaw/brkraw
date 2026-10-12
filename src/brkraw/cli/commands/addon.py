@@ -100,7 +100,11 @@ def _normalize_transform_row(row: Dict[str, str]) -> Dict[str, object]:
 
 
 def cmd_add(args: argparse.Namespace) -> int:
-    installed = addon_app.add(args.filename, root=args.root)
+    try:
+        installed = addon_app.add(args.filename, root=args.root)
+    except (ValueError, FileNotFoundError) as exc:
+        logger.error("%s", exc)
+        return 2
     logger.info("Installed %d file(s).", len(installed))
     return 0
 
@@ -116,6 +120,8 @@ def cmd_list(args: argparse.Namespace) -> int:
     transform_columns = ("file", "spec")
     spec_rows = [_normalize_row(row) for row in data["specs"]]
     pruner_rows = [_normalize_pruner_row(row) for row in pruner_specs]
+    context_map_rows = [_normalize_pruner_row(row) for row in data.get("context_maps", [])]
+    context_map_rows.sort(key=lambda row: (str(row.get("name", "")), str(row.get("version", ""))))
     rules_rows = [_normalize_rule_row(row) for row in rules]
     transform_rows = [_normalize_transform_row(row) for row in data["transforms"]]
     category_order = {"info_spec": 0, "metadata_spec": 1, "converter_hook": 2, "<Unknown>": 9}
@@ -176,6 +182,19 @@ def cmd_list(args: argparse.Namespace) -> int:
     if pruner_rows:
         logger.info("")
         logger.info("%s", pruner_table)
+    if context_map_rows:
+        context_map_table = formatter.format_table(
+            "Context Maps",
+            pruner_columns,
+            context_map_rows,
+            width=width,
+            colors={"file": "gray", "name": "green", "description": "gray"},
+            title_color="green",
+            col_widths=formatter.compute_column_widths(pruner_columns, context_map_rows),
+            min_last_col_width=40,
+        )
+        logger.info("")
+        logger.info("%s", context_map_table)
     if transform_rows:
         logger.info("")
         logger.info("%s", transforms_table)
@@ -234,6 +253,8 @@ def _resolve_edit_target(
         return addon_app.resolve_spec_reference(target, category=category, root=root)
     if kind == "pruner":
         return addon_app.resolve_pruner_spec_reference(target, root=root)
+    if kind == "context_map":
+        return addon_app.resolve_context_map_reference(target, root=root)
     if kind == "rule":
         return _resolve_rule_target(target, category=category, rules_dir=paths.rules_dir)
     if kind == "transform":
@@ -244,6 +265,9 @@ def _resolve_edit_target(
     pruner_candidate = (paths.pruner_specs_dir / target).resolve()
     if pruner_candidate.exists():
         return pruner_candidate
+    context_map_candidate = (paths.context_maps_dir / target).resolve()
+    if context_map_candidate.exists():
+        return context_map_candidate
     try:
         return addon_app.resolve_spec_reference(target, category=category, root=root)
     except Exception:
@@ -282,7 +306,7 @@ def _resolve_rule_target(target: str, *, category: Optional[str], rules_dir: Pat
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
     addon_parser = subparsers.add_parser(
         "addon",
-        help="Manage info specs and rules.",
+        help="Install and manage specs, rules, pruner specs and shared context maps.",
     )
     addon_parser.add_argument(
         "--root",
@@ -291,18 +315,22 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     addon_parser.set_defaults(func=cmd_addon, parser=addon_parser)
     addon_sub = addon_parser.add_subparsers(dest="addon_command")
 
-    add_parser = addon_sub.add_parser("add", help="Install a spec or rule file.")
-    add_parser.add_argument("filename", help="Spec/rule YAML.")
+    add_parser = addon_sub.add_parser(
+        "add", help="Install a spec, rule, pruner spec or shared context map file (and its transforms)."
+    )
+    add_parser.add_argument("filename", help="Spec, rule, pruner spec or shared context map YAML.")
     add_parser.set_defaults(addon_func=cmd_add)
 
-    list_parser = addon_sub.add_parser("list", help="List installed specs and rules.")
+    list_parser = addon_sub.add_parser(
+        "list", help="List installed specs, rules, pruner specs, transforms and context maps."
+    )
     list_parser.set_defaults(addon_func=cmd_list)
 
-    rm_parser = addon_sub.add_parser("rm", help="Remove an installed spec or rule file.")
-    rm_parser.add_argument("filename", help="Spec/rule filename to remove.")
+    rm_parser = addon_sub.add_parser("rm", help="Remove an installed file (any kind; see --kind).")
+    rm_parser.add_argument("filename", help="Installed filename to remove.")
     rm_parser.add_argument(
         "--kind",
-        choices=["spec", "pruner", "rule", "transform"],
+        choices=["spec", "pruner", "context_map", "rule", "transform"],
         help="Limit removal to a specific kind.",
     )
     rm_parser.add_argument(
@@ -313,11 +341,11 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     rm_parser.set_defaults(addon_func=cmd_rm)
 
 
-    edit_parser = addon_sub.add_parser("edit", help="Edit an installed spec or rule.")
-    edit_parser.add_argument("target", help="Spec/rule name or filename.")
+    edit_parser = addon_sub.add_parser("edit", help="Edit an installed file (any kind; see --kind).")
+    edit_parser.add_argument("target", help="Installed name or filename.")
     edit_parser.add_argument(
         "--kind",
-        choices=["spec", "pruner", "rule", "transform"],
+        choices=["spec", "pruner", "context_map", "rule", "transform"],
         help="Target kind (default: auto-detect).",
     )
     edit_parser.add_argument(

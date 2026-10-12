@@ -5,7 +5,7 @@ import logging
 import os
 from pathlib import Path
 from brkraw.core import config as config_core
-from brkraw.cli.utils import load
+from brkraw.cli.utils import load, parse_scan_ids
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +16,20 @@ def cmd_info(args: argparse.Namespace) -> int:
     if args.path is None:
         args.parser.print_help()
         return 2
-    if args.scan_id is None:
+    if args.scan_id:
+        try:
+            args.scan_id = parse_scan_ids(args.scan_id)
+        except ValueError as exc:
+            logger.error("-s/--scan-id: %s", exc)
+            return 2
+    else:
+        args.scan_id = None
         env_scan = os.environ.get("BRKRAW_SCAN_ID")
-        if env_scan:
-            parts = [p.strip() for p in env_scan.split(",") if p.strip()]
+        if env_scan and env_scan.strip():
             try:
-                args.scan_id = [int(p) for p in parts]
-            except ValueError:
-                logger.error("Invalid BRKRAW_SCAN_ID: %s", env_scan)
+                args.scan_id = parse_scan_ids([env_scan])
+            except ValueError as exc:
+                logger.error("BRKRAW_SCAN_ID: %s", exc)
                 return 2
     if not Path(args.path).exists():
         logger.error("Path not found: %s", args.path)
@@ -59,8 +65,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         "-s",
         "--scan-id",
         nargs="*",
-        type=int,
-        help="Scan id(s) to include when scope is scan/full.",
+        metavar="ID",
+        help="Scan id(s) to include when scope is scan/full (for example -s 3 4 or -s 3,4).",
     )
     info_parser.add_argument(
         "--show-reco",

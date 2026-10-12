@@ -1,342 +1,104 @@
 # prune
 
-Create a "pruned" dataset zip for sharing or archiving, using a pruner spec.
-
-The goal of `brkraw prune` is to make Paravision datasets easier to share by:
-
-- keeping only the files you need (or dropping sensitive/unnecessary files)
-- optionally stripping JCAMP comment lines (`$$ ...`)
-- optionally editing or deleting specific JCAMP parameters (via `update_params`)
-- producing a reproducible sidecar (`.prune.yaml`) describing what was done
-
-This is especially useful when you want to share a dataset with collaborators
-without exposing private metadata or irrelevant files.
-
----
-
-## Basic usage
-
-Prune a dataset using a spec file path:
+Copy a ParaVision study into one zip, whole or only the scans and recos you
+choose. The source is never changed.
 
 ```bash
-brkraw prune /path/to/dataset --spec /path/to/prune_spec.yaml
+brkraw prune /path/to/study.zip                     # ./pruned_study.zip: all scans, no changes
+brkraw prune                                        # scanner console: the open study
+brkraw prune /path/to/study.zip -s 3 5 -r 1 -o scans_3_5.zip
+brkraw prune /path/to/study.zip --exclude-files fid
+brkraw prune /path/to/study.zip --institution "Example University"
+brkraw prune /path/to/study.zip --anonymize --subject-id M01 --dry-run
 ```
 
-Use an installed pruner spec by name:
+By default every file of the chosen scans is copied as it is, including raw
+data (`fid`, `rawdata.job0`) and study files such as `subject`. **Nothing is
+anonymized.** For sharing outside your institution, use `--anonymize` (or
+your own [pruner spec](../extensions/pruner-specs.md)) and check the result.
+
+Without a path, the study set with `brkraw session` is used, or on a scanner
+console the study open in ParaVision (with several open studies, brkraw asks
+which one in a terminal).
+
+!!! note "Changed in 0.6.0"
+    `--spec` is no longer required; `--spec-name` was merged into `--spec`;
+    `--scan-ids` / `--reco-ids` became `-s` / `-r`; the built-in spec
+    `deid4share` became `anonymize`; `--mode` was replaced by `--files` /
+    `--exclude-files`. See [Migrating to 0.6](../getting-started/migrating.md).
+
+## What to copy
+
+| Option | Meaning |
+| --- | --- |
+| `-s`, `--scan-id` | Copy only these scans (space or comma separated). Study files are kept. |
+| `-r`, `--reco-id` | Copy only these recos of each chosen scan. |
+| `--files NAME …` | Copy only files with these names or relative paths. |
+| `--exclude-files NAME …` | Copy everything except files with these names (for example `fid`). |
+
+brkraw warns about a chosen scan that is missing, a scan with raw data only
+(it cannot be converted), and a scan with neither image nor raw data files.
+
+## Values
+
+| Option | Meaning |
+| --- | --- |
+| `--institution NAME` | Write `NAME` into the institution fields that exist (`ACQ_institution`, `VisuInstitution`, `SUBJECT_institution`). |
+| `--anonymize` | Apply the example anonymization spec shipped with brkraw (`anonymize`). A starting point, not a guarantee. |
+| `--spec SPEC` | Apply a pruner spec: a YAML path, an installed name or a built-in name. Not with `--anonymize`. |
+| `--subject-id ID` | Value for `$subject_id` (default `anon`). |
+| `--study-id ID` | Value for `$study_id` (default `anon`). |
+| `--set-var KEY=VALUE` | Fill another `$KEY` placeholder (repeatable). A placeholder left unfilled stops the run. |
+| `--strip-jcamp-comments` / `--keep-jcamp-comments` | Remove or keep `$$` comment lines (default: the spec's setting; kept without a spec). |
+
+## Output
+
+| Option | Meaning |
+| --- | --- |
+| `-o`, `--output` | Output zip. It changes only the file name; the top folder inside the zip stays the study folder name (or the spec's `root_name`). |
+| `--overwrite` | Replace an existing output file. Without it, an existing file stops the run. |
+| `--dry-run` | Show what would be copied and changed; write nothing. |
+| `--no-validate` | Skip pruner spec validation. |
+| `--root DIR` | Config folder to use. |
+
+Default output names (in the current folder):
+
+| Run | Output |
+| --- | --- |
+| no spec, or a spec without `anonymize: true` | `pruned_<study>.zip` |
+| `--anonymize`, or a spec with `anonymize: true` | `pruned_anon_<subject-id>_<study-id>.zip` (the original study name is not used) |
+
+The zip is written to a temporary file first and moved into place, so an
+interrupted run leaves no partial zip. Members over 2 GiB are written in ZIP64
+format.
+
+## The record: `.prune.yaml`
+
+Next to the zip, brkraw writes `<output>.prune.yaml` with the time, the
+command, the input and output file names (the input name is left out when
+anonymizing), the spec file name with its SHA-256 and a summary of the spec,
+and the options used. It records names only, never full paths.
+
+## Anonymizing
+
+`--anonymize` keeps the image files, replaces subject and study IDs with
+`--subject-id` / `--study-id`, removes names, operators, institution,
+station, dates and UIDs, removes `$$` comment lines and sets the zip's top
+folder to the subject ID. Some fields that can still hold names or the
+original folder name (scan descriptions, reconstruction inputs) are only
+suggested in the spec. Before sharing:
 
 ```bash
-brkraw prune /path/to/dataset --spec-name minimal_share
+brkraw prune /path/to/study.zip --anonymize --subject-id M01 --dry-run
+brkraw prune /path/to/study.zip --anonymize --subject-id M01
+brkraw info pruned_anon_M01_anon.zip
 ```
 
-Notes:
+To change what is anonymized, copy the built-in spec, edit it and use
+`--spec`; keep `anonymize: true` in your copy so the output name and the
+record do not carry the original study name. The format is described in
+[Pruner specs](../extensions/pruner-specs.md).
 
-- `--spec` accepts an absolute path, or a basename that is resolved relative to the current
-  working directory and the config root pruner spec directory (`pruner_specs/`).
-- `--spec-name` is a convenience form for selecting an installed pruner spec by basename.
+## Python API
 
-Write to a specific zip path:
-
-```bash
-brkraw prune /path/to/dataset --spec prune_spec.yaml -o out.zip
-```
-
----
-
-## What a pruner spec controls
-
-A pruner spec is a YAML mapping that defines:
-
-- which files to keep or drop (`files` + `mode`)
-- optional directory-level filters (`dirs`)
-- optional JCAMP edits (`update_params`)
-- optional root folder handling inside the zip (`add_root`, `root_name`)
-- optional comment stripping for JCAMP files (`strip_jcamp_comments`)
-
-`files` is always required and must contain at least one selector.
-
-Selectors are matched by either:
-
-- full dataset-relative path (e.g. `pdata/1/visu_pars`)
-- basename only (e.g. `visu_pars`)
-
----
-
-## keep vs drop
-
-### mode: keep
-
-Only files matching `files` are included.
-
-Example:
-
-```yaml
-mode: keep
-files:
-  - visu_pars
-  - reco
-  - method
-  - acqp
-```
-
-### mode: drop
-
-Files matching `files` are excluded, everything else is included.
-
-Example:
-
-```yaml
-mode: drop
-files:
-  - subject
-  - patient
-  - private_notes.txt
-```
-
-Notes:
-
-- The selection is evaluated after directory rules (if any).
-- If no files remain after applying rules, the prune fails.
-
----
-
-## Directory rules (dirs)
-
-`dirs` allows filtering by directory names at specific path levels.
-
-Each rule is a mapping:
-
-- level: integer (1-based)
-- dirs: list of directory names allowed or disallowed (depends on mode)
-
-Example: keep only scans 3 and 5 (level 1 is usually scan folder level)
-
-```yaml
-dirs:
-  - level: 1
-    dirs: [3, 5]
-```
-
-Example: keep only reco folders `1` and `2` (level 3 is often pdata level)
-
-```yaml
-dirs:
-  - level: 3
-    dirs: [1, 2]
-```
-
-CLI overrides:
-
---scan-ids overrides a level=1 dirs rule
---reco-ids overrides a level=3 dirs rule
-
-Examples:
-
-```bash
-brkraw prune /path/to/dataset --spec prune.yaml --scan-ids 3 5
-brkraw prune /path/to/dataset --spec prune.yaml --reco-ids 1,2
-```
-
-Notes:
-
-- The CLI override rules are applied as:
-    - scan_ids: level=1
-    - reco_ids: level=3
-
----
-
-## JCAMP parameter edits (update_params)
-
-`update_params` allows you to edit or delete JCAMP parameter keys in selected files.
-
-Structure:
-
-```yaml
-update_params:
-  <filename>:
-    <PARAM_KEY>: <value-or-null>
-```
-
-Rules:
-
-- The map key is a filename (basename only), not a full path.
-- If a file with that basename is included, it will be rewritten in the output zip.
-- Values are converted to strings internally (except null).
-- If the value is null, the key is removed (or cleared depending on Parameters behavior).
-
-Example:
-
-```yaml
-update_params:
-  subject:
-    SUBJECT_id: null
-    SUBJECT_name: null
-  method:
-    Operator: null
-```
-
-Important:
-
-- Updates are applied by parsing the file as JCAMP parameters.
-- If parsing fails, prune fails with an error.
-- Updates apply only to files that are included by keep/drop selection.
-
----
-
-## Strip JCAMP comments
-
-Some Paravision parameter files include comment lines starting with `$$`.
-You can remove them from files that are included in the zip.
-
-From CLI:
-
-```bash
-brkraw prune /path/to/dataset --spec prune.yaml --strip-jcamp-comments
-```
-
-From spec:
-
-```yaml
-strip_jcamp_comments: true
-```
-
-Behavior:
-
-- If a file is being rewritten due to update_params, comment stripping is applied after edits.
-- If a file is included and looks like JCAMP, it can be stripped even without update_params.
-
----
-
-## Output zip naming
-
-### Default behavior
-
-If `--output` is not provided, BrkRaw tries to use `root_name` from the spec.
-If the spec has no root_name, you must provide `--output`.
-
-When a default output is generated, it is written to the current working directory.
-
-Default output name:
-
-- when the input is a directory: `./<root_name>.zip`
-- when the input is a file: `./<root_name><input_suffix>`
-
-### Root folder in the zip
-
-The zip can include a top-level root directory (recommended for clean unpacking).
-
-Spec fields:
-
-- add_root: true or false (default: true)
-- root_name: string (optional)
-
-Notes:
-
-- When `--output` is provided, the root folder name defaults to the output filename stem.
-- You can override that with root_name in the spec (or by not providing --output).
-
----
-
-## Template variables in spec
-
-The CLI supports simple template variables, substituted into the spec before execution.
-
-Use:
-
-```bash
---set-var KEY=VALUE
-```
-
-Example:
-
-```bash
-brkraw prune /path/to/dataset --spec prune.yaml --set-var Project=CAMRI
-```
-
-In the spec, reference it using `$KEY`:
-
-```yaml
-root_name: "$Project_shared"
-```
-
-Notes:
-
-- Substitution is recursive for all strings in the spec.
-- Unknown variables are left unchanged.
-
----
-
-## Spec validation
-
-By default, prune specs are validated against the schema.
-
-Disable validation:
-
-```bash
-brkraw prune /path/to/dataset --spec prune.yaml --no-validate
-```
-
----
-
-## Sidecar output (.prune.yaml)
-
-After pruning, BrkRaw writes a sidecar next to the output zip:
-
-```text
-<output>.prune.yaml
-```
-
-It contains:
-
-- timestamp (UTC)
-- input path and output path
-- the spec path and a summary of spec keys
-- CLI overrides (mode, strip_jcamp_comments, scan_ids, reco_ids, set_vars)
-- computed overrides (root_name_override, dirs_override, template_vars)
-
-This sidecar is meant to make pruning reproducible and auditable.
-
----
-
-## Example prune spec
-
-This is a minimal example that keeps only a few core parameter files,
-drops large raw data, and removes subject identifiers.
-
-```yaml
-__meta__:
-  name: minimal_share
-  description: Minimal shareable dataset (no raw data, anonymized params)
-
-mode: keep
-files:
-  - method
-  - acqp
-  - reco
-  - visu_pars
-  - subject
-
-dirs:
-  - level: 1
-    dirs: [3]
-  - level: 3
-    dirs: [1]
-
-update_params:
-  subject:
-    SUBJECT_id: null
-    SUBJECT_name: null
-
-add_root: true
-root_name: "shared_scan3"
-strip_jcamp_comments: true
-```
-
----
-
-## Common pitfalls
-
-- A prune spec must include `files` with at least one selector.
-- `update_params` matches by basename only (not full path).
-- `--scan-ids` and `--reco-ids` override directory rules at fixed levels (1 and 3).
-- If filtering removes all files, pruning fails.
-- If a JCAMP file cannot be parsed for updates, pruning fails.
+See [prune (Python API)](../api/prune.md).

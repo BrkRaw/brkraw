@@ -103,6 +103,51 @@ def add_pruner_spec_data(
     return [target]
 
 
+def add_context_map_data(
+    map_data: Dict[str, Any],
+    *,
+    filename: Optional[str] = None,
+    source_path: Optional[Path] = None,
+    root: Optional[Union[str, Path]] = None,
+) -> List[Path]:
+    """Install a shared context map (a base for ``include``) into ``context_maps/`` (BRK-0038).
+
+    The map needs ``__meta__.name`` and ``__meta__.version`` so it can be
+    included by name, and must be a valid context map. A dataset's own map
+    stays next to the dataset and is not installed.
+    """
+    from ...specs import context_map as context_map_core
+
+    if not isinstance(map_data, dict):
+        raise ValueError("Context map data must be a mapping.")
+    if filename is None:
+        if source_path is None:
+            raise ValueError("filename is required when source_path is not provided.")
+        filename = source_path.name
+    if not filename.endswith((".yaml", ".yml")):
+        raise ValueError(f"Context map filename must be .yaml/.yml: {filename}")
+    meta = map_data.get("__meta__") if isinstance(map_data.get("__meta__"), dict) else {}
+    missing = [key for key in ("name", "version") if not isinstance(meta.get(key), str) or not meta.get(key)]
+    if missing:
+        raise ValueError(
+            f"{filename}: an installed context map needs __meta__.{' and __meta__.'.join(missing)} "
+            "(it is included by name); a dataset's own map stays next to the dataset."
+        )
+    try:
+        if source_path is not None:
+            context_map_core.validate_context_map(source_path)
+        else:
+            context_map_core.validate_context_map(map_data)
+    except context_map_core.ContextMapError as exc:
+        raise ValueError(f"Invalid context map {filename}: {exc}") from exc
+    paths = config_core.paths(root=root)
+    target = paths.context_maps_dir / filename
+    content = yaml.safe_dump(map_data, sort_keys=False)
+    _write_file(target, content)
+    logger.info("Installed context map: %s", target)
+    return [target]
+
+
 def add_rule_data(
     rule_data: Dict[str, Any],
     *,
@@ -177,6 +222,7 @@ def list_installed(root: Optional[Union[str, Path]] = None) -> Dict[str, List[Di
     result: Dict[str, List[Dict[str, str]]] = {
         "specs": [],
         "pruner_specs": [],
+        "context_maps": [],
         "rules": [],
         "transforms": [],
     }
@@ -233,6 +279,19 @@ def list_installed(root: Optional[Union[str, Path]] = None) -> Dict[str, List[Di
             }
         )
 
+    for record in _load_pruner_spec_records(paths.context_maps_dir):
+        result["context_maps"].append(
+            {
+                "file": record["file"],
+                "name": record.get("name") or "<Unknown>",
+                "version": record.get("version") or "<Unknown>",
+                "description": record.get("description") or "<Unknown>",
+                "name_unknown": "1" if not record.get("name") else "0",
+                "version_unknown": "1" if not record.get("version") else "0",
+                "description_unknown": "1" if not record.get("description") else "0",
+            }
+        )
+
     for path in sorted(paths.transforms_dir.rglob("*.py")):
         relpath = str(path.relative_to(paths.transforms_dir))
         mapped = transforms_map.get(relpath)
@@ -263,7 +322,7 @@ def remove(
     name = Path(filename).name
     paths = config_core.paths(root=root)
     removed: List[Path] = []
-    kinds = [kind] if kind else ["spec", "pruner", "rule", "transform"]
+    kinds = [kind] if kind else ["spec", "pruner", "context_map", "rule", "transform"]
     targets = resolve_targets(name, kinds, paths)
     if not targets:
         raise FileNotFoundError(name)
@@ -291,12 +350,14 @@ def resolve_targets(
             base = paths.specs_dir
         elif item == "pruner":
             base = paths.pruner_specs_dir
+        elif item == "context_map":
+            base = paths.context_maps_dir
         elif item == "rule":
             base = paths.rules_dir
         elif item == "transform":
             base = paths.transforms_dir
         else:
-            raise ValueError("kind must be 'spec' or 'pruner' or 'rule' or 'transform'.")
+            raise ValueError("kind must be 'spec', 'pruner', 'context_map', 'rule' or 'transform'.")
         if not base.exists():
             continue
         candidate = (base / name).resolve()
@@ -324,11 +385,16 @@ def add_from_yaml(path: Path, root: Optional[Union[str, Path]]) -> List[Path]:
         return add_spec_data(data, filename=path.name, source_path=path, root=root)
     if kind == "pruner_spec":
         return add_pruner_spec_data(data, filename=path.name, source_path=path, root=root)
+    if kind == "context_map":
+        return add_context_map_data(data, filename=path.name, source_path=path, root=root)
     raise ValueError(f"Unrecognized YAML file: {path}")
 
 
 def classify_yaml(data: Dict[str, Any]) -> str:
-    """Classify YAML content as a spec or rule mapping."""
+    """Classify YAML content as a spec, pruner spec, context map or rule mapping."""
+    meta = data.get("__meta__")
+    if isinstance(meta, dict) and meta.get("category") == "context_map":
+        return "context_map"
     if RULE_KEYS.intersection(data.keys()):
         rules_validator.validate_rules(data)
         return "rule"
@@ -484,6 +550,7 @@ __all__ = [
     "add",
     "add_spec_data",
     "add_pruner_spec_data",
+    "add_context_map_data",
     "add_rule_data",
     "install_defaults",
     "list_installed",

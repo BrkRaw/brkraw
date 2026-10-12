@@ -1,18 +1,32 @@
-# **BrkRaw**
+# BrkRaw
 
-A modular toolkit for converting Bruker Paravision MRI data into structured, reproducible, explicit file-format outputs.
+brkraw reads Bruker ParaVision MRI data and converts it to NIfTI with JSON
+sidecars, in the folder layout you choose (including BIDS-style names).
 
-## **Inspect and convert ParaVision raw data, directly and flexibly**
-
-Inspect studies, explore parameters, and convert data step by step with a flexible, parameter-based,
-spec- and rule-driven workflow.
+```bash
+brkraw info /path/to/study                           # what is in the study
+brkraw convert /path/to/study -o out/ -c             # NIfTI files and sidecars
+brkraw prune /path/to/study --anonymize -o share.zip # a copy for sharing
+```
 
 ![brkraw-cli-demo](assets/gif/intro.gif)
 
-## **How BrkRaw works?**
+## How brkraw works
 
-- Inspect-first workflow: metadata can be inspected directly from the CLI before conversion.
-- Parameter-based parsing: rules and specs define metadata extraction and sidecar generation.
-- Extensible conversion: the same rule-based framework drives conversion and reconstruction via hooks.
+- Inspect first: study and scan information can be read from the CLI before
+  converting.
+- Parameter-based: rules and specs define what is read from the ParaVision
+  parameter files and written to sidecars.
+- Per-dataset choices: a context map next to a dataset sets output names and
+  sidecar fields without changing the original information.
+- Extensible: hook packages add sequence-specific conversion and
+  reconstruction.
 
-## New here? Start with  👉 [Getting Started](getting-started/index.md)
+!!! note "Version 0.6"
+    This documentation describes brkraw 0.6 (current pre-release: 0.6.1rc2).
+    Moving from 0.5.x? See
+    [Migrating to 0.6](getting-started/migrating.md).
+
+## Start here
+
+[Getting started](getting-started/index.md)

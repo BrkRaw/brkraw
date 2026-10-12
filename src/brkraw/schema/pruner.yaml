@@ -50,6 +50,19 @@ properties:
     type: string
   strip_jcamp_comments:
     type: boolean
+  anonymize:
+    description: "The spec anonymizes: default output name and .prune.yaml record as with --anonymize."
+    type: boolean
+  jcamp_headers:
+    description: "Values for JCAMP ##NAME= header lines of every kept JCAMP file, e.g. {OWNER: anon}."
+    type: object
+    propertyNames:
+      pattern: "^[A-Za-z0-9_.]+$"
+    additionalProperties:
+      type:
+        - string
+        - number
+        - boolean
 required:
   - __meta__
   - files

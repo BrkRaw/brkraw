@@ -1,207 +1,417 @@
 from __future__ import annotations
 
-"""Create a pruned dataset zip using a prune spec."""
+"""Copy a ParaVision study (or chosen scans) into one zip."""
 
 import argparse
+import hashlib
 import logging
-from datetime import datetime
+import os
+import re
+from datetime import datetime, timezone
+from importlib import resources
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
+
+try:
+    resources.files  # type: ignore[attr-defined]
+except AttributeError:  # pragma: no cover - fallback for Python 3.8
+    import importlib_resources as resources  # type: ignore[assignment,no-redef]
 
 import yaml
 
-from brkraw.cli.utils import spinner
+from brkraw.cli.utils import add_root_argument, spinner
 from brkraw.core import config as config_core
-from brkraw.specs.pruner import prune_dataset_to_zip_from_spec
+from brkraw.specs.pruner import (
+    classify_scans,
+    prune_dataset_to_zip,
+    resolve_prune_spec,
+    select_files,
+)
 
 logger = logging.getLogger(__name__)
 
 
+_UNSAFE_NAME = re.compile(r'[/\\:*?"<>|\s]')
+
+
+def default_output_name(input_name: str, *, anonymize: bool, subject_id: str, study_id: str) -> str:
+    """Default zip name: pruned_<study>.zip, or pruned_anon_<subject>_<study-id>.zip when anonymizing."""
+    if anonymize:
+        base = "pruned_anon_" + subject_id + "_" + study_id
+    else:
+        text = input_name
+        lower = text.lower()
+        if lower.endswith(".zip"):
+            text = text[:-4]
+        elif lower.endswith(".pvdatasets"):
+            text = text[:-11]
+        base = "pruned_" + text
+    return _UNSAFE_NAME.sub("_", base) + ".zip"
+
+
 def cmd_prune(args: argparse.Namespace) -> int:
-    output = args.output
-    root_name_override = None
-    dirs_override = _build_dir_override(args.scan_ids, args.reco_ids)
-    template_vars = _parse_kv_pairs(args.set_vars)
+    path = args.path or os.environ.get("BRKRAW_PATH")
+    if not path:
+        args.parser.print_help()
+        return 2
+    if not args.path:
+        logger.info("Using study: %s", path)
+    if not Path(path).exists():
+        logger.error("Path not found: %s", path)
+        return 2
+
+    template_vars: Dict[str, str] = {"subject_id": args.subject_id, "study_id": args.study_id}
     try:
-        spec_path = _resolve_pruner_spec(
-            args.spec_name if args.spec_name else args.spec
-        )
+        template_vars.update(_parse_kv_pairs(args.set_vars))
     except ValueError as exc:
         logger.error("%s", exc)
         return 2
-    if output is None:
-        root_name = _load_root_name(spec_path)
-        if not root_name:
-            logger.error("Prune spec has no root_name; please provide --output.")
+
+    spec_value = "anonymize" if args.anonymize else args.spec
+    if spec_value:
+        try:
+            spec_path = _resolve_pruner_spec(spec_value)
+            spec = resolve_prune_spec(spec_path, validate=not args.no_validate, template_vars=template_vars)
+        except ValueError as exc:
+            logger.error("%s", exc)
             return 2
-        output = _default_output_path(Path(args.path), spec_path=spec_path)
+        # --anonymize, or a spec that declares it (anonymize: true), or the built-in spec
+        anonymize = args.anonymize or spec.get("anonymize") is True or _is_builtin_anonymize(spec_path)
     else:
-        root_name_override = Path(output).stem
-    try:
-        logger.info("Pruning dataset: %s", args.path)
-        logger.info("Prune spec: %s", spec_path)
-        logger.info("Output zip: %s", output)
-        with spinner("Pruning"):
-            out_path = prune_dataset_to_zip_from_spec(
-                spec_path,
-                source=args.path,
-                dest=output,
-                validate=not args.no_validate,
-                strip_jcamp_comments=args.strip_jcamp_comments,
-                root_name=root_name_override,
-                dirs=dirs_override,
-                mode=args.mode,
-                template_vars=template_vars,
-            )
-        logger.info("Wrote pruned zip: %s", out_path)
-        _write_prune_sidecar(
-            out_path=Path(out_path),
-            input_path=Path(args.path),
-            spec_path=spec_path,
-            args=args,
-            root_name_override=root_name_override,
-            dirs_override=dirs_override,
-            template_vars=template_vars,
+        spec_path = None
+        spec = {}
+        anonymize = False
+
+    if args.files:
+        files, mode = args.files, "keep"
+    elif args.exclude_files:
+        files, mode = args.exclude_files, "drop"
+    elif spec_path is not None:
+        files, mode = spec.get("files", []), spec.get("mode", "keep")
+    else:
+        files, mode = None, "keep"
+
+    dirs = _build_dir_override(args.scan_id, args.reco_id)
+    if dirs is None:
+        dirs = spec.get("dirs")
+
+    strip = (
+        args.strip_jcamp_comments
+        if args.strip_jcamp_comments is not None
+        else bool(spec.get("strip_jcamp_comments", False))
+    )
+
+    output = args.output or str(
+        Path.cwd()
+        / default_output_name(
+            Path(path).name,
+            anonymize=anonymize,
+            subject_id=template_vars["subject_id"],
+            study_id=template_vars["study_id"],
         )
+    )
+
+    try:
+        selected = select_files(path, files, mode=mode, dirs=dirs)
+    except ValueError as exc:
+        logger.error("%s", exc)
+        return 2
+    if not selected:
+        logger.error("No files left to copy.")
+        return 2
+    _warn_scans(selected, args.scan_id, args.reco_id)
+
+    if args.dry_run:
+        print("Dry run: nothing is written.")
+        print(f"input: {path}")
+        print(f"output: {output}")
+        root_name = spec.get("root_name")
+        if root_name:
+            print(f"top folder: {root_name}")
+        else:
+            print("top folder: the original study folder name")
+        kinds = classify_scans(selected)
+        scan_ids = list(kinds.keys())
+        print("scans: " + (", ".join(scan_ids) if scan_ids else "-"))
+        for sid in scan_ids:
+            n = sum(1 for p in selected if p.split("/")[0] == sid)
+            print(f"  scan {sid}: {n} files")
+        print(f"files: {len(selected)}")
+        print("changes:")
+        listed = False
+        update_params = spec.get("update_params") or {}
+        for file_name, keys in update_params.items():
+            for key, value in keys.items():
+                listed = True
+                shown = "removed" if value is None else value
+                print(f"  {file_name}: {key} -> {shown}")
+        jcamp_headers = spec.get("jcamp_headers") or {}
+        for name, value in jcamp_headers.items():
+            listed = True
+            print(f"  ##{name} -> {value} (every JCAMP file)")
+        if args.institution:
+            listed = True
+            print(
+                f"  institution -> {args.institution} "
+                "(ACQ_institution, VisuInstitution, SUBJECT_institution where present)"
+            )
+        if not listed:
+            print("  none")
+        print("$$ comment lines: removed" if strip else "$$ comment lines: kept")
+        print("Fields are changed only where they exist in the source.")
+        return 0
+
+    report: dict = {}
+    try:
+        with spinner("Pruning"):
+            prune_dataset_to_zip(
+                path,
+                output,
+                files,
+                mode=mode,
+                update_params=spec.get("update_params"),
+                dirs=dirs,
+                add_root=spec.get("add_root", True),
+                root_name=spec.get("root_name"),
+                strip_jcamp_comments=strip,
+                jcamp_headers=spec.get("jcamp_headers"),
+                institution=args.institution,
+                overwrite=args.overwrite,
+                report=report,
+            )
     except Exception as exc:
         logger.error("%s", exc)
         return 2
+
+    write_prune_record(
+        out_path=Path(output),
+        input_path=Path(path),
+        spec_path=spec_path,
+        settings={
+            "strip_jcamp_comments": strip,
+            "scan_id": args.scan_id,
+            "reco_id": args.reco_id,
+            "files": args.files,
+            "exclude_files": args.exclude_files,
+            "institution": args.institution,
+            "template_vars": template_vars,
+        },
+        anonymize=anonymize,
+    )
+
+    print(
+        f'Wrote {output}: {report["files"]} files, {report["bytes"]} bytes; '
+        f'scans: {", ".join(report["scans"]) or "-"}; fields changed: {report["changed"]}.'
+    )
+    print(f'Check the copy with "brkraw info {output}" before sharing it.')
     return 0
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
     prune_parser = subparsers.add_parser(
         "prune",
-        help="Create a pruned dataset zip from a prune spec.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Copy a ParaVision study (or chosen scans) into one zip.",
+        description=(
+            "Copy a ParaVision study into one zip, whole or only the scans and recos you\n"
+            "choose. The source is never changed.\n"
+            "\n"
+            "By default every file of the chosen scans is copied as it is, including raw\n"
+            "data (fid, rawdata.job0) and study files such as subject. Nothing is\n"
+            "anonymized. Without -s, all scans are copied. Without a path, the study set\n"
+            "with \"brkraw session\" is used, or on a scanner console the study open in\n"
+            "ParaVision."
+        ),
+        epilog=(
+            "examples:\n"
+            "  brkraw prune study.zip                     # ./pruned_study.zip: all scans, no changes\n"
+            "  brkraw prune                               # scanner console: the open study\n"
+            "  brkraw prune study.zip -s 3 5 -r 1 -o scans_3_5.zip\n"
+            "  brkraw prune study.zip --exclude-files fid\n"
+            "  brkraw prune study.zip --institution \"Example University\"\n"
+            "  brkraw prune study.zip --anonymize --subject-id M01 --dry-run\n"
+        ),
     )
     prune_parser.add_argument(
         "path",
+        nargs="?",
         type=str,
-        help="Source dataset path.",
+        help="Study folder, .zip or .PvDatasets file.",
     )
-    spec_group = prune_parser.add_mutually_exclusive_group(required=True)
-    spec_group.add_argument(
+
+    what_group = prune_parser.add_argument_group("what to copy")
+    what_group.add_argument(
+        "-s",
+        "--scan-id",
+        dest="scan_id",
+        nargs="+",
+        metavar="SCAN_ID",
+        help="Copy only these scans (space or comma separated).",
+    )
+    what_group.add_argument(
+        "-r",
+        "--reco-id",
+        dest="reco_id",
+        nargs="+",
+        metavar="RECO_ID",
+        help="Copy only these recos of each chosen scan.",
+    )
+    files_group = what_group.add_mutually_exclusive_group()
+    files_group.add_argument(
+        "--files",
+        nargs="+",
+        metavar="NAME",
+        help="Copy only files with these names or relative paths.",
+    )
+    files_group.add_argument(
+        "--exclude-files",
+        dest="exclude_files",
+        nargs="+",
+        metavar="NAME",
+        help="Copy everything except files with these names (for example fid).",
+    )
+
+    values_group = prune_parser.add_argument_group("values")
+    values_group.add_argument(
+        "--institution",
+        metavar="NAME",
+        help=(
+            "Write NAME into the institution fields that exist "
+            "(ACQ_institution, VisuInstitution, SUBJECT_institution)."
+        ),
+    )
+    anon_group = values_group.add_mutually_exclusive_group()
+    anon_group.add_argument(
+        "--anonymize",
+        action="store_true",
+        help=(
+            "Apply the example anonymization spec shipped with brkraw. It is a "
+            "starting point: check the result before sharing."
+        ),
+    )
+    anon_group.add_argument(
         "--spec",
-        dest="spec",
-        type=str,
-        help="Path to prune spec YAML (or basename of installed spec).",
+        metavar="SPEC",
+        help="Apply a pruner spec: a YAML path, an installed name, or a built-in name.",
     )
-    spec_group.add_argument(
-        "--spec-name",
-        dest="spec_name",
-        type=str,
-        help="Use an installed pruner spec by name (basename, no path).",
+    values_group.add_argument(
+        "--subject-id",
+        dest="subject_id",
+        metavar="ID",
+        default="anon",
+        help="Value for $subject_id (default: anon).",
     )
-    prune_parser.add_argument(
-        "-o",
-        "--output",
-        dest="output",
-        type=str,
-        help="Output zip path (default: ./<root_name>.zip when omitted).",
+    values_group.add_argument(
+        "--study-id",
+        dest="study_id",
+        metavar="ID",
+        default="anon",
+        help="Value for $study_id (default: anon).",
     )
-    prune_parser.add_argument(
-        "--no-validate",
-        action="store_true",
-        help="Skip prune spec validation.",
-    )
-    prune_parser.add_argument(
-        "--strip-jcamp-comments",
-        action="store_true",
-        help="Remove $$ comment lines from kept JCAMP files.",
-    )
-    prune_parser.add_argument(
-        "--mode",
-        choices=["keep", "drop"],
-        help="Override spec mode for file selection.",
-    )
-    prune_parser.add_argument(
+    values_group.add_argument(
         "--set-var",
         dest="set_vars",
         action="append",
         metavar="KEY=VALUE",
-        help="Template variable for use in prune spec (can repeat).",
+        help="Fill another $KEY placeholder (repeatable). A placeholder left unfilled stops the run.",
     )
-    prune_parser.add_argument(
-        "--scan-ids",
-        nargs="+",
-        metavar="SCAN_ID",
-        help="Override scan IDs to keep (space or comma separated).",
+    comments_group = values_group.add_mutually_exclusive_group()
+    comments_group.add_argument(
+        "--strip-jcamp-comments",
+        dest="strip_jcamp_comments",
+        action="store_const",
+        const=True,
+        default=None,
+        help="Remove $$ comment lines from kept JCAMP files (default: the spec's setting).",
     )
-    prune_parser.add_argument(
-        "--reco-ids",
-        nargs="+",
-        metavar="RECO_ID",
-        help="Override reco IDs to keep (space or comma separated).",
+    comments_group.add_argument(
+        "--keep-jcamp-comments",
+        dest="strip_jcamp_comments",
+        action="store_const",
+        const=False,
+        help="Keep $$ comment lines even if the spec removes them.",
     )
-    prune_parser.set_defaults(func=cmd_prune)
+
+    output_group = prune_parser.add_argument_group("output")
+    output_group.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        help=(
+            "Output zip (default: ./pruned_<study>.zip, or "
+            "./pruned_anon_<subject>_<study-id>.zip with --anonymize or a spec with anonymize: true)."
+        ),
+    )
+    output_group.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace an existing output file.",
+    )
+    output_group.add_argument(
+        "--dry-run",
+        dest="dry_run",
+        action="store_true",
+        help="Show what would be copied and changed; write nothing.",
+    )
+    output_group.add_argument(
+        "--no-validate",
+        action="store_true",
+        help="Skip pruner spec validation.",
+    )
+
+    add_root_argument(prune_parser)
+    prune_parser.set_defaults(func=cmd_prune, parser=prune_parser)
 
 
-def _default_output_path(path: Path, *, spec_path: Path) -> str:
-    root_name = _load_root_name(spec_path)
-    suffix = path.suffix
-    base_dir = Path.cwd()
-    base_name = root_name or _stem_or_name(path)
-    if path.is_dir():
-        return str(base_dir / f"{base_name}.zip")
-    if suffix and path.name.endswith(suffix):
-        return str(base_dir / f"{base_name}{suffix}")
-    return str(base_dir / f"{base_name}.zip")
-
-
-def _stem_or_name(path: Path) -> str:
-    if path.is_dir():
-        return f"{path.name}_pruned"
-    suffix = path.suffix
-    return path.name[:-len(suffix)] if suffix else path.name
-
-
-def _load_root_name(spec_path: Path) -> Optional[str]:
-    try:
-        data = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    if not isinstance(data, dict):
-        return None
-    root_name = data.get("root_name")
-    if isinstance(root_name, str) and root_name.strip():
-        return root_name.strip()
-    return None
-
-
-def _write_prune_sidecar(
+def write_prune_record(
     *,
     out_path: Path,
     input_path: Path,
-    spec_path: Path,
-    args: argparse.Namespace,
-    root_name_override: Optional[str],
-    dirs_override: Optional[list],
-    template_vars: dict,
-) -> None:
-    sidecar = out_path.with_suffix(".prune.yaml")
-    spec_summary = _load_prune_spec_summary(spec_path)
-    payload = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+    spec_path: Optional[Path],
+    settings: dict,
+    anonymize: bool = False,
+) -> Path:
+    """Write ``<output>.prune.yaml`` next to the zip (fix 4).
+
+    The record keeps names, never full paths: the input folder or file name
+    (left out entirely when anonymizing, because it usually holds the date and
+    subject), the output file name, and the spec file name with its SHA-256.
+    ``settings`` holds the options actually used.
+    """
+    record = out_path.with_suffix(".prune.yaml")
+    payload: dict = {
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "command": "brkraw prune",
-        "input_path": str(input_path),
-        "output_path": str(out_path),
-        "spec_path": str(spec_path),
-        "spec": spec_summary,
-        "mode": args.mode,
-        "strip_jcamp_comments": bool(args.strip_jcamp_comments),
-        "scan_ids": args.scan_ids,
-        "reco_ids": args.reco_ids,
-        "set_vars": args.set_vars,
-        "template_vars": template_vars,
-        "root_name_override": root_name_override,
-        "dirs_override": dirs_override,
     }
-    sidecar.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    if not anonymize:
+        payload["input_name"] = input_path.name
+    payload["output_name"] = out_path.name
+    if spec_path is None:
+        payload["spec_name"] = None
+        payload["spec_sha256"] = None
+    else:
+        payload["spec_name"] = spec_path.name
+        payload["spec_sha256"] = hashlib.sha256(spec_path.read_bytes()).hexdigest()
+        payload["spec"] = _load_prune_spec_summary(spec_path)
+    payload.update(settings)
+    record.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return record
 
 
-def _resolve_pruner_spec(value: Optional[str]) -> Path:
-    if value is None:
-        raise ValueError("A prune spec is required (use --spec or --spec-name).")
+def _builtin_spec(name: str) -> Optional[Path]:
+    if "/" in name or "\\" in name:
+        return None
+    if name.endswith(".yaml"):
+        stem = name[:-5]
+    elif name.endswith(".yml"):
+        stem = name[:-4]
+    else:
+        stem = name
+    entry = resources.files("brkraw.default").joinpath("pruner_specs", stem + ".yaml")
+    return Path(str(entry)) if entry.is_file() else None
+
+
+def _resolve_pruner_spec(value: str) -> Path:
     raw = Path(value).expanduser()
     candidates = []
     if raw.suffix:
@@ -215,17 +425,25 @@ def _resolve_pruner_spec(value: Optional[str]) -> Path:
         for cand in candidates:
             if cand.exists():
                 return cand
-        raise ValueError(f"Prune spec not found: {value}")
+    else:
+        search_roots = [Path.cwd(), config_core.paths().pruner_specs_dir]
+        for base in search_roots:
+            for cand in candidates:
+                path = (base / cand).resolve()
+                if path.exists():
+                    return path
 
-    search_roots = [Path.cwd(), config_core.paths().pruner_specs_dir]
-    for base in search_roots:
-        for cand in candidates:
-            path = (base / cand).resolve()
-            if path.exists():
-                return path
-    raise ValueError(f"Prune spec not found: {value}")
+    builtin = _builtin_spec(value)
+    if builtin is not None:
+        return builtin
+    raise ValueError(f"Pruner spec not found: {value}")
 
 
+def _is_builtin_anonymize(spec_path: Path) -> bool:
+    builtin = _builtin_spec("anonymize")
+    if builtin is None:
+        return False
+    return spec_path.resolve() == builtin.resolve()
 
 
 def _load_prune_spec_summary(spec_path: Path) -> dict:
@@ -248,12 +466,12 @@ def _load_prune_spec_summary(spec_path: Path) -> dict:
 
 
 def _build_dir_override(
-    scan_ids: Optional[list[str]],
-    reco_ids: Optional[list[str]],
-) -> Optional[list[dict[str, object]]]:
+    scan_ids: Optional[List[str]],
+    reco_ids: Optional[List[str]],
+) -> Optional[List[Dict[str, object]]]:
     scan_list = _parse_id_list(scan_ids)
     reco_list = _parse_id_list(reco_ids)
-    rules: list[dict[str, object]] = []
+    rules: List[Dict[str, object]] = []
     if scan_list:
         rules.append({"level": 1, "dirs": scan_list})
     if reco_list:
@@ -261,10 +479,10 @@ def _build_dir_override(
     return rules or None
 
 
-def _parse_id_list(values: Optional[list[str]]) -> list[str]:
+def _parse_id_list(values: Optional[List[str]]) -> List[str]:
     if not values:
         return []
-    result: list[str] = []
+    result: List[str] = []
     for value in values:
         for part in str(value).split(","):
             part = part.strip()
@@ -273,16 +491,47 @@ def _parse_id_list(values: Optional[list[str]]) -> list[str]:
     return result
 
 
-def _parse_kv_pairs(items: Optional[list[str]]) -> dict[str, str]:
+def _parse_kv_pairs(items: Optional[List[str]]) -> Dict[str, str]:
     if not items:
         return {}
-    pairs: dict[str, str] = {}
+    pairs: Dict[str, str] = {}
     for item in items:
         if "=" not in item:
-            continue
+            raise ValueError(f"--set-var needs KEY=VALUE: {item!r}")
         key, value = item.split("=", 1)
         key = key.strip()
         if not key:
-            continue
+            raise ValueError(f"--set-var needs KEY=VALUE: {item!r}")
         pairs[key] = value
     return pairs
+
+
+def _warn_scans(
+    selected: List[str],
+    scan_ids: Optional[List[str]],
+    reco_ids: Optional[List[str]],
+) -> None:
+    kinds = classify_scans(selected)
+    for sid, kind in kinds.items():
+        if kind == "raw":
+            logger.warning(
+                "scan %s has raw data only (no 2dseq and visu_pars): brkraw cannot convert it.",
+                sid,
+            )
+        elif kind == "none":
+            logger.warning(
+                "scan %s has no image or raw data files (2dseq, fid, rawdata.job*): it may be incomplete.",
+                sid,
+            )
+    for sid in _parse_id_list(scan_ids):
+        if sid not in kinds:
+            logger.warning("scan %s not found in the dataset.", sid)
+    for rid in _parse_id_list(reco_ids):
+        found = False
+        for p in selected:
+            parts = p.split("/")
+            if len(parts) >= 3 and parts[1] == "pdata" and parts[2] == rid:
+                found = True
+                break
+        if not found:
+            logger.warning("reco %s not found in the chosen scans.", rid)

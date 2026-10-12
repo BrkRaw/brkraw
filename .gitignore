@@ -22,4 +22,12 @@ site/
 .envrc
 .idea/
 *.lock
+# uv lock file is tracked so `uv sync --locked` is reproducible
+!uv.lock
 .tmp
+.omx/
+
+# Local AI agent guidance (not version controlled)
+AGENTS.md
+CLAUDE.md
+.agent/

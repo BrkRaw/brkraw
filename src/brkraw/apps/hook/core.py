@@ -146,12 +146,13 @@ def uninstall_hook(
     removed: Dict[str, List[str]] = {
         "specs": [],
         "pruner_specs": [],
+        "context_maps": [],
         "rules": [],
         "transforms": [],
     }
     root_path = config_core.resolve_root(root)
     namespace = entry.get("namespace") if isinstance(entry, dict) else None
-    for kind in ("specs", "pruner_specs", "rules", "transforms"):
+    for kind in ("specs", "pruner_specs", "context_maps", "rules", "transforms"):
         for relpath in entry.get(kind, []) if isinstance(entry, dict) else []:
             target_path = root_path / relpath
             if not target_path.exists():
@@ -210,6 +211,8 @@ def _kind_to_remove(kind: str) -> str:
         return "spec"
     if kind == "pruner_specs":
         return "pruner"
+    if kind == "context_maps":
+        return "context_map"
     if kind == "rules":
         return "rule"
     if kind == "transforms":
@@ -227,6 +230,7 @@ def _install_manifest(
     installed: Dict[str, List[str]] = {
         "specs": [],
         "pruner_specs": [],
+        "context_maps": [],
         "rules": [],
         "transforms": [],
     }
@@ -252,6 +256,17 @@ def _install_manifest(
         spec_data = _read_yaml(src)
         paths_installed = addon_install.add_pruner_spec_data(
             spec_data,
+            filename=str(Path(namespace) / src.name),
+            source_path=src,
+            root=root,
+        )
+        _record_installed_paths(paths_installed, installed, root=root)
+    for cmap in _normalize_manifest_list(manifest.get("context_maps")):
+        # shared context maps (bases for include), BRK-0038
+        src = _resolve_manifest_path(base_dir, cmap)
+        map_data = _read_yaml(src)
+        paths_installed = addon_install.add_context_map_data(
+            map_data,
             filename=str(Path(namespace) / src.name),
             source_path=src,
             root=root,
@@ -299,6 +314,13 @@ def _record_installed_paths(
             pass
         else:
             installed["pruner_specs"].append(relpath)
+            continue
+        try:
+            path.relative_to(config_paths.context_maps_dir)
+        except ValueError:
+            pass
+        else:
+            installed["context_maps"].append(relpath)
             continue
         try:
             path.relative_to(config_paths.rules_dir)
@@ -626,7 +648,7 @@ def _install_status(entry: Any, *, root: Path) -> str:
     if not isinstance(entry, dict):
         return "No"
     paths: List[str] = []
-    for kind in ("specs", "pruner_specs", "rules", "transforms"):
+    for kind in ("specs", "pruner_specs", "context_maps", "rules", "transforms"):
         items = entry.get(kind, [])
         if isinstance(items, list):
             paths.extend([item for item in items if isinstance(item, str) and item.strip()])

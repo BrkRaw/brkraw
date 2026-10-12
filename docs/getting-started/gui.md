@@ -1,17 +1,17 @@
 # Graphical User Interface
 
-`brkraw-viewer` is an optional GUI extension that plugs into BrkRaw to provide
-interactive tools for raw-data workflows. Its primary goal is to let you
-quickly inspect raw data images for QC without requiring a prior conversion
-step.
+`brkraw-viewer` is the optional visualization application plugin for BrkRaw.
+Its default interface lets you inspect raw images for QC without a prior
+conversion step. It also hosts optional modality-specific visualization
+extensions; BrkRaw core remains responsible for data loading and conversion.
 
 The legacy GUI features that previously shipped with BrkRaw have been retired
 and split into this separate module. Going forward, the GUI will evolve as an
 independent, GUI-first ecosystem around BrkRaw.
 
-The viewer is built to be extensible through the BrkRaw hook system, so hook
-packages can introduce dedicated GUI extensions and deliver modality-specific
-QC experiences.
+The viewer is extensible through `brkraw.viewer.hook`, so hook packages can
+introduce dedicated visualization panels. Shared display and interaction
+behavior belongs in `brkraw-viewer`.
 
 Current development focuses on:
 

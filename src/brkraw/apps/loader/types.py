@@ -126,13 +126,14 @@ class ScanLoader(Scan, BaseLoader):
         ...
 
     def get_dataobj(
-            self, 
+            self,
             reco_id: Optional[int] = None,
-            *,
-            cycle_index: Optional[int] = None,
-            cycle_count: Optional[int] = None,
+            axis: Optional[Union[str, int]] = None,
+            frames: Optional[Union[int, List[int], str]] = None,
             **kwargs: Any
-            ) -> Dataobjs: 
+            ) -> Dataobjs:
+        """``axis``/``frames`` select frames (numpy rules); legacy ``cycle_index``/
+        ``cycle_count`` still work with a DeprecationWarning until 0.7.0."""
         ...
 
     def get_affine(
@@ -179,7 +180,6 @@ class ScanLoader(Scan, BaseLoader):
             self, 
             reco_id: Optional[int] = None,
             spec: Optional[Union[Mapping[str, Any], str, "Path"]] = None,
-            context_map: Optional[Union[str, "Path"]] = None,
             return_spec: bool = False,
             ) -> Metadata:
         ...

@@ -26,8 +26,8 @@ from brkraw.api import addon_manager as addon
 ```
 
 Note: `brkraw.api.addon_manager` manages installed addon files under the config
-root. `brkraw.api.addon` refers to the spec/remapper module (spec loading,
-context maps, mapping).
+root. Context map functions are in `brkraw.api.context_map` (the old name
+`brkraw.api.addon` was removed in 0.6.0).
 
 Public functions:
 
@@ -272,7 +272,7 @@ Resolve a pruner spec by name (latest version by default):
 ```python
 from brkraw.api import addon_manager as addon
 
-path = addon.resolve_pruner_spec_reference("minimal_share")
+path = addon.resolve_pruner_spec_reference("lab_share")
 print(path)
 ```
 
@@ -280,7 +280,7 @@ Resolve a specific version:
 
 ```python
 path = addon.resolve_pruner_spec_reference(
-    "minimal_share",
+    "lab_share",
     version="1.0.0",
 )
 ```

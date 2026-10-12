@@ -1,13 +1,24 @@
 # hook
 
-Manage converter hook packages and their bundled addon assets (specs, rules, pruner specs, transforms).
+Register the files that converter hook packages ship (specs, rules, pruner
+specs, transforms, context maps) with brkraw. Two steps:
+
+```bash
+pip install brkraw-sordino       # 1. install the package itself
+brkraw hook install sordino      # 2. register its files with brkraw
+```
+
+`brkraw hook install` does not download or install the package; `pip` does.
+`brkraw hook uninstall` removes the registered files; `pip uninstall` removes
+the package.
 
 A converter hook is a Python package that exposes one or more entrypoints in the
 `brkraw.converter_hook` group. Hook packages can optionally ship addon files via a
 hook manifest (`brkraw_hook.yaml` / `brkraw_hook.yml`).
 
 !!! note "Available hook packages"
-    Currently installable hook packages include `brkraw-mrs` and `brkraw-dti`.
+    Currently installable hook packages include `brkraw-mrs`, `brkraw-dti` and
+    `brkraw-sordino`.
 
 ---
 
@@ -26,11 +37,14 @@ brkraw hook --root /path/to/config list
 ## What gets installed
 
 When you install a hook, BrkRaw installs addon assets under a per-hook namespace
-to avoid filename collisions:
+to avoid filename collisions. The namespace is the package name (for example
+`brkraw-sordino`):
 
 - specs: `~/.brkraw/specs/<hook-namespace>/...`
 - rules: `~/.brkraw/rules/<hook-namespace>/...`
 - pruner specs: `~/.brkraw/pruner_specs/<hook-namespace>/...`
+- context maps: `~/.brkraw/context_maps/<hook-namespace>/...` (included by
+  their `__meta__.name`; the folder name does not matter for `include`)
 - transforms: `~/.brkraw/transforms/<hook-namespace>/...`
 
 BrkRaw also records installed files in a registry file:
@@ -126,4 +140,4 @@ Write to a file:
 brkraw hook preset <hook-entrypoint> -o hook_args.yaml
 ```
 
-You can pass the generated file to `brkraw convert` / `brkraw convert-batch` via `--hook-args-yaml`.
+You can pass the generated file to `brkraw convert` (also with `--batch`) via `--hook-args-yaml`.

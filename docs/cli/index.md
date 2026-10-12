@@ -1,64 +1,37 @@
 # CLI overview
 
-The `brkraw` CLI is organized around a few core tasks:
+`brkraw -h` lists the commands in three groups:
 
-- Initialize a reproducible config root (`init`, `config`)
-- Keep defaults across commands in a shell session (`session`)
-- Inspect datasets (`info`, `params`)
-- Convert scans and write outputs (`convert`, `convert-batch`)
-- Manage mapping logic and extensions (`prune`, `addon`, `hook`)
+| Group | Command | What it does |
+| --- | --- | --- |
+| Data | [`info`](info.md) | show study and scan information (including each reco's frame axes) |
+| | [`params`](params.md) | search parameter files for a key |
+| | [`convert`](convert.md) | convert scans to NIfTI (one, several or all), one study or a folder of studies (`--batch`) |
+| | [`prune`](prune.md) | copy a ParaVision study, or chosen scans, into one zip |
+| Workspace | [`init`](init.md) | create the config folder and install defaults |
+| | [`config`](config.md) | show and change the config |
+| | [`cache`](cache.md) | show and clear the cache |
+| | [`session`](session.md) | keep defaults (path, scan ID …) in the shell |
+| Extensions | [`addon`](addon.md) | install and manage spec, rule, pruner spec and shared context map files |
+| | [`hook`](hook.md) | register the files of hook packages installed with pip |
 
-This section documents what each command is for and how they fit together.
+Every command takes `--root DIR` for another config folder (default:
+`BRKRAW_CONFIG_HOME`, else `~/.brkraw`). Without a dataset path, commands use
+the study set with `brkraw session`, or on a scanner console the study open in
+ParaVision.
 
-Recommended starting sequence:
+## First steps
 
-1. Initialize:
+```bash
+brkraw init                                   # config folder (asks about defaults and shell helpers)
+brkraw info /path/to/study                    # what is in the study
+brkraw convert /path/to/study -s 3 -o out/    # one scan
+eval "$(brkraw session set -p /path/to/study -s 3 -r 1)"
+brkraw convert -o out/                        # uses the session defaults
+```
 
-    ```bash
-    brkraw init
-    ```
-
-2. Inspect a dataset:
-
-    ```bash
-    brkraw info /path/to/study
-    ```
-
-3. Convert a scan:
-
-    ```bash
-    brkraw convert /path/to/study --scan-id 3
-    ```
-
-4. When running many conversions, use session defaults:
-
-    ```bash
-    eval "$(brkraw session set --path /path/to/study --scan-id 3 --reco-id 1)"
-    brkraw convert
-    ```
-
-Notes:
-
-- Output naming is controlled by configuration (`config.yaml`) and optionally by
-  a `context_map` YAML at runtime.
-- Extensions are installed as addons (rules/specs/transforms files) and plugins
-  (hook packages and CLI plugins as Python packages).
-- For concepts and file formats (rules/specs/context maps/layout), see the
-  [Extensions](../extensions/extensibility.md) section.
-
-See also:
-
-- [init](init.md)
-- [session](session.md)
-- [info](info.md)
-- [params](params.md)
-- [convert](convert.md)
-- [prune](prune.md)
-- [config](config.md)
-- [addon](addon.md)
-- [hook](hook.md)
-
-Roadmap:
-
-- Practical BIDS organization requiring scan_id mapping, modality-aware naming,
-  and project-specific rules is planned as `brkraw-bids`.
+Output names come from the config layout, or from a context map next to the
+dataset (see [Layout and naming](../extensions/layout.md) and
+[Context maps](../extensions/context-map.md)). File formats of the
+extensions are described in the [Extensions](../extensions/extensibility.md)
+section.

@@ -1,0 +1,104 @@
+__meta__:
+  name: "anonymize"
+  version: "1.0.0"
+  description: >
+    Example anonymization spec (a starting point, not a guarantee). Replaces
+    the subject and study IDs that brkraw reads with $subject_id and $study_id
+    (brkraw prune --anonymize --subject-id ID --study-id ID; default "anon")
+    and removes names, operators, institution, station, dates and UIDs. Lines
+    starting with "# suggest:" are left off on purpose: they are scan
+    descriptions or reconstruction inputs that can still hold names or the
+    original folder name. Turn them on when your data needs it, and check the
+    result with --dry-run and "brkraw info" before sharing.
+  category: "pruner_spec"
+
+mode: "keep"
+
+# This spec anonymizes: the default output name uses the replacement IDs and the
+# .prune.yaml record leaves out the original input name (as with --anonymize).
+anonymize: true
+
+# Image files only. Add fid, rawdata.job0 and traj to keep raw data for
+# reconstruction.
+files: ["subject", "acqp", "method", "reco", "visu_pars", "2dseq"]
+
+# The top folder of the zip is the replacement subject ID, not the original
+# study folder name (which holds the date, time and subject).
+root_name: "$subject_id"
+
+strip_jcamp_comments: true
+jcamp_headers: {OWNER: anon}
+
+update_params:
+  subject:
+    SUBJECT_id: "<$subject_id>"
+    SUBJECT_name_string: "<$subject_id>"
+    SUBJECT_study_name: "<$study_id>"
+    SUBJECT_dbirth: null
+    SUBJECT_abs_date: null
+    SUBJECT_date: null
+    SUBJECT_study_date: null
+    SUBJECT_instance_creation_date: null
+    SUBJECT_study_instance_uid: null
+    SUBJECT_instance_uid: null
+    SUBJECT_study_uid: null
+    SUBJECT_uid: null
+    SUBJECT_name: null
+    SUBJECT_referral: null
+    SUBJECT_study_operator: null
+    SUBJECT_comment: null
+    SUBJECT_remarks: null
+    SUBJECT_study_comment: null
+    SUBJECT_institution: null
+    SUBJECT_location: null
+  acqp:
+    ACQ_operator: null
+    ACQ_institution: null
+    ACQ_station: null
+    ACQ_system_order_number: null
+    ACQ_time: null
+    ACQ_abs_time: null
+    ACQ_calib_date: null
+    ACQ_comment: null
+    # suggest: ACQ_protocol_name: null        # protocol name; brkraw output names use it
+    # suggest: ACQ_scan_name: null
+    # suggest: ACQ_protocol_location: null
+  method:
+    PVM_StudyB0Map: null                      # points to the B0 map scan: folder name, study UID
+  reco:
+    RECO_time: null
+    RECO_abs_time: null
+    RECO_base_image_uid: null
+    # suggest: RecoRegridNTrajFile: null      # path of this scan's traj file (reconstruction input)
+    # suggest: RecoRegridNTrajFileDC: null
+    # suggest: RecoStageNodes: null           # reconstruction pipeline; may hold paths
+  visu_pars:
+    VisuSubjectId: "<$subject_id>"
+    VisuSubjectName: "<$subject_id>"
+    VisuStudyId: "<$study_id>"
+    VisuSubjectBirthDate: null
+    VisuSubjectUid: null
+    VisuSubjectInstanceCreationDate: null
+    VisuSubjectComment: null
+    VisuStudyDate: null
+    VisuStudyUid: null
+    VisuStudyReferringPhysician: null
+    VisuStudyOperator: null
+    VisuStudyDescription: null
+    VisuOperator: null
+    VisuAcqOperator: null
+    VisuSeriesDate: null
+    VisuAcqDate: null
+    VisuCreationDate: null
+    VisuUid: null
+    VisuSeriesUid: null
+    VisuInstanceUid: null
+    VisuFrameUid: null
+    VisuSeriesFrameOfReferenceUid: null
+    VisuInstitution: null
+    VisuStation: null
+    VisuSystemOrderNumber: null
+    # suggest: VisuAcquisitionProtocol: null
+    # suggest: VisuSeriesReferences: null     # references to source series (path, UID)
+    # suggest: VisuSeriesComment: null
+    # suggest: VisuSeriesExperimentComment: null

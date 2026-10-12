@@ -70,6 +70,11 @@ Optional:
 
 - `pruner_specs`: you can ship pruner specs with a hook when you want to bundle
   a “share/de-identify” pruning preset alongside the conversion pipeline.
+- `context_maps`: shared context maps, bases that users include by name (for
+  example a BIDS base map shipped by `brkraw-bids`). They are installed under
+  `context_maps/<namespace>/`, need `__meta__.name` and `version`, and are
+  removed with the hook. Users include them with `include: [name]` or
+  `include: [{use: name, version: "1.0.0"}]`.
 
 ---
 
@@ -146,6 +151,101 @@ At conversion time, BrkRaw looks up args by the selected hook entrypoint name
 If users provide extra keys that your hook does not accept, BrkRaw will drop
 unsupported kwargs (and log the dropped keys at DEBUG) to avoid `TypeError`
 crashes.
+
+### NIfTI output options in `convert`
+
+`xyz_units`, `t_units` (`brkraw convert --xyz-units/--t-units`) and
+`override_header` (`--header`) describe the output file, not how the data or
+the affine are read. They are not hook args:
+
+- `convert` gets them when it takes a parameter of that name or `**kwargs`,
+  whether or not `get_dataobj`/`get_affine` take `**kwargs`. The CLI always
+  passes both units (default `mm`, `sec`); `override_header` is passed only
+  when it is given.
+- `get_dataobj` and `get_affine` get them only when they name them as
+  parameters, never through `**kwargs`.
+
+A hook with its own `convert` writes them into its header; for example:
+
+```python
+def convert(scan, dataobj, affine, *, xyz_units="mm", t_units="sec",
+            override_header=None, **kwargs):
+    nii = Nifti1Image(dataobj, affine)
+    nii.header.set_xyzt_units(xyz_units, t_units)
+    for key, value in (override_header or {}).items():
+        nii.header[key] = value
+    return nii
+```
+
+Up to 0.6.1rc1 the three options went to `get_dataobj`/`get_affine` when
+those took `**kwargs` (also BrkRaw's own, so a hook with only `convert` never
+got them), and `override_header` never reached a hook.
+
+### The reco and intensity scaling in `convert`
+
+`convert(scan, dataobj, affine, **kwargs)` gets the data as read: BrkRaw does
+not apply the per-frame slope/offset rule for a hook with its own `convert`
+(see [Intensity scaling](../cli/convert.md#intensity-scaling)). Two helpers
+(0.6.0rc2) let the hook produce the same values as BrkRaw's default path:
+
+- `reco_id` is passed to `convert` when it takes a `reco_id` parameter or
+  `**kwargs`. Use it instead of guessing the reco from the data or affine.
+- `brkraw.api.scale_frames(scan, reco_id, dataobjs)` returns
+  `(dataobjs, scaling_applied)`. Pass the data objects as a tuple (one per
+  slice pack). When the slopes or offsets differ per frame, the data come
+  back scaled (float) and `scaling_applied` is True; otherwise they are
+  unchanged and the header carries the value. Give the flag to
+  `scan.get_nifti1image(..., scaling_applied=...)`.
+
+```python
+from brkraw import api
+
+def convert(scan, dataobj, affine, **kwargs):
+    reco_id = kwargs["reco_id"]
+    data = dataobj if isinstance(dataobj, tuple) else (dataobj,)
+    affines = affine if isinstance(affine, tuple) else (affine,)
+    data, applied = api.scale_frames(scan, reco_id, data)
+    return scan.get_nifti1image(reco_id=reco_id, dataobjs=data, affines=affines,
+                                scaling_applied=applied)
+```
+
+With `brkraw convert --axis/--frames`, `convert` also gets `axis` and
+`frames` (when it takes them or `**kwargs`) and the data are already the
+selected frames; pass the same values to `scale_frames(..., axis=, frames=)`.
+The legacy `cycle_index`/`cycle_count` are passed the same way; give them to
+`scale_frames` too. With `-F` (`flatten_fg`) the data reach `convert` with the
+frame axes already flattened; `scale_frames` accepts them as they are. One
+exception: when every spatial axis has size 1 and two or more frame axes have
+different slopes or offsets, the flatten order cannot be told from the data,
+and `scale_frames` raises `ValueError` instead of guessing; convert such data
+without `-F`.
+
+### Stopping for memory, and the CLI retry (0.6.1)
+
+A hook that estimates, before it starts, that a scan needs more memory than it
+allows may refuse with a `MemoryError` (or a subclass). If the error has an
+attribute `retry_kwargs`, a dict of hook arguments that would let it run (for
+example `{"max_memory_gb": 7.5}`), `brkraw convert` in a terminal shows the
+message and asks `Proceed anyway with max_memory_gb=7.5 for scan N? [y/N]`.
+On `y`/`yes` it converts that scan once more with those arguments added to the
+hook's arguments (they override the user's value of the same key); any other
+answer, a second stop, a missing `retry_kwargs` or no terminal (scripts, CI)
+leaves the error as it was: the scan fails and the run goes on as before.
+Only the hook's own arguments can be proposed this way; keep them to limits
+the user could also give with `--hook-arg`.
+
+```python
+class MyResourceError(MemoryError):
+    def __init__(self, message, retry_kwargs=None):
+        super().__init__(message)
+        self.retry_kwargs = retry_kwargs
+
+def get_dataobj(scan, reco_id=None, *, max_memory_gb=None, **kwargs):
+    need_gb = estimate_gb(scan, **kwargs)
+    if need_gb > (max_memory_gb or default_limit_gb()):
+        raise MyResourceError(f"needs about {need_gb:.1f} GB", {"max_memory_gb": round(need_gb + 0.05, 1)})
+    ...
+```
 
 ### Recommended pattern: accept `**kwargs` and validate
 

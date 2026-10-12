@@ -1,0 +1,36 @@
+name: Docs check
+
+# Builds the documentation with --strict on every change to the docs, so a
+# broken link or page shows up in the pull request, not at release time.
+# Publishing stays in docs.yml (final releases only).
+
+on:
+  push:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs-check.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install MkDocs
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "mkdocs<2" "mkdocs-material<10"
+      - name: Build site (strict)
+        run: mkdocs build --strict --site-dir site

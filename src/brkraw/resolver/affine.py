@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Union, TypedDict, Tuple, Literal, List, Any, TYPE_CHECKING
+from typing import Optional, Union, TypedDict, Tuple, Literal, List, Any, NamedTuple, TYPE_CHECKING
 from typing import cast
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -186,6 +186,136 @@ def flip_voxel_axis_affine(
     return out
 
 
+# ---------------------------------------------------------------------------
+# Subject pose <-> subject RAS+
+# ---------------------------------------------------------------------------
+# Scanner frame after unwrap (the operator stands at the bore and looks in):
+#   +x = operator's left -> right, +y = bottom -> top, +z = near -> far.
+#   This triple is left-handed and RAS+ is right-handed, so wrap needs exactly
+#   one mirror (step 3, flip_x); every other step is a proper rotation.
+#
+# Pose words: Head/Foot = what enters the bore first. Supine/Prone/Left/Right
+#   = what lies on the bed (back, belly, the subject's own left or right side).
+# Anatomy: Biped head end = S, belly = A. Quadruped nose end = A, back = S.
+# Labels: three letters = the subject direction that scanner +x, +y, +z point
+#   to. Example: LAS = +x to the subject's left, +y anterior, +z superior.
+#
+# wrap_to_subject_ras applies the steps from _subject_ras_steps in order.
+# Each step rotates or mirrors the affine about a world axis through the
+# origin (A' = T @ A, as rotate_affine / flip_affine do):
+#   1 foot   Foot poses only. Ry +180: feet-first becomes head-first.
+#   2 roll   Not Supine. Rz about the bore axis until the back is on the bed.
+#   3 flip_x Always. Mirror x: operator's left-right -> subject's left-right.
+#   4 stand  Quadruped only. Rx -90: biped naming -> quadruped naming.
+# unwrap_to_scanner_xyz first maps the stored ParaVision frame to subject RAS+
+# (_RAW_FRAME) and then undoes steps 4..1 in reverse order, each with the
+# opposite angle, so it is the exact inverse of wrap after that first map.
+# Subject types other than Biped/Quadruped use step 1 only (unchanged).
+#
+# Labels after each step, all 16 poses. tests/test_03_resolver/
+# test_subject_orientation.py checks every line of this table against the
+# code and against labels derived from the pose words.
+#   Biped     Head_Supine  LAS  flip_x -> RAS
+#   Biped     Head_Prone   RPS  roll Rz+180 -> LAS  flip_x -> RAS
+#   Biped     Head_Left    ARS  roll Rz+90 -> LAS  flip_x -> RAS
+#   Biped     Head_Right   PLS  roll Rz-90 -> LAS  flip_x -> RAS
+#   Biped     Foot_Supine  RAI  foot Ry+180 -> LAS  flip_x -> RAS
+#   Biped     Foot_Prone   LPI  foot Ry+180 -> RPS  roll Rz+180 -> LAS  flip_x -> RAS
+#   Biped     Foot_Left    PRI  foot Ry+180 -> ARS  roll Rz+90 -> LAS  flip_x -> RAS
+#   Biped     Foot_Right   ALI  foot Ry+180 -> PLS  roll Rz-90 -> LAS  flip_x -> RAS
+#   Quadruped Head_Supine  LIA  flip_x -> RIA  stand Rx-90 -> RAS
+#   Quadruped Head_Prone   RSA  roll Rz+180 -> LIA  flip_x -> RIA  stand Rx-90 -> RAS
+#   Quadruped Head_Left    IRA  roll Rz+90 -> LIA  flip_x -> RIA  stand Rx-90 -> RAS
+#   Quadruped Head_Right   SLA  roll Rz-90 -> LIA  flip_x -> RIA  stand Rx-90 -> RAS
+#   Quadruped Foot_Supine  RIP  foot Ry+180 -> LIA  flip_x -> RIA  stand Rx-90 -> RAS
+#   Quadruped Foot_Prone   LSP  foot Ry+180 -> RSA  roll Rz+180 -> LIA  flip_x -> RIA  stand Rx-90 -> RAS
+#   Quadruped Foot_Left    SRP  foot Ry+180 -> IRA  roll Rz+90 -> LIA  flip_x -> RIA  stand Rx-90 -> RAS
+#   Quadruped Foot_Right   ILP  foot Ry+180 -> SLA  roll Rz-90 -> LIA  flip_x -> RIA  stand Rx-90 -> RAS
+
+
+class _PoseStep(NamedTuple):
+    """One wrap step: rotate about ``axis`` by ``degrees``, or mirror ``axis`` if ``degrees`` is None."""
+    name: str
+    axis: str
+    degrees: Optional[int]
+
+
+# Step 2 angle per gravity word: the roll about the bore axis z that puts the
+# back on the bed. Rz +90 turns +x into +y, i.e. counter-clockwise as the
+# operator sees it. Same table for Biped and Quadruped.
+_ROLL_TO_SUPINE_DEG = {"Supine": 0, "Prone": 180, "Left": 90, "Right": -90}
+
+# Stored ParaVision frame per subject type (from the original source comments;
+# not checked against ParaVision documents): the subject direction of stored
+# +x, +y, +z. Both describe the same physical frame, named for each anatomy.
+_RAW_FRAME = {"Biped": "LPS", "Quadruped": "LSA"}
+
+_RAS_AXIS = {"R": (0, 1.0), "L": (0, -1.0), "A": (1, 1.0), "P": (1, -1.0), "S": (2, 1.0), "I": (2, -1.0)}
+
+
+def _labels_to_matrix(labels: str) -> np.ndarray:
+    """3x3 matrix whose column i is the RAS+ unit vector named by ``labels[i]``."""
+    mat = np.zeros((3, 3))
+    for col, letter in enumerate(labels):
+        row, sign = _RAS_AXIS[letter]
+        mat[row, col] = sign
+    return mat
+
+
+def _subject_ras_steps(subject_type: Optional[SubjectType], subject_pose: SubjectPose) -> List[_PoseStep]:
+    """Ordered wrap steps (scanner XYZ -> subject RAS+) for one type and pose.
+
+    wrap_to_subject_ras applies them in order; unwrap_to_scanner_xyz undoes
+    them in reverse order. The table above lists the labels after each step.
+    """
+    head_or_foot, gravity = subject_pose.split('_', 1)
+    subject_type = subject_type or 'Biped'  # backward compatibility with PV5.1 (subject_type == None)
+    steps: List[_PoseStep] = []
+
+    # Step 1 (foot): Ry +180, a half turn about the vertical axis y.
+    #   Feet-first becomes head-first; the same body part stays on the bed.
+    #   Biped Foot_Left PRI -> ARS (= Head_Left), Quadruped Foot_Prone LSP -> RSA.
+    if head_or_foot == "Foot":
+        steps.append(_PoseStep("foot", "y", 180))
+
+    if subject_type not in ("Biped", "Quadruped"):
+        # Phantom / Other / OtherAnimal: only step 1, as before.
+        return steps
+
+    # Step 2 (roll): Rz about the bore axis z, until the back is on the bed.
+    #   Prone Rz +180: half turn, belly-down becomes back-down.
+    #     Biped RPS -> LAS, Quadruped RSA -> LIA.
+    #   Left Rz +90: quarter turn counter-clockwise (operator's view); the left
+    #     flank comes off the bed and the back comes down onto it.
+    #     Biped ARS -> LAS, Quadruped IRA -> LIA.
+    #   Right Rz -90: quarter turn clockwise; the right flank comes off the bed.
+    #     Biped PLS -> LAS, Quadruped SLA -> LIA.
+    roll = _ROLL_TO_SUPINE_DEG.get(gravity, 0)
+    if roll:
+        steps.append(_PoseStep("roll", "z", roll))
+
+    # Step 3 (flip_x): mirror x, the one reflection wrap needs.
+    #   Head-first and back on the bed, the operator's left -> right is the
+    #   subject's right -> left; after the mirror +x points to the subject's right.
+    #   Biped LAS -> RAS (done), Quadruped LIA -> RIA.
+    steps.append(_PoseStep("flip", "x", None))
+
+    # Step 4 (stand, Quadruped only): Rx -90, a quarter turn about the
+    #   left-right axis. The bore axis is S-I for a biped (head end = S) but
+    #   A-P for a quadruped (nose = A), and its back is S. RIA -> RAS.
+    if subject_type == "Quadruped":
+        steps.append(_PoseStep("stand", "x", -90))
+    return steps
+
+
+def _apply_pose_step(affine: np.ndarray, step: _PoseStep, inverse: bool = False) -> np.ndarray:
+    """Apply one step to ``affine`` in world space; ``inverse`` undoes it."""
+    if step.degrees is None:  # a mirror is its own inverse
+        return flip_affine(affine, **{f"flip_{step.axis}": True})
+    degrees = -step.degrees if inverse else step.degrees
+    return rotate_affine(affine, **{f"rad_{step.axis}": np.pi * (degrees / 180.0)})
+
+
 def unwrap_to_scanner_xyz(
         affine: np.ndarray,
         subject_type: Optional[SubjectType], 
@@ -207,35 +337,22 @@ def unwrap_to_scanner_xyz(
         Affine reoriented to scanner L-R, bottom-to-top, front-to-back.
     """
     _affine = np.asarray(affine)
-    head_or_foot, gravity = subject_pose.split('_', 1)
     subject_type = subject_type or 'Biped' # backward compatibility with PV5.1 (subject_type == None)
+    steps = _subject_ras_steps(subject_type, subject_pose)
 
-    if head_or_foot == "Foot":
-        _affine = rotate_affine(_affine, rad_y=np.pi)
+    # Step U0: stored ParaVision frame -> subject RAS+.
+    #   Biped LPS -> RAS, Quadruped LSA -> RAS (see _RAW_FRAME).
+    raw_frame = _RAW_FRAME.get(subject_type)
+    if raw_frame is not None:
+        mat, vec = to_matvec(_affine)
+        to_ras = _labels_to_matrix(raw_frame)
+        _affine = from_matvec(to_ras @ mat, to_ras @ vec)
 
-    if subject_type == "Biped":
-        # Paravision stores affine based on LPS+, but scanner coordinate is LAS+(based on subject orientation)
-        # correspond to scanner left to right(x), buttom to top(y), front to back(z) according to the operation's view
-        # simply flip y axis unwrap subject to scanner orient
-        _affine = flip_affine(_affine, flip_y=True)
-        if gravity == "Prone":
-            _affine = rotate_affine(_affine, rad_z=np.pi)
-        elif gravity == "Left":
-            _affine = rotate_affine(_affine, rad_z=-np.pi/2)
-        elif gravity == "Right":
-            _affine = rotate_affine(_affine, rad_z=np.pi/2)
-
-    elif subject_type == "Quadruped":
-        # Paravision convert affine to match LSA+ of Quadruped subject, 
-        # but the scanner coordinate is RSA+(based on subject orientation)
-        _affine = flip_affine(_affine, flip_x=True)
-        if gravity == "Supine":
-            _affine = rotate_affine(_affine, rad_z=np.pi)
-        elif gravity == "Left":
-            _affine = rotate_affine(_affine, rad_z=np.pi/2)
-        elif gravity == "Right":
-            _affine = rotate_affine(_affine, rad_z=-np.pi/2)
-    
+    # Steps 4..1 of wrap_to_subject_ras, undone in reverse order with the
+    # opposite angle (a mirror undoes itself). Result: scanner XYZ, labels as
+    # in the "start" column of the table above _PoseStep.
+    for step in reversed(steps):
+        _affine = _apply_pose_step(_affine, step, inverse=True)
     return _affine
 
 def wrap_to_subject_ras(affine: np.ndarray, 
@@ -257,40 +374,10 @@ def wrap_to_subject_ras(affine: np.ndarray,
         Affine reoriented to subject RAS+.
     """
     _affine = np.asarray(affine)
-    head_or_foot, gravity = subject_pose.split('_', 1)
-    
-    # device back: Head / foot
-    if head_or_foot == "Foot":
-        _affine = rotate_affine(_affine, rad_y=np.pi)
-    
-    subject_type = subject_type or 'Biped' # backward compatibility with PV5.1 (subject_type == None)
-
-    if subject_type == "Biped":
-        # in operators view (scanner), patient is LAS+ in scanner coordinate in "Head_Supine" position (after unwrap)
-        # step1. LAS+ (scanner coordinate) to LAI+ (subject coordinate, dicom)
-        _affine = flip_affine(_affine, flip_z=True)
-        # step2. LAI+ to RAS+
-        _affine = rotate_affine(_affine, rad_y=np.pi)
-        if gravity == "Prone":
-            _affine = rotate_affine(_affine, rad_z=np.pi)
-        elif gravity == "Left":
-            _affine = rotate_affine(_affine, rad_z=np.pi/2)
-        elif gravity == "Right":
-            _affine = rotate_affine(_affine, rad_z=-np.pi/2)
-
-    elif subject_type == "Quadruped":
-        # in unwrapped view (scanner), subject is RSA+ in "Head_Prone" position
-        # step1. RSA+ to RSP+
-        _affine = flip_affine(_affine, flip_z=True)
-        # step2. RSP+ to RAS+
-        _affine = rotate_affine(_affine, rad_x=np.pi/2)
-        if gravity == "Supine":
-            _affine = rotate_affine(_affine, rad_z=np.pi)
-        elif gravity == "Left":
-            _affine = rotate_affine(_affine, rad_z=-np.pi/2)
-        elif gravity == "Right":
-            _affine = rotate_affine(_affine, rad_z=np.pi/2)
-    
+    # Steps 1..4 in order (foot, roll, flip_x, stand); labels after each step
+    # are in the table above _PoseStep. The last labels are RAS.
+    for step in _subject_ras_steps(subject_type, subject_pose):
+        _affine = _apply_pose_step(_affine, step)
     return _affine
 
 

@@ -1,29 +1,26 @@
 # Layout (Python API)
 
-Helpers for building filenames from info/metadata specs.
-
-Module: `brkraw.core.layout`
-
----
-
-## Equivalent CLI behavior
-
-The CLI (`brkraw convert`) uses the layout system to build output paths and
-handles de-duplication, sanitization, and multi-slicepack suffixes.
-
-In the Python API, `render_layout()` only builds a path string. You then pass
-that path to `to_filename()` yourself.
-
----
-
-## render_layout
+Build output names with the **config layout** from Python. The CLI
+(`brkraw convert`) also handles repeated names, invalid characters and slice
+pack suffixes; `render_layout()` only returns the name. The two layouts
+(config and context map) are compared in
+[Layout and naming](../extensions/layout.md).
 
 ```python
-from brkraw.core import layout as layout_core
+from brkraw.api import layout
+```
 
-out_path = layout_core.render_layout(
+## `render_layout`
+
+```python
+import brkraw as brk
+from brkraw.api import layout
+
+loader = brk.load("/path/to/study")
+name = layout.render_layout(
     loader,
-    scan_id=3,
+    3,                                   # scan ID
+    reco_id=1,
     layout_entries=[
         {"key": "Study.ID", "entry": "study", "sep": "/"},
         {"key": "Subject.ID", "entry": "sub", "sep": "/"},
@@ -32,122 +29,46 @@ out_path = layout_core.render_layout(
 )
 ```
 
-Use it when writing files:
+- With both `layout_entries` and `layout_template`, the template wins.
+- Fixed keys `{ScanID}`, `{RecoID}` and `{Counter}` (`counter=`) are always
+  available.
+- `extra={"bids": {...}}` adds values the tags can read, for example context
+  map namespaces.
+- `override_info_spec=` / `override_metadata_spec=` use other specs (for
+  testing); metadata values are read only with `override_metadata_spec`.
+- Entry fields: `key`, `entry`, `hide`, `sep`, `use_entry`, and
+  `value_pattern` (allowed characters, default `[A-Za-z0-9._-]`),
+  `value_replace` (replacement, default empty), `max_length`.
+- Missing values are skipped; when nothing remains the name is
+  `scan-<ScanID>`.
+
+Writing the files yourself:
 
 ```python
 from pathlib import Path
 
 nii = loader.convert(3, reco_id=1)
-if nii is None:
-    raise RuntimeError("Conversion returned no output.")
-
-Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-if isinstance(nii, tuple):
-    for i, img in enumerate(nii, start=1):
-        img.to_filename(f"{out_path}_part{i}.nii.gz")
-else:
-    nii.to_filename(f"{out_path}.nii.gz")
+Path(name).parent.mkdir(parents=True, exist_ok=True)
+images = nii if isinstance(nii, tuple) else (nii,)
+suffixes = layout.render_slicepack_suffixes(
+    layout.load_layout_info(loader, 3, reco_id=1), count=len(images), template="_slpack{index}"
+) if len(images) > 1 else [""]
+for img, suffix in zip(images, suffixes):
+    img.to_filename(f"{name}{suffix}.nii.gz")
 ```
 
-If both `layout_entries` and `layout_template` are provided, the template wins.
+## Information the tags read
 
 ```python
-name = layout_core.render_layout(
-    loader,
-    scan_id=3,
-    layout_entries=[{"key": "Subject.ID", "entry": "sub", "sep": "/"}],
-    layout_template="sub-{Subject.ID}/scan-{ScanID}",
-)
+info, metadata = layout.load_layout_info_parts(loader, 3, reco_id=1)
 ```
 
-Example outputs (same inputs):
+`info` is the original study and scan information (`Subject`, `Study`,
+`Method`, `MethodBase`, `Protocol`, …). `metadata` is filled only with
+`override_metadata_spec`. `load_layout_info()` returns both merged.
 
-```text
-layout_entries only  -> sub-001
-layout_template only -> sub-001/scan-3
-both provided        -> sub-001/scan-3
-```
+## Context map names
 
-### Fixed keys
-
-These placeholders are always available, regardless of mapped metadata:
-
-- `{ScanID}` / `{scan_id}` / `{scanid}`
-- `{RecoID}` / `{reco_id}` / `{recoid}` (may be `None`)
-- `{Counter}` / `{counter}` (used for de-duplication)
-
-You can override specs for testing via API-only kwargs:
-
-```python
-name = layout_core.render_layout(
-    loader,
-    scan_id=3,
-    layout_entries=[{"key": "Protocol", "hide": True}],
-    override_info_spec="info_override.yaml",
-    override_metadata_spec="metadata_override.yaml",
-)
-```
-
-Fields:
-
-- `key`: dotted key resolved from the layout info (for example `Subject.ID`).
-
-- `entry`: prefix label used to emit `entry-value` (optional; default entry is derived from `key` when `hide` is false).
-
-- `hide`: when true, only the value is appended.
-
-- `use_entry`: reuse a previously defined `entry` value.
-
-- `sep`: separator to insert between fields (default `_`, use `/` for folders).
-
-- `value_pattern`: regex that defines allowed characters (default `[A-Za-z0-9._-]`).
-
-- `value_replace`: replacement for disallowed characters (default `""`).
-
-- `max_length`: truncate values longer than this length.
-
-Notes:
-
-- Values come from merged `info_spec` + `metadata_spec` results.
-
-- Missing values are skipped.
-- For `layout_template`, missing placeholders render as empty strings.
-
-- When no parts remain, the fallback is `scan-<ScanID>`.
-
-- `use_entry` only works when the referenced entry was recorded (for example, it is not recorded when `hide: true` and `entry` is omitted).
-
-- `context_map` is optional. When provided, it applies runtime remapping rules to spec output.
-- Metadata still wins on conflicts when keys overlap.
-
-## Layout info parts
-
-```python
-info, metadata = layout_core.load_layout_info_parts(
-    loader,
-    scan_id=3,
-)
-```
-
-Notes:
-
-- `info` is the mapped `info_spec` output.
-- `metadata` is the mapped `metadata_spec` output.
-
-## Slice pack suffixes
-
-```python
-info = layout_core.load_layout_info(
-    loader,
-    scan_id=3,
-)
-suffixes = layout_core.render_slicepack_suffixes(
-    info,
-    count=3,
-    template="_slpack{index}",
-)
-```
-
-Notes:
-
-- `{index}` is always 1-based.
+A context map with its own `layout_template` is rendered by
+`brkraw.api.context_map` during `brkraw convert`; see
+[Context maps](../extensions/context-map.md).

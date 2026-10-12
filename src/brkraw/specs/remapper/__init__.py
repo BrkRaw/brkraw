@@ -1,27 +1,14 @@
 from __future__ import annotations
 
+# Info/metadata spec remapping. Context maps live in brkraw.specs.context_map (0.6.0).
 from .logic import (
     load_spec,
     map_parameters,
-    load_context_map,
-    load_context_map_data,
-    load_context_map_meta,
-    get_selector_keys,
-    matches_context_map_selectors,
-    apply_context_map,
 )
-from .validator import validate_spec, validate_context_map, validate_map_data
+from .validator import validate_spec
 
 __all__ = [
     "load_spec",
     "map_parameters",
     "validate_spec",
-    "validate_context_map",
-    "validate_map_data",
-    "load_context_map",
-    "load_context_map_data",
-    "load_context_map_meta",
-    "get_selector_keys",
-    "matches_context_map_selectors",
-    "apply_context_map",
 ]

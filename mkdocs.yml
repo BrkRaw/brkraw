@@ -1,4 +1,4 @@
-site_name: A Modular Toolkit for Bruker MRI raw-data handling.
+site_name: BrkRaw 0.6
 site_description: A modular toolkit for Bruker MRI raw-data handling.
 site_url: https://brkraw.github.io/
 repo_url: https://github.com/BrkRaw/brkraw
@@ -41,52 +41,55 @@ extra_css:
 nav:
   - Home: index.md
 
-  - Getting Started:
+  - Getting started:
       - Overview: getting-started/index.md
-      - Command Line Interface: getting-started/cli.md
+      - Command line: getting-started/cli.md
       - Python API: getting-started/api.md
-      - Graphical User Interface: getting-started/gui.md
+      - Graphical user interface: getting-started/gui.md
       - BIDS integration: getting-started/bids.md
-      - User Configuration: getting-started/config.md
+      - User configuration: getting-started/config.md
+      - Migrating to 0.6: getting-started/migrating.md
 
-  - CLI Reference:
-      - overview: cli/index.md
-      - init: cli/init.md
-      - session: cli/session.md
-      - info: cli/info.md
-      - params: cli/params.md
-      - convert: cli/convert.md
-      - prune: cli/prune.md
-      - cache: cli/cache.md
-      - config: cli/config.md
-      - addon: cli/addon.md
-      - hook: cli/hook.md
+  - CLI reference:
+      - Overview: cli/index.md
+      - Data:
+          - info: cli/info.md
+          - params: cli/params.md
+          - convert: cli/convert.md
+          - prune: cli/prune.md
+      - Workspace:
+          - init: cli/init.md
+          - config: cli/config.md
+          - cache: cli/cache.md
+          - session: cli/session.md
+      - Extensions:
+          - addon: cli/addon.md
+          - hook: cli/hook.md
 
-  - API Reference:
-      - overview: api/overview.md
-      - data access: api/data-access.md
-      - info and params: api/info.md
-      - convert: api/convert.md
-      - prune: api/prune.md
-      - layout: api/layout.md
-      - addon: api/addon.md
-      - hook: api/hook.md
+  - API reference:
+      - Overview: api/overview.md
+      - Data access: api/data-access.md
+      - Info and params: api/info.md
+      - Convert: api/convert.md
+      - Prune: api/prune.md
+      - Layout: api/layout.md
+      - Addon: api/addon.md
+      - Hook: api/hook.md
 
   - Extensions:
       - Overview: extensions/extensibility.md
       - Addons and plugins: extensions/addons-and-plugins.md
-      - CLI plugins (overview): extensions/cli-extensions.md
       - Rules: extensions/rules.md
       - Specs: extensions/specs.md
+      - Pruner specs: extensions/pruner-specs.md
       - Context maps: extensions/context-map.md
       - Layout and naming: extensions/layout.md
-      - Hook packages (overview): extensions/hook-packages.md
 
-  - Developer Guide:
+  - Developer guide:
       - Contributing: dev/contributing.md
       - Core vs addon development: dev/core-vs-addon.md
       - Building CLI plugins: dev/cli-extensions.md
       - Building hook packages: dev/hook-packages.md
-      - Roadmap: dev/roadmap.md
+      - Integration test plan (proposal): dev/roadmap.md
       - Documentation: dev/documentation.md
       - Contributors: dev/contributors.md

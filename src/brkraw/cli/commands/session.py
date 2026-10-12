@@ -39,6 +39,7 @@ def cmd_set(args: argparse.Namespace) -> int:
         and not args.param_key
         and not args.param_file
         and not args.convert_option
+        and not getattr(args, "root", None)
     ):
         parser = getattr(args, "parser", None)
         if parser is not None:
@@ -48,6 +49,9 @@ def cmd_set(args: argparse.Namespace) -> int:
         print("You can still use `eval \"$(brkraw session set ...)\"` directly.")
         return 2
     lines: List[str] = []
+    if getattr(args, "root", None):
+        # `brkraw session --root DIR set ...`: keep using that config folder in this shell.
+        lines.append(_format_export("BRKRAW_CONFIG_HOME", str(Path(args.root).expanduser().absolute())))
     if args.path:
         path = Path(args.path).expanduser()
         if not path.exists():
@@ -74,7 +78,12 @@ def cmd_set(args: argparse.Namespace) -> int:
                 convert_items.extend(item)
             else:
                 convert_items.append(item)
-        for key, value in _parse_convert_options(convert_items):
+        try:
+            pairs = _parse_convert_options(convert_items)
+        except ValueError as exc:
+            print(f"error: {exc}")
+            return 2
+        for key, value in pairs:
             lines.append(_format_export(f"BRKRAW_CONVERT_{key}", value))
     if lines:
         print("\n".join(lines))
@@ -95,7 +104,7 @@ def cmd_unset(args: argparse.Namespace) -> int:
         "BRKRAW_CONVERT_SCAN_ID",
         "BRKRAW_CONVERT_RECO_ID",
         "BRKRAW_CONVERT_SIDECAR",
-        "BRKRAW_CONVERT_CONTEXT_MAP",
+        "BRKRAW_CONVERT_CONTEXT_MAP",  # removed in 0.6; still unset so old shells get clean
         "BRKRAW_CONVERT_SPACE",
         "BRKRAW_CONVERT_COMPRESS",
         "BRKRAW_CONVERT_FLATTEN_FG",
@@ -148,7 +157,6 @@ def cmd_env(_: argparse.Namespace) -> int:
     convert_scan_id = os.environ.get("BRKRAW_CONVERT_SCAN_ID")
     convert_reco_id = os.environ.get("BRKRAW_CONVERT_RECO_ID")
     convert_sidecar = os.environ.get("BRKRAW_CONVERT_SIDECAR")
-    convert_context_map = os.environ.get("BRKRAW_CONVERT_CONTEXT_MAP")
     convert_compress = os.environ.get("BRKRAW_CONVERT_COMPRESS")
     convert_space = os.environ.get("BRKRAW_CONVERT_SPACE")
     convert_flatten_fg = os.environ.get("BRKRAW_CONVERT_FLATTEN_FG")
@@ -168,7 +176,6 @@ def cmd_env(_: argparse.Namespace) -> int:
         and convert_scan_id is None
         and convert_reco_id is None
         and convert_sidecar is None
-        and convert_context_map is None
         and convert_compress is None
         and convert_space is None
         and convert_flatten_fg is None
@@ -200,8 +207,6 @@ def cmd_env(_: argparse.Namespace) -> int:
         print(f"BRKRAW_CONVERT_RECO_ID={convert_reco_id}")
     if convert_sidecar is not None:
         print(f"BRKRAW_CONVERT_SIDECAR={convert_sidecar}")
-    if convert_context_map is not None:
-        print(f"BRKRAW_CONVERT_CONTEXT_MAP={convert_context_map}")
     if convert_space is not None:
         print(f"BRKRAW_CONVERT_SPACE={convert_space}")
     if convert_compress is not None:
@@ -236,6 +241,11 @@ def _format_short_help(parser: argparse.ArgumentParser) -> str:
     return formatter.format_help()
 
 
+_REMOVED_CONVERT_OPTIONS = {
+    "CONTEXT_MAP": "put the context map next to the dataset with the same name, or pass -M FILE to convert",
+}
+
+
 def _parse_convert_options(items: List[str]) -> List[Tuple[str, str]]:
     pairs: List[Tuple[str, str]] = []
     for item in items:
@@ -245,6 +255,8 @@ def _parse_convert_options(items: List[str]) -> List[Tuple[str, str]]:
         key = key.strip().upper().replace("-", "_")
         if not key:
             raise ValueError(f"Invalid convert option key in: {item}")
+        if key in _REMOVED_CONVERT_OPTIONS:
+            raise ValueError(f"convert option {key} was removed in brkraw 0.6: {_REMOVED_CONVERT_OPTIONS[key]}")
         pairs.append((key, value.strip()))
     return pairs
 
@@ -300,9 +312,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
         metavar="KEY=VALUE",
         help=(
             "Set BRKRAW_CONVERT_<OPTION> as KEY=VALUE (repeatable). "
-            "Keys: OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, CONTEXT_MAP, "
+            "Keys: OUTPUT, PREFIX, SCAN_ID, RECO_ID, SIDECAR, "
             "COMPRESS, SPACE, FLATTEN_FG, OVERRIDE_SUBJECT_TYPE, "
-            "OVERRIDE_SUBJECT_POSE, XYZ_UNITS, T_UNITS, HEADER, FORMAT."
+            "OVERRIDE_SUBJECT_POSE, XYZ_UNITS, T_UNITS, HEADER."
         ),
     )
     set_parser.set_defaults(session_func=cmd_set, parser=set_parser)

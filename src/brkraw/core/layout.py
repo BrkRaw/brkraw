@@ -11,9 +11,6 @@ from ..apps.loader import info as info_resolver
 from ..specs.remapper import (
     load_spec,
     map_parameters,
-    load_context_map,
-    load_context_map_meta,
-    apply_context_map,
 )
 
 _ENTRY_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
@@ -28,26 +25,29 @@ def render_layout(
     *,
     layout_entries: Optional[Iterable[Mapping[str, Any]]] = None,
     layout_template: Optional[str] = None,
-    context_map: Optional[Union[str, Path]] = None,
     root: Optional[Union[str, Path]] = None,
     reco_id: Optional[int] = None,
     counter: Optional[int] = None,
     override_info_spec: Optional[Union[str, Path]] = None,
     override_metadata_spec: Optional[Union[str, Path]] = None,
+    extra: Optional[Mapping[str, Any]] = None,
 ) -> str:
-    if layout_entries is None and layout_template is None and context_map:
-        meta = load_layout_meta(context_map)
-        layout_entries = meta.get("layout_entries")
-        layout_template = meta.get("layout_template")
+    """Render the config layout (``layout_template`` / ``layout_entries``).
+
+    ``extra`` adds values to the info the tags read, for example the
+    namespaces of a context map that has no layout_template of its own.
+    Context map templates are rendered by ``brkraw.specs.context_map.output``.
+    """
     info = load_layout_info(
         loader,
         scan_id,
-        context_map=context_map,
         root=root,
         reco_id=reco_id,
         override_info_spec=override_info_spec,
         override_metadata_spec=override_metadata_spec,
     )
+    if extra:
+        info = {**info, **dict(extra)}
     if isinstance(layout_template, str) and layout_template:
         return _render_layout_template(layout_template, info, scan_id, reco_id=reco_id, counter=counter)
     return _render_fields(layout_entries, info, scan_id, reco_id=reco_id, counter=counter)
@@ -57,7 +57,6 @@ def load_layout_info(
     loader: Any,
     scan_id: int,
     *,
-    context_map: Optional[Union[str, Path]],
     root: Optional[Union[str, Path]] = None,
     reco_id: Optional[int],
     override_info_spec: Optional[Union[str, Path]] = None,
@@ -66,7 +65,6 @@ def load_layout_info(
     info, metadata = load_layout_info_parts(
         loader,
         scan_id,
-        context_map=context_map,
         root=root,
         reco_id=reco_id,
         override_info_spec=override_info_spec,
@@ -81,15 +79,12 @@ def load_layout_info_parts(
     loader: Any,
     scan_id: int,
     *,
-    context_map: Optional[Union[str, Path]],
     root: Optional[Union[str, Path]] = None,
     reco_id: Optional[int],
     override_info_spec: Optional[Union[str, Path]] = None,
     override_metadata_spec: Optional[Union[str, Path]] = None,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    map_data = None
-    if context_map:
-        map_data = load_context_map(context_map)
+    """Original study + scan info (and metadata when an override metadata spec is given)."""
     scan = loader.get_scan(scan_id)
     if override_info_spec:
         spec_path = resolve_spec_reference(
@@ -104,7 +99,6 @@ def load_layout_info_parts(
             spec_data,
             transforms,
             validate=False,
-            context_map=None,
             context={"scan_id": scan_id, "reco_id": reco_id},
         )
         if not isinstance(mapped, dict):
@@ -126,30 +120,16 @@ def load_layout_info_parts(
             if "Subject" in study_info:
                 scan_info["Subject"] = study_info["Subject"]
         info = scan_info if isinstance(scan_info, dict) else {}
-    if map_data:
-        info = apply_context_map(
-            info,
-            map_data,
-            target="info_spec",
-            context={"scan_id": scan_id, "reco_id": reco_id},
-        )
     metadata: Dict[str, Any] = {}
-    if map_data or override_metadata_spec:
+    if override_metadata_spec:
         meta = loader.get_metadata(
             scan_id,
             reco_id=reco_id,
-            context_map=context_map,
             spec=override_metadata_spec,
         )
         if isinstance(meta, dict):
             metadata = meta
     return info, metadata
-
-
-def load_layout_meta(context_map: Optional[Union[str, Path]]) -> Dict[str, Any]:
-    if not context_map:
-        return {}
-    return load_context_map_meta(context_map)
 
 
 def render_slicepack_suffixes(

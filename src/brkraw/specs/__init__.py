@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from . import hook, pruner, remapper, rules
+from . import context_map, hook, pruner, remapper, rules
 
 __all__ = [
+    "context_map",
     "hook",
     "pruner",
     "remapper",

@@ -457,6 +457,36 @@ def resolve_pruner_spec_reference(
     return selected["path"]
 
 
+
+def resolve_context_map_reference(
+    use: str,
+    *,
+    version: Optional[str] = None,
+    root: Optional[Union[str, Path]] = None,
+) -> Path:
+    """An installed context map by ``__meta__.name`` (BRK-0038).
+
+    Looks only in the config folder's ``context_maps/`` (maps added with
+    ``brkraw addon add`` and maps shipped by hook packages under
+    ``context_maps/<namespace>/``). Without ``version`` the latest version
+    wins; two files with that version are an error.
+    """
+    base = config_core.resolve_root(root)
+    paths = config_core.paths(root=base)
+    records = [r for r in load_pruner_spec_records(paths.context_maps_dir) if r.get("name") == use]
+    if not records:
+        raise FileNotFoundError(f"context map name not found in {paths.context_maps_dir}: {use}")
+    if version:
+        matches = [r for r in records if r.get("version") == version]
+        if not matches:
+            raise FileNotFoundError(f"context map name/version not found: {use}@{version}")
+        if len(matches) > 1:
+            files = ", ".join(sorted(item["file"] for item in matches))
+            raise ValueError(f"Multiple context maps share the same version for {use}: {files}")
+        return matches[0]["path"]
+    return select_latest(records)["path"]
+
+
 __all__ = [
     "RULE_KEYS",
     "warn_dependencies",
@@ -475,4 +505,5 @@ __all__ = [
     "resolve_spec_by_name",
     "resolve_spec_reference",
     "resolve_pruner_spec_reference",
+    "resolve_context_map_reference",
 ]

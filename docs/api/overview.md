@@ -48,13 +48,20 @@ hooks = hook_manager.list_hooks()
 addons = addon_manager.list_installed()
 ```
 
-Remapper/spec utilities (spec loading, context maps) are also exposed:
+Context maps, the config layout and prune are also exposed:
 
 ```python
-from brkraw.api import addon as remapper
+from brkraw.api import context_map, layout, pruner
 
-context_map = remapper.load_context_map("map.yaml")
+cmap = context_map.load_context_map("/path/to/20240101_mouse01.yaml")
+name = layout.render_layout(loader, 3, layout_template="sub-{Subject.ID}/scan-{ScanID}")
+files = pruner.select_files("/path/to/study")
 ```
+
+!!! note "Changed in 0.6.0"
+    `brkraw.api.addon` (context map functions) was renamed
+    `brkraw.api.context_map`; the old name is gone. `brkraw.api.layout` is
+    new. `addon_manager` (installing spec and rule files) is unchanged.
 
 ## Recommended workflow
 
@@ -94,8 +101,13 @@ while keeping scan selection explicit at each call.
 
 ## Notes
 
-- Output naming and metadata generation are controlled by configuration
-  files (`config.yaml`) and optionally by a `context_map` YAML passed at
-  runtime.
+- Output naming and metadata generation are controlled by the config
+  (`config.yaml`) and, per dataset, by a context map next to the dataset
+  (see [Context maps](../extensions/context-map.md)).
+- `loader.convert()` without `reco_id` converts the first reco; the CLI
+  without `-r` converts every reco.
+- `loader.get_dataobj(scan_id, reco_id, axis=..., frames=...)` selects frames
+  like `brkraw convert --axis/--frames`; `cycle_index` / `cycle_count` still
+  work with a `DeprecationWarning` (removed in 0.7.0).
 - Extensions are managed as addons (data files) and hooks (Python packages
   that install namespaced addon assets).

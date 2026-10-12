@@ -20,6 +20,7 @@ from nibabel.spatialimages import HeaderDataError
 import yaml
 
 if TYPE_CHECKING:
+    from .datatype import ScalingValue
     from .image import ResolvedImage
     from nibabel.nifti1 import Nifti1Image
 
@@ -33,7 +34,7 @@ logger = logging.getLogger("brkraw")
 
 class Nifti1HeaderContents(TypedDict, total=False):
     slice_code: int
-    slope_inter: Tuple[float, float]
+    slope_inter: Tuple["ScalingValue", "ScalingValue"]
     time_step: Optional[float]
     slice_duration: Optional[float]
     xyzt_unit: XYZTUnit
@@ -212,6 +213,50 @@ def _coerce_scalar(value, *, name: str) -> float:
     return float(value)
 
 
+def _coerce_scaling(value, *, name: str) -> Tuple[float, bool]:
+    """Return a scalar scaling value and whether the input has varying values."""
+    if isinstance(value, (np.ndarray, list, tuple)):
+        arr = np.asarray(value, dtype=float).reshape(-1)
+        if arr.size == 0:
+            return 0.0, False
+        first = float(arr[0])
+        if arr.size == 1 or bool(np.all(arr == first)):
+            # exactly equal only (BRK-0036); no tolerance
+            return first, False
+        logger.debug("NIfTI %s has multiple distinct values; applying it to dataobj.", name)
+        return first, True
+    return float(value), False
+
+
+def _scaling_operand(
+    value,
+    data_shape: Tuple[int, ...],
+    *,
+    name: str,
+    scaling: Optional[Tuple[float, bool]] = None,
+) -> Union[float, np.ndarray]:
+    scalar, has_distinct_values = (
+        _coerce_scaling(value, name=name) if scaling is None else scaling
+    )
+    if not has_distinct_values:
+        return scalar
+
+    arr = np.asarray(value, dtype=float).reshape(-1)
+    if len(data_shape) >= 3 and arr.size == data_shape[2]:
+        shape = [1] * len(data_shape)
+        shape[2] = arr.size
+        return arr.reshape(shape)
+
+    try:
+        np.broadcast_to(arr, data_shape)
+    except ValueError as exc:
+        raise ValueError(
+            f"NIfTI {name} has {arr.size} values that cannot be broadcast "
+            f"to data shape {data_shape}."
+        ) from exc
+    return arr
+
+
 def _coerce_int(value, *, name: str) -> int:
     return int(_coerce_scalar(value, name=name))
 
@@ -294,13 +339,32 @@ def update(
                 niiobj.header['slice_code'] = _coerce_int(val, name="slice_code")
         elif c == "slope_inter":
             pair = cast(Sequence[float], val)
-            slope_val = _coerce_scalar(pair[0], name="slope")
-            inter_val = _coerce_scalar(pair[1], name="intercept")
-            if slope_mode == 'header':
+            slope_val, slope_has_distinct_values = _coerce_scaling(pair[0], name="slope")
+            inter_val, inter_has_distinct_values = _coerce_scaling(pair[1], name="intercept")
+            effective_slope_mode = slope_mode
+            if (
+                slope_mode == 'header' and
+                (slope_has_distinct_values or inter_has_distinct_values)
+            ):
+                effective_slope_mode = 'dataobj'
+            if effective_slope_mode == 'header':
                 niiobj.header.set_slope_inter(slope_val, inter_val)
-            elif slope_mode == 'dataobj':
+            elif effective_slope_mode == 'dataobj':
                 dataobj = np.asarray(niiobj._dataobj)
-                _set_dataobj(niiobj, dataobj * slope_val + inter_val)
+                slope_operand = _scaling_operand(
+                    pair[0],
+                    dataobj.shape,
+                    name="slope",
+                    scaling=(slope_val, slope_has_distinct_values),
+                )
+                inter_operand = _scaling_operand(
+                    pair[1],
+                    dataobj.shape,
+                    name="intercept",
+                    scaling=(inter_val, inter_has_distinct_values),
+                )
+                _set_dataobj(niiobj, dataobj * slope_operand + inter_operand)
+                niiobj.header.set_slope_inter(1.0, 0.0)
             else:
                 pass
             niiobj.header.set_data_dtype(np.asarray(niiobj._dataobj).dtype)

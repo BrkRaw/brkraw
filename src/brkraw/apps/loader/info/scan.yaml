@@ -10,6 +10,13 @@ Method:
     - file: acqp
       key: ACQ_method
   transform: strip_jcamp_string
+MethodBase:
+  sources:
+    - file: acqp
+      key: ACQ_method
+  transform:
+    - strip_jcamp_string
+    - strip_method_prefix
 Protocol:
   sources:
     - file: acqp

@@ -19,7 +19,7 @@ By default, BrkRaw stores configuration under:
 You can override this location by setting:
 
 ```bash
-BRKRAW_CONFIG_HOME=/path/to/config
+export BRKRAW_CONFIG_HOME=/path/to/config
 ```
 
 The main configuration file is `config.yaml`.
@@ -63,9 +63,11 @@ Most users start with `layout_entries` and leave
 To see more details about what BrkRaw is doing, increase the logging
 level:
 
-```yaml
-logging.level: DEBUG
+```bash
+brkraw config set logging.level DEBUG
 ```
+
+(In `config.yaml` this is `level: DEBUG` under `logging:`.)
 
 This is useful when debugging rules, specs, or hooks.
 
@@ -118,7 +120,7 @@ semantics into the slice-pack suffix.
 
 ## Common layout patterns
 
-Below are three example layout patterns that reflect common
+Below are two example layout patterns that reflect common
 research workflows.
 
 These examples are starting points, not fixed standards.
@@ -175,8 +177,8 @@ sub-01/ses-1/scan-3_T2w.nii.gz
 
 ---
 
-For BIDS-style naming guidance (including example layouts and a roadmap for
-`brkraw-bids`), see [BIDS integration](bids.md).
+For BIDS-style names, use a context map next to the dataset; see
+[BIDS integration](bids.md).
 
 ---
 
@@ -189,6 +191,7 @@ extensions:
 rules/
 specs/
 pruner_specs/
+context_maps/
 transforms/
 ```
 
@@ -205,15 +208,15 @@ The configuration schema may evolve over time.
 - New configuration keys may be added in future releases.
 - Existing keys may gain new optional fields.
 
-For authoritative details, refer to the Configuration Reference
-section of the documentation.
+For the commands that read and change these values, see
+[config](../cli/config.md).
 
 ---
 
 ## Next steps
 
-- To explore all available configuration options, see the full
-  Configuration Reference.
+- To see and change configuration values, see [config](../cli/config.md);
+  for the layout keys, see [Layout and naming](../extensions/layout.md).
 - To edit configuration interactively, run:
 
 ```bash

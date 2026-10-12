@@ -44,7 +44,15 @@ def cmd_init(args: argparse.Namespace) -> int:
     interactive = not args.yes
     create_config = True
     install_defaults = args.install_default
-    shellrc = Path(args.shellrc) if args.shellrc else _default_shell_rc()
+    # A shell file is changed only when asked: --shell-rc PATH, or "yes" to the
+    # prompt (which suggests ~/.zshrc or ~/.bashrc). --yes never edits one by
+    # itself (BRK-0040 1).
+    if args.shellrc:
+        shellrc: Optional[Path] = Path(args.shellrc)
+    elif interactive:
+        shellrc = _default_shell_rc()
+    else:
+        shellrc = None
     explicit_actions = args.install_default or args.shellrc
     config_values: Optional[Dict[str, Any]] = None
 
@@ -88,6 +96,11 @@ def cmd_init(args: argparse.Namespace) -> int:
             logger.info("Installed %d default file(s).", len(installed))
     if not interactive and shellrc is not None:
         _install_shell_helpers(shellrc)
+    elif not interactive:
+        logger.info(
+            "Shell helpers (brkraw-set, brkraw-unset) were not added; "
+            "to add them, run: brkraw init --shell-rc ~/.zshrc (or ~/.bashrc)"
+        )
     return 0
 
 
@@ -113,7 +126,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     init_parser.add_argument(
         "--yes",
         action="store_true",
-        help="Skip prompts and use defaults.",
+        help="Skip prompts and use defaults (writes config.yaml; does not change any shell file).",
     )
     init_parser.add_argument(
         "--install-default",
@@ -123,7 +136,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     init_parser.add_argument(
         "--shell-rc",
         dest="shellrc",
-        help="Append shell helpers to the specified rc file (defaults to ~/.zshrc or ~/.bashrc).",
+        metavar="PATH",
+        help="Append the shell helpers (brkraw-set, brkraw-unset) to this file, for example ~/.zshrc.",
     )
     init_parser.set_defaults(func=cmd_init)
 

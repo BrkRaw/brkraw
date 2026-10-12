@@ -3,9 +3,11 @@
 BrkRaw development follows two clearly separated paths:
 
 - **Core updates**: maintain compatibility with current and upcoming
-  Paravision layouts, file structures, and metadata conventions.
+  ParaVision layouts, file structures, and metadata conventions.
 - **Addons and plugins**: implement rules, specs, transforms, context_map
   definitions, or custom CLI tooling without modifying core code.
+- **Viewer application**: implements shared visualization and hosts optional
+  modality-specific visualization panels in `brkraw-viewer`.
 
 This separation is intentional and helps keep the core stable while allowing
 rapid experimentation and customization through extensions.
@@ -14,7 +16,7 @@ rapid experimentation and customization through extensions.
 
 ## When core changes are appropriate
 
-Core changes are intentionally limited to Paravision compatibility and
+Core changes are intentionally limited to ParaVision compatibility and
 low-level loader or infrastructure concerns.
 
 If you believe a change must live in core, start with a GitHub Discussion and

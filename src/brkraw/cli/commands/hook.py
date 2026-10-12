@@ -299,7 +299,12 @@ def _normalize_yaml_payload(value: Any) -> Any:
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
     hook_parser = subparsers.add_parser(
         "hook",
-        help="Manage converter hook packages.",
+        help="Register the files of installed converter hook packages.",
+        description=(
+            "A hook package is installed with pip first (pip install brkraw-sordino); "
+            "brkraw hook install then registers its specs, rules, transforms and "
+            "context maps with brkraw."
+        ),
     )
     hook_parser.add_argument(
         "--root",
@@ -311,7 +316,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     list_parser = hook_sub.add_parser("list", help="List installed hook packages.")
     list_parser.set_defaults(hook_func=cmd_list)
 
-    install_parser = hook_sub.add_parser("install", help="Install hook addons.")
+    install_parser = hook_sub.add_parser(
+        "install", help="Register an installed hook package's files (install the package with pip first)."
+    )
     install_parser.add_argument("target", help="Hook name or entrypoint name, or 'all'.")
     install_parser.add_argument(
         "--upgrade",
@@ -325,7 +332,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[na
     )
     install_parser.set_defaults(hook_func=cmd_install)
 
-    uninstall_parser = hook_sub.add_parser("uninstall", help="Remove hook addons.")
+    uninstall_parser = hook_sub.add_parser(
+        "uninstall", help="Remove a hook package's registered files (pip uninstall removes the package)."
+    )
     uninstall_parser.add_argument("target", help="Hook name or entrypoint name.")
     uninstall_parser.add_argument(
         "--force",

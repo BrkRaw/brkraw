@@ -1,13 +1,12 @@
 # Convert (Python API)
 
-Convert Bruker Paravision scans into NIfTI objects, with optional hook arguments.
+Convert Bruker ParaVision scans into NIfTI objects, with optional hook arguments.
 
 ---
 
 ## Equivalent CLI commands
 
-- `brkraw convert`
-- `brkraw convert-batch`
+- `brkraw convert` (and `brkraw convert --batch` for a folder of studies)
 
 In the CLI, output naming, selection, and sidecars are handled for you.
 In the Python API, conversion returns in-memory objects and you decide how to
@@ -73,13 +72,33 @@ Flatten frame-group dimensions to 4D when data is 5D or higher:
 nii = loader.convert(3, reco_id=1, flatten_fg=True)
 ```
 
-### cycle_index / cycle_count
+### axis / frames
 
-Read only a subset of cycles (last axis) when the scan has multi-cycle data:
+Keep only some frames of one frame axis (numpy rules: an int removes the
+axis, a list keeps it in that order, a `"start:stop[:step]"` text is a slice):
 
 ```python
-nii = loader.convert(3, reco_id=1, cycle_index=0, cycle_count=10)
+nii = loader.convert(3, reco_id=1, axis="cycle", frames="5:")   # drop 5 dummy volumes
+data = loader.get_dataobj(8, 1, axis="echo", frames=[1, 0])     # array, echoes swapped
 ```
+
+The axis names are the ones `brkraw info` shows under "Frame axes" (see
+[Context maps](../extensions/context-map.md#frame-axis-names)). The axis can
+be left out when the data has one frame axis.
+
+!!! note "Changed in 0.6.0"
+    `cycle_index` / `cycle_count` still work but raise a
+    `DeprecationWarning` and are removed in 0.7.0: use
+    `axis="cycle", frames="START:STOP"`. They cannot be combined with
+    `axis` / `frames`.
+
+### Intensity scaling
+
+`convert()` applies the ParaVision slope and offset. When the values differ
+per slice pack or per frame, they are applied to the data (floating point,
+header slope 1); otherwise one value goes into the header and the data stays
+integer. `get_dataobj()` always returns the stored values without scaling.
+Details: [convert](../cli/convert.md#intensity-scaling).
 
 ---
 
@@ -105,7 +124,7 @@ Convert multiple datasets:
 from pathlib import Path
 from brkraw.api import BrukerLoader
 
-root = Path("/path/to/datasets")
+root = Path("/path/to/studies")
 for dataset in root.iterdir():
     if not dataset.is_dir():
         continue

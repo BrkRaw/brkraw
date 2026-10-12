@@ -42,6 +42,12 @@ output:
   slicepack_suffix: "_slpack{index}"
   # float_decimals: 6
 
+# Cache folder (brkraw cache info/clear). Before a command, brkraw warns when the
+# cache is larger than warn_size_gb (GB of 1024^3 bytes; 0 turns the warning off)
+# and, in a terminal, asks per subfolder whether to clear it.
+cache:
+  warn_size_gb: 10
+
 # Viewer settings for brkraw-viewer (optional GUI extension).
 viewer:
   cache:
@@ -53,6 +59,7 @@ viewer:
 # rules_dir: rules
 # specs_dir: specs
 # pruner_specs_dir: pruner_specs
+# context_maps_dir: context_maps
 # transforms_dir: transforms
 """
 
@@ -63,6 +70,7 @@ class ConfigPaths:
     config_file: Path
     specs_dir: Path
     pruner_specs_dir: Path
+    context_maps_dir: Path
     rules_dir: Path
     transforms_dir: Path
     cache_dir: Path
@@ -84,6 +92,7 @@ def get_paths(root: Optional[Union[str, Path]] = None) -> ConfigPaths:
         config_file=base / "config.yaml",
         specs_dir=base / "specs",
         pruner_specs_dir=base / "pruner_specs",
+        context_maps_dir=base / "context_maps",
         rules_dir=base / "rules",
         transforms_dir=base / "transforms",
         cache_dir=base / "cache",
@@ -101,6 +110,7 @@ def get_path(name: str, root: Optional[Union[str, Path]] = None) -> Path:
         "config": paths_obj.config_file,
         "specs": paths_obj.specs_dir,
         "pruner_specs": paths_obj.pruner_specs_dir,
+        "context_maps": paths_obj.context_maps_dir,
         "rules": paths_obj.rules_dir,
         "transforms": paths_obj.transforms_dir,
         "cache": paths_obj.cache_dir,
@@ -127,6 +137,7 @@ def ensure_initialized(
     paths.root.mkdir(parents=True, exist_ok=True)
     paths.specs_dir.mkdir(parents=True, exist_ok=True)
     paths.pruner_specs_dir.mkdir(parents=True, exist_ok=True)
+    paths.context_maps_dir.mkdir(parents=True, exist_ok=True)
     paths.rules_dir.mkdir(parents=True, exist_ok=True)
     paths.transforms_dir.mkdir(parents=True, exist_ok=True)
     paths.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -216,6 +227,7 @@ def clear_config(
     keep_rules: bool = False,
     keep_specs: bool = False,
     keep_pruner_specs: bool = False,
+    keep_context_maps: bool = False,
     keep_transforms: bool = False,
     keep_cache: bool = False,
 ) -> None:
@@ -230,6 +242,8 @@ def clear_config(
         _remove_tree(paths.specs_dir)
     if paths.pruner_specs_dir.exists() and not keep_pruner_specs:
         _remove_tree(paths.pruner_specs_dir)
+    if paths.context_maps_dir.exists() and not keep_context_maps:
+        _remove_tree(paths.context_maps_dir)
     if paths.transforms_dir.exists() and not keep_transforms:
         _remove_tree(paths.transforms_dir)
     if paths.cache_dir.exists() and not keep_cache:
@@ -247,6 +261,7 @@ def clear(
     keep_rules: bool = False,
     keep_specs: bool = False,
     keep_pruner_specs: bool = False,
+    keep_context_maps: bool = False,
     keep_transforms: bool = False,
     keep_cache: bool = False,
 ) -> None:
@@ -256,6 +271,7 @@ def clear(
         keep_rules=keep_rules,
         keep_specs=keep_specs,
         keep_pruner_specs=keep_pruner_specs,
+        keep_context_maps=keep_context_maps,
         keep_transforms=keep_transforms,
         keep_cache=keep_cache,
     )

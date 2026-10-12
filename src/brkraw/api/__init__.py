@@ -19,9 +19,11 @@ __all__ = [
     "hook",
     "hook_manager",
     "hook_resolver",
+    "scale_frames",
     "pruner",
     "rules",
-    "addon",
+    "context_map",
+    "layout",
     "addon_manager",
     "validate_meta",
     "transform",
@@ -47,6 +49,8 @@ _LAZY: Dict[str, Tuple[str, str | None]] = {
     "hook_manager": ("brkraw.apps", "hook"),
     "addon_manager": ("brkraw.apps", "addon"),
     "hook_resolver": ("brkraw.apps.loader.helper", "resolve_converter_hook"),
+    # per-frame slope/offset rule for converter hooks (0.6.0rc2, BRK-0046)
+    "scale_frames": ("brkraw.apps.loader.helper", "scale_frames"),
     "config": ("brkraw.core", "config"),
 
     # apps.loader.info resolvers
@@ -64,7 +68,9 @@ _LAZY: Dict[str, Tuple[str, str | None]] = {
     "hook": ("brkraw.specs", "hook"),
     "pruner": ("brkraw.specs", "pruner"),
     "rules": ("brkraw.specs", "rules"),
-    "addon": ("brkraw.specs", "remapper"),
+    # context map v3 (0.6.0 renamed brkraw.api.addon; no alias, BRK-0020)
+    "context_map": ("brkraw.specs", "context_map"),
+    "layout": ("brkraw.core.layout", None),
 
     # meta
     "validate_meta": ("brkraw.specs.meta", "validate_meta"),
@@ -104,10 +110,12 @@ def __dir__() -> list[str]:
 if TYPE_CHECKING:
     from brkraw.core import formatter as formatter
     from brkraw.core import config as config
+    from brkraw.core import layout as layout
     from brkraw.apps.loader import BrukerLoader as BrukerLoader
     from brkraw.apps.loader import info as info_resolver
     from brkraw.apps.loader.info import transform as transform
     from brkraw.apps.loader.helper import resolve_converter_hook as hook_resolver
+    from brkraw.apps.loader.helper import scale_frames as scale_frames
     from brkraw.apps import addon as addon_manager, hook as hook_manager, loader as loader
     from brkraw.resolver import (
         affine as affine_resolver,
@@ -117,6 +125,6 @@ if TYPE_CHECKING:
         shape as shape_resolver,
     )
     from brkraw.specs import hook as hook, pruner as pruner, rules as rules
-    from brkraw.specs import remapper as addon
+    from brkraw.specs import context_map as context_map
     from brkraw.specs.meta import validate_meta as validate_meta
     from brkraw.api import types as types

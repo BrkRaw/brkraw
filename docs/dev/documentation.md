@@ -31,6 +31,21 @@ Rule of thumb:
 - Prefer concrete examples (YAML snippets, CLI commands, directory layouts).
 - Avoid duplicating content across pages; link instead.
 
+### Terms and formatting
+
+| Item | Rule |
+| --- | --- |
+| Product name | **ParaVision** (not Paravision) |
+| Spec for `brkraw prune` | **pruner spec** (code name `pruner_spec`, folder `pruner_specs/`) |
+| File format | **NIfTI** |
+| Numbers | in text **scan ID** / **reco ID**; options `--scan-id` / `--reco-id` |
+| Commands | command / subcommand; names always in backquotes (`brkraw convert`) |
+| Version changes | a `!!! note "Changed in 0.6.0"` box on pages whose behavior changed |
+| Headings | sentence case (first letter capital), no bold, question marks or emoji; identifiers in backquotes (`` `__meta__` ``) |
+| Example paths | one dataset `/path/to/study`, a folder of datasets `/path/to/studies` |
+| Python imports | `import brkraw as brk` and `from brkraw.api import …`; not internal paths such as `brkraw.core.…` |
+| Examples | a docs example that the test suite checks is marked with `<!-- example: NAME -->` before the block; keep the marker when editing |
+
 ---
 
 ## Examples and commands

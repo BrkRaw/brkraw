@@ -6,6 +6,14 @@ def test_schema_resources_loadable() -> None:
 
     assert isinstance(meta_validator._load_schema(), dict)
     assert isinstance(remapper_validator._load_schema(), dict)
-    assert isinstance(remapper_validator._load_map_schema(), dict)
     assert isinstance(pruner_validator._load_schema(None), dict)
     assert isinstance(rules_validator._load_schema(), dict)
+
+
+def test_old_context_map_schema_is_removed() -> None:
+    # BRK-0034 ②: the v2 map schema is gone with the old context map code
+    from pathlib import Path
+
+    import brkraw
+
+    assert not (Path(brkraw.__file__).parent / "schema" / "context_map.yaml").exists()

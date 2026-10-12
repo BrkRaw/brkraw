@@ -8,7 +8,7 @@ objects (`acqp` for Scan, `visu_pars` for Reco) and returns a dict containing:
     - offset: VisuCoreDataOffs
 """
 from __future__ import annotations
-from typing import Union, Optional, TypedDict, cast
+from typing import Union, Optional, TypedDict, cast, Sequence
 import numpy as np
 from .helpers import get_file
 from ..dataclasses import Scan, Reco, LazyScan
@@ -27,10 +27,13 @@ BYTEORDER = {
 }
 
 
+ScalingValue = Optional[Union[float, Sequence[float], np.ndarray]]
+
+
 class ResolvedDatatype(TypedDict):
     dtype: np.dtype
-    slope: Optional[float]
-    offset: Optional[float]
+    slope: ScalingValue
+    offset: ScalingValue
 
 
 
@@ -70,8 +73,8 @@ def resolve(obj: Union["LazyScan", "Scan", "Reco"]) -> Optional[ResolvedDatatype
         raise TypeError(f"resolve() expects Scan or Reco, got {type(obj)!r}")
     result: ResolvedDatatype = {
         "dtype": _get_dtype(byte_order, word_type),
-        "slope": cast(Optional[float], p.get('VisuCoreDataSlope')),
-        "offset": cast(Optional[float], p.get('VisuCoreDataOffs')),
+        "slope": cast(ScalingValue, p.get('VisuCoreDataSlope')),
+        "offset": cast(ScalingValue, p.get('VisuCoreDataOffs')),
     }
 
     return result
