@@ -1,5 +1,6 @@
 """convert with context map v3 output, --axis/--frames, legacy cycle options, info frame axes
-(b1 bundle B5). Synthetic data (echo/cycle frame groups) and approved zips."""
+(b1 bundle B5). Synthetic data only (echo/cycle frame groups); the checks on approved
+zips are manual checks in scripts/validate/."""
 from __future__ import annotations
 
 import json
@@ -354,52 +355,3 @@ def test_info_shows_frame_axes(study, capsys):
     assert recos[8][1]["Frame axes"] == "echo(2)"
     assert recos[5][1]["Frame axes"] == "cycle(3)"
     assert "Frame axes" not in recos[3][1]
-
-
-# ---------------------------------------------------------------------------
-# Approved zips: a same-name map gives one output per converted scan
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.agent_fixtures
-@pytest.mark.parametrize("pv", ["pv5.1", "pv6.0.1", "pv360-3.x"])
-def test_same_name_map_on_approved_zips(pv, approved_zips, tmp_path):
-    for src in approved_zips(pv):
-        _map(src, {"__meta__": {"category": "context_map",
-                                "layout_template": "{x.sub}/scan-{x.scan}[_sp{utils.slicepack}][_reco-{x.reco}]"},
-                   "x": {"sub": {"from": "Subject.ID"}, "scan": {"from": "ScanID"}, "reco": {"from": "RecoID"}}},
-             name=f"{src.stem}.yaml")  # a zip's same-name map drops ".zip"
-        out = tmp_path / f"out-{src.stem}"
-        loader = brkraw.load(str(src))
-        assert main(["convert", str(src), "-o", str(out), "-c"]) == 0
-        names = _niis(out)
-        sub = str((brkraw.apps.loader.info.study(loader) or {}).get("Subject", {}).get("ID"))
-        assert names and all(n.startswith(f"{sub}/scan-") for n in names)
-        written = {int(n.split("scan-")[1].split("_")[0].split(".")[0]) for n in names}
-        # every scan is written, except the known scaling regression (test_per_frame_slope_scans_convert);
-        # when that is fixed, this fails until KNOWN_SLOPE_FAILURES is emptied
-        assert written == set(loader.avail) - KNOWN_SLOPE_FAILURES.get(src.name, set())
-        for n in names:
-            assert (out / (n[: -len(".nii.gz")] + ".json")).is_file()
-
-
-# ---------------------------------------------------------------------------
-# Scaling regression from 0.6.0a1 (2d93b67), fixed by BRK-0035 (option C):
-# one slope value per frame. Frame-level tests are in tests/test_03_resolver/test_frame_scaling.py.
-# ---------------------------------------------------------------------------
-
-KNOWN_SLOPE_FAILURES: dict = {}
-SLOPE_SCANS = {"pv5.1-02.zip": {11}, "pv360-3.1-01.zip": {4}}
-
-
-@pytest.mark.agent_fixtures
-@pytest.mark.parametrize("pv, name", [("pv5.1", "pv5.1-02.zip"), ("pv360-3.x", "pv360-3.1-01.zip")])
-def test_per_frame_slope_scans_convert(pv, name, approved_zips):
-    src = [p for p in approved_zips(pv) if p.name == name][0]
-    loader = brkraw.load(str(src))
-    for scan_id in SLOPE_SCANS[name]:
-        nii = loader.convert(scan_id, reco_id=1)
-        assert nii is not None
-        raw = np.asarray(loader.get_dataobj(scan_id, 1))
-        # these scans have one equal slope per frame: kept in the header, data stays raw (as 0.5.7)
-        assert np.array_equal(np.asarray(nii.dataobj), raw)

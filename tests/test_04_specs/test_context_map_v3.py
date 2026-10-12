@@ -2,7 +2,7 @@
 
 Covers test plan v3 groups 1-4 (lookup, value forms, validation, include), the
 YAML loader without base-60 numbers, value-level results of the design
-examples, and the read-only rule on synthetic data and approved zips. Path
+examples, and the read-only rule on synthetic data (approved zips: scripts/validate/). Path
 templates, utils values, collisions and split slicing are bundle B5.
 """
 from __future__ import annotations
@@ -425,42 +425,6 @@ def test_include_by_relative_path_and_circular_include(tmp_path):
     _write(tmp_path, "cyc_b.yaml", "__meta__: {category: context_map, include: ./cyc_a.yaml}\nx: {b: '2'}\n")
     with pytest.raises(ContextMapError, match="circular"):
         load_context_map(tmp_path / "cyc_a.yaml")
-
-
-# ---------------------------------------------------------------------------
-# Approved zips: real info per ParaVision version, originals unchanged
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.agent_fixtures
-@pytest.mark.parametrize("pv", ["pv5.1", "pv6.0.1", "pv360-3.x"])
-def test_values_from_real_scan_info_leave_it_unchanged(pv, approved_zips, tmp_path):
-    import brkraw
-    from brkraw.apps.loader import info as info_resolver
-
-    data = load_context_map(_write(tmp_path, "m.yaml", """
-        __meta__: {category: context_map}
-        v:
-          method: {from: Method}
-          sub: {from: Subject.ID}
-          ses: {from: Session.ID}
-          scan: {from: ScanID}
-          kind: {from: Method, map: {"Bruker:EPI": func}, default: other}
-    """))
-    for zip_path in approved_zips(pv):
-        loader = brkraw.load(str(zip_path))
-        study = info_resolver.study(loader) or {}
-        for scan_id in sorted(loader.avail):
-            scan = info_resolver.scan(loader.get_scan(scan_id)) or {}
-            info = {**study, **scan}
-            before = copy.deepcopy(info)
-            plan = plan_scan(info, data, scan_id=scan_id)
-            assert info == before
-            assert plan.namespaces["v"]["method"] == scan.get("Method")
-            assert plan.namespaces["v"]["sub"] == (study.get("Subject") or {}).get("ID")
-            assert plan.namespaces["v"]["ses"] == (study.get("Study") or {}).get("ID")
-            assert plan.namespaces["v"]["scan"] == scan_id
-            assert plan.namespaces["v"]["kind"] in {"func", "other"}
 
 
 # ---------------------------------------------------------------------------

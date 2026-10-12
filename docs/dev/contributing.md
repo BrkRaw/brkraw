@@ -56,6 +56,39 @@ python -m pip install -e ".[dev]"
 
 ---
 
+## Tests and manual checks on real data
+
+`tests/` is the automatic suite that CI runs on every push. It uses synthetic
+data only (the PvDataset builder in `tests/helpers.py`) and never reads a real
+study, so it passes the same way on every machine.
+
+Checks that need real, approved anonymized ParaVision studies are not tests.
+They are kept in `scripts/validate/` and are run by hand, for example before a
+release or when you change prune, convert, context maps, scaling or study info.
+CI does not run them, and a plain `pytest` does not collect them (the file name
+starts with `check_`, and `pytest` collects `test_*.py`).
+
+The approved zips (ParaVision 5.1, 6.0.1 and 360.3.x) are kept outside Git in a
+folder next to your checkout, `<checkout>/../agent-fixtures`, with a README
+that lists each zip, its SHA-256 and whether it is approved. Only approved zips
+with a matching SHA-256 are used, and they are copied to a temporary folder;
+nothing is written in the folder. To use another folder, set
+`BRKRAW_AGENT_FIXTURES=/path/to/agent-fixtures`. If the folder is missing the
+run stops with a message (it does not skip).
+
+```bash
+pytest -v scripts/validate/check_agent_fixtures.py
+```
+
+`check_agent_fixtures.py` holds the checks that were moved out of `tests/`:
+the byte-identical default prune of the 5.1 zips, a same-name context map
+converting every scan of the 5.1, 6.0.1 and 360.3.x zips, scans with one equal
+slope per frame keeping raw data, context map values read from real scan info
+leaving it unchanged, and the self-test of the fixture finder. Each of these
+has a synthetic counterpart in `tests/`.
+
+---
+
 ## CLI extensions
 
 BrkRaw supports CLI extensions through an entrypoint mechanism, allowing new

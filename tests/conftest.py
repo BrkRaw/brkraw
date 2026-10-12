@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -19,7 +18,6 @@ if str(REPO_ROOT) not in sys.path:
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from tests.agent_fixtures import find_approved_zips, fixtures_dir  # noqa: E402
 from tests.helpers import KEEP_ENV, isolate_brkraw_env  # noqa: E402
 
 
@@ -30,10 +28,6 @@ def pytest_configure(config):
         if key.startswith("BRKRAW_") and key not in KEEP_ENV:
             del os.environ[key]
     os.environ["BRKRAW_CONFIG_HOME"] = os.path.join(tempfile.gettempdir(), "brkraw-pytest-collection-config")
-    config.addinivalue_line(
-        "markers",
-        "agent_fixtures: uses approved anonymized zips from the agent-fixtures folder (skipped when absent)",
-    )
 
 
 @pytest.fixture(autouse=True)
@@ -49,28 +43,3 @@ def _isolated_brkraw_env(tmp_path_factory, monkeypatch):
     yield
     for key in [k for k in os.environ if k.startswith("BRKRAW_") and k not in before]:
         del os.environ[key]
-
-
-@pytest.fixture
-def approved_zips(tmp_path):
-    """Return a function ``approved_zips(pv)`` -> list of approved zips copied into ``tmp_path``.
-
-    Skips the test (with the reasons) when the folder, README rows or zips are
-    missing, not approved, or do not match their SHA-256. Tests never write in
-    the agent-fixtures folder itself.
-    """
-
-    def _get(pv: str):
-        found, reasons = find_approved_zips(fixtures_dir(), pv)
-        if not found:
-            pytest.skip("no approved agent fixture for {}: {}".format(pv, "; ".join(reasons)))
-        dest = tmp_path / "agent-fixtures" / pv
-        dest.mkdir(parents=True, exist_ok=True)
-        copies = []
-        for src in found:
-            target = dest / src.name
-            shutil.copyfile(src, target)
-            copies.append(target)
-        return copies
-
-    return _get

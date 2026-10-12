@@ -1,5 +1,5 @@
-"""prune 0.6.0 design (b1 bundle B3; BRK-0030, BRK-0031, BRK-0032). Synthetic data
-and approved agent-fixture zips only."""
+"""prune 0.6.0 design (b1 bundle B3; BRK-0030, BRK-0031, BRK-0032). Synthetic data only
+(the byte-identical prune of approved zips is a manual check, scripts/validate/)."""
 from __future__ import annotations
 
 import logging
@@ -325,18 +325,3 @@ def test_help_explains_the_default(capsys):
     assert "Nothing is anonymized" in " ".join(out.split())
     for option in ("--files", "--exclude-files", "--institution", "--anonymize", "--dry-run", "--overwrite"):
         assert option in out
-
-
-# ---------------------------------------------------------------------------
-# Approved anonymized zips (real ParaVision 5.1 data)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.agent_fixtures
-def test_default_prune_of_approved_zip_is_byte_identical(approved_zips, tmp_path, cwd):
-    for src in approved_zips("pv5.1"):
-        assert main(["prune", str(src), "-o", f"{src.stem}_copy.zip"]) == 0
-        with zipfile.ZipFile(src) as a, zipfile.ZipFile(cwd / f"{src.stem}_copy.zip") as b:
-            files_a = {n: a.read(n) for n in a.namelist() if not n.endswith("/")}
-            files_b = {n: b.read(n) for n in b.namelist() if not n.endswith("/")}
-        assert files_a == files_b

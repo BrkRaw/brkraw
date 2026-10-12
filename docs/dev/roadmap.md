@@ -2,10 +2,10 @@
 
 !!! note "Proposal"
     This page is a plan, not a description of existing features. Commands it
-    mentions, such as `brkraw test`, do not exist yet. Since 0.6.0 the test
-    suite can also run tests on anonymized studies kept outside the
-    repository (`BRKRAW_AGENT_FIXTURES`); those tests are skipped when the
-    folder is absent, as on CI.
+    mentions, such as `brkraw test`, do not exist yet. Since 0.6.0 the
+    repository can be checked by hand on anonymized studies kept outside it
+    (`scripts/validate/`, `BRKRAW_AGENT_FIXTURES`); these checks are not part
+    of `tests/` or CI (see the contribution guide).
 
 This project currently has strong unit-tested coverage in core/dataclasses, but
 end-to-end validation of `resolver/`, `apps/`, and `cli/` is limited by the need

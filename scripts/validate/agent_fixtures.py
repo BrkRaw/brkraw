@@ -1,11 +1,11 @@
-"""Approved anonymized PvDatasets for internal tests (agent fixtures).
+"""Approved anonymized PvDatasets for the manual checks in ``scripts/validate/``.
 
 The folder lives next to the repository checkout (``<checkout>/../agent-fixtures``)
 and is not part of any Git repository. Its README holds a provenance table;
 only rows whose last cell is exactly ``승인`` and whose zip SHA-256 matches
-are used. Set ``BRKRAW_AGENT_FIXTURES`` to use another folder. When the
-folder, a row or a zip is missing, tests that need it are skipped (always the
-case on GitHub CI).
+are used. Set ``BRKRAW_AGENT_FIXTURES`` to use another folder. The automatic
+test suite in ``tests/`` never reads this folder; only the manual checks do
+(``check_agent_fixtures.py``), and they stop with a message when it is missing.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 ENV_AGENT_FIXTURES = "BRKRAW_AGENT_FIXTURES"
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _PATH = re.compile(r"`([^`]+)`")
 _SHA = re.compile(r"sha256\s+`([0-9a-fA-F]{64})`")

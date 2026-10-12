@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 # Kept while tests run: the config home set by the isolation itself and the
-# optional override for the agent-fixtures folder.
+# optional override for the agent-fixtures folder (read only by the manual
+# checks in scripts/validate/, never by tests).
 KEEP_ENV = ("BRKRAW_CONFIG_HOME", "BRKRAW_AGENT_FIXTURES")
 
 
