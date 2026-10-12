@@ -152,6 +152,35 @@ If users provide extra keys that your hook does not accept, BrkRaw will drop
 unsupported kwargs (and log the dropped keys at DEBUG) to avoid `TypeError`
 crashes.
 
+### NIfTI output options in `convert`
+
+`xyz_units`, `t_units` (`brkraw convert --xyz-units/--t-units`) and
+`override_header` (`--header`) describe the output file, not how the data or
+the affine are read. They are not hook args:
+
+- `convert` gets them when it takes a parameter of that name or `**kwargs`,
+  whether or not `get_dataobj`/`get_affine` take `**kwargs`. The CLI always
+  passes both units (default `mm`, `sec`); `override_header` is passed only
+  when it is given.
+- `get_dataobj` and `get_affine` get them only when they name them as
+  parameters, never through `**kwargs`.
+
+A hook with its own `convert` writes them into its header; for example:
+
+```python
+def convert(scan, dataobj, affine, *, xyz_units="mm", t_units="sec",
+            override_header=None, **kwargs):
+    nii = Nifti1Image(dataobj, affine)
+    nii.header.set_xyzt_units(xyz_units, t_units)
+    for key, value in (override_header or {}).items():
+        nii.header[key] = value
+    return nii
+```
+
+Up to 0.6.1rc1 the three options went to `get_dataobj`/`get_affine` when
+those took `**kwargs` (also BrkRaw's own, so a hook with only `convert` never
+got them), and `override_header` never reached a hook.
+
 ### The reco and intensity scaling in `convert`
 
 `convert(scan, dataobj, affine, **kwargs)` gets the data as read: BrkRaw does
